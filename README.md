@@ -1,9 +1,18 @@
-# smoc
+# SMoC
 Steaming Music on Console
 
 A TUI music player for streaming services. The currently implemented streaming service is YouTube Music (YTM).
 
+![screenshot](smoc_example.png)
+
 This project is not supported or endorsed by Google. The same warnings and disclamers for the well-known [yt-dlp](https://github.com/yt-dlp/yt-dlp) project apply here.
+
+## Commands
+SMoC operates via a vim-style command bar. Switching between views and performing many actions occur via the bottom command bar. Much like vim, hitting the `:` key will activate COMMAND mode. The following commands are supported:
+- `:a`: Switch to the ARTIST mode
+- `:a/<artist name>`: Switch to the ARTIST mode and search for a given artist
+- `:np`: Switch to the now playing mode (current playback queue)
+- `:v/<volume>`: Change volume to the specified value
 
 ## Cookies
 In order to play most tracks, you will need to authenticate with a Google acocunt that has a value YouTube Music Subscription.
