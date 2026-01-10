@@ -1,6 +1,4 @@
-using System.Linq;
 using System.Net;
-using Terminal.Gui.App;
 using YouTubeMusicAPI.Client;
 using YouTubeMusicAPI.Models.Search;
 using YouTubeMusicAPI.Models.Streaming;
@@ -26,10 +24,21 @@ public sealed class YtmStreamingClient : IStreamingClient
         return results.Select(r => new Artist(r.Id, r.Name)).ToList();
     }
 
+    public async Task<Artist> GetArtistAsync(string artistId)
+    {
+        var result = await ytmClient.GetArtistInfoAsync(artistId);
+        return new Artist(result.Id, result.Name);
+    }
+
     public async Task<List<Album>> GetAlbumsByArtistAsync(Artist artist)
     {
         var results = await ytmClient.GetArtistInfoAsync(artist.Id);
-        return results.Albums.Select(s => new Album(s.Id, artist, s.Name, s.ReleaseYear)).ToList();
+        return results.Albums.Select(s => new Album(
+            s.Id,
+            artist,
+            s.Name,
+            s.ReleaseYear,
+            s.Thumbnails.OrderBy(t => t.Height).Select(t => t.Url).FirstOrDefault())).ToList();
     }
 
     public async Task<List<Song>> GetSongsByAlbumAsync(Album album)

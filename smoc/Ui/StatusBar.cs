@@ -10,6 +10,16 @@ namespace Smoc.Ui;
 
 public sealed class StatusBar : View
 {
+    private static class Messages
+    {
+        public const string PLAY = "[PLAY]";
+        public const string PAUSE = "[PAUSE]";
+        public const string STOP = "[STOP]";
+        public const string UNKNOWN = "[UNK]";
+        public const string NO_SONG = "No song";
+        public const string NO_ARTIST = "No artist";
+    }
+
     private readonly Label modeLabel;
     private readonly Label versionLabel;
     private readonly Label stateLabel;
@@ -59,14 +69,14 @@ public sealed class StatusBar : View
         {
             string playbackStatePrefix = playerService.PlaybackState switch
             {
-                PlaybackState.Playing => "[PLAY]",
-                PlaybackState.Paused => "[PAUSE]",
-                PlaybackState.Stopped => "[STOP]",
-                _ => "[UNK]"
+                PlaybackState.Playing => Messages.PLAY,
+                PlaybackState.Paused => Messages.PAUSE,
+                PlaybackState.Stopped => Messages.STOP,
+                _ => Messages.UNKNOWN
             };
 
-            string songName = playerService.CurrentSong?.Title ?? "No song";
-            string artistName = playerService.CurrentSong?.Artist.Name ?? "No artist";
+            string songName = playerService.CurrentSong?.Title ?? Messages.NO_SONG;
+            string artistName = playerService.CurrentSong?.Artist.Name ?? Messages.NO_ARTIST;
             string songDuration = playerService.Duration.ToString("mm\\:ss");
             string songPosition = playerService.CurrentTime.ToString("mm\\:ss");
             this.stateLabel.Text = $"{playbackStatePrefix} {artistName} - {songName} [{songPosition}/{songDuration}]";

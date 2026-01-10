@@ -81,7 +81,6 @@ public sealed class PlayerService : IDisposable
         Stop();
         currentPlaybackIndex = index;
         await Play();
-        SongChanged?.Invoke(this, playbackQueue[index]);
     }
 
     public void ClearPlaybackQueue()

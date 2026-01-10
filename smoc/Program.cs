@@ -18,6 +18,7 @@ public static class Program
     private static readonly string CONFIG_PATH = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) + "/.config/smoc/config.json";
     private static readonly string COOKIES_PATH = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) + "/.config/smoc/cookies.txt";
     private static readonly string TOKENS_PATH = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) + "/.config/smoc/tokens.json";
+    private static readonly string LOG_PATH = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) + "/.config/smoc/log_{Date}.txt";
     public static readonly string PRODUCT_NAME = "SMoC";
 
     /// <summary>
@@ -48,9 +49,11 @@ public static class Program
 
             using IApplication application = Application.Create().Init();
 
-            using ILoggerFactory factory = LoggerFactory.Create(builder => builder.SetMinimumLevel(LogLevel.Debug).AddFile("log.txt", LogLevel.Debug));
-            ILogger logger = factory.CreateLogger("Program");
+            using ILoggerFactory factory = LoggerFactory.Create(
+                builder => builder.SetMinimumLevel(LogLevel.Debug).AddFile(LOG_PATH, LogLevel.Debug, retainedFileCountLimit: 2));
+            ILogger logger = factory.CreateLogger("SMoC");
             Logging.Logger = logger;
+            logger.LogInformation("SMoC starting...");
 
             application.Mouse.IsMouseDisabled = true;
             IStreamingClient streamingClient = CreateStreamingClient();

@@ -1,6 +1,6 @@
 {
     "ConfigurationManager.ThrowOnJsonErrors": true,
-    "Application.QuitKey": "Ctrl+C",
+    "Application.QuitKey": ":",
     "Theme": "default",
     "Themes": [
         {

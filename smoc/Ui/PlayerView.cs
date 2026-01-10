@@ -48,6 +48,17 @@ public sealed class PlayerView : View
         songTable.SongSelected += OnSongSelected;
     }
 
+    protected override void OnVisibleChanged()
+    {
+        base.OnVisibleChanged();
+
+        if (Visible && playerService.CurrentSong is Song currentSong)
+        {
+            songTable.SelectedRow = playerService.CurrentPlaybackIndex;
+            songTable.EnsureSelectedCellIsVisible();
+        }
+    }
+
     private async void OnSongSelected(object? sender, Song e)
     {
         await playerService.ChangeTrack(songTable.SelectedRow);

@@ -1,45 +1,73 @@
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
 using Smoc.Services;
 using Smoc.Streaming;
+using Smoc.Ui.Components;
 using Terminal.Gui.App;
 using Terminal.Gui.Drawing;
 using Terminal.Gui.Input;
 using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
+using Color = Terminal.Gui.Drawing.Color;
 
 namespace Smoc.Ui;
 
 public sealed class NowPlaying : View
 {
+    private static class Messages
+    {
+        public const string NO_SONG = "no song";
+        public const string NO_ARTIST = "no artist";
+        public const string VOLUME = "volume: {0}%";
+    }
+
     private readonly PlayerService playerService;
+    private string? albumArtUrl;
+    private readonly SixelImageView albumArtView;
     private readonly Label songLabel;
     private readonly Label artistLabel;
     private readonly Label positionLabel;
     private readonly ProgressBar progressBar;
     private readonly Label durationLabel;
     private readonly Label volumeLabel;
+    private readonly HttpClient httpClient;
 
     public NowPlaying(PlayerService playerService, CommandService commandService)
     {
         this.playerService = playerService;
+        this.httpClient = new HttpClient();
+        this.albumArtUrl = null;
         Width = Dim.Fill();
         Height = Dim.Absolute(3);
         Padding!.Thickness = new Thickness(1, 0, 1, 0);
+        CanFocus = false;
+
+        this.albumArtView = new SixelImageView()
+        {
+            X = Pos.Absolute(0),
+            Y = Pos.Absolute(0),
+            Width = Dim.Absolute(6),
+            Height = Dim.Fill(),
+            BorderStyle = LineStyle.Dashed
+        };
+        albumArtView.Margin!.Thickness = new Thickness(0, 0, 1, 0);
 
         this.songLabel = new Label()
         {
-            X = Pos.Absolute(0),
+            X = Pos.Right(this.albumArtView),
             Y = Pos.Absolute(0)
         };
 
         this.artistLabel = new Label()
         {
-            X = Pos.Absolute(0),
+            X = Pos.Right(this.albumArtView),
             Y = Pos.Absolute(1)
         };
 
         this.positionLabel = new Label()
         {
-            X = Pos.Absolute(0),
+            X = Pos.Right(this.albumArtView),
             Y = Pos.Absolute(2)
         };
 
@@ -69,6 +97,7 @@ public sealed class NowPlaying : View
         Reset();
 
         Add(
+            this.albumArtView,
             this.volumeLabel,
             this.songLabel,
             this.artistLabel,
@@ -84,6 +113,15 @@ public sealed class NowPlaying : View
         commandService.RegisterCommand("v", OnSetVolumeCommand);
         AddCommand(Command.HotKey, OnHotKey);
         HotKeyBindings.Add(Key.Space, this, Command.HotKey);
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        playerService.SongChanged -= OnSongChanged;
+        playerService.PositionChanged -= OnPositionChanged;
+        playerService.VolumeChanged -= OnVolumeChanged;
+        httpClient.Dispose();
+        base.Dispose(disposing);
     }
 
     private bool? OnHotKey(ICommandContext? ctx)
@@ -111,7 +149,7 @@ public sealed class NowPlaying : View
 
     private void OnVolumeChanged(object? sender, float e)
     {
-        this.volumeLabel.Text = $"volume: {(int)Math.Round(e * 100)}%";
+        this.volumeLabel.Text = string.Format(Messages.VOLUME, (int)Math.Round(e * 100));
     }
 
     private void OnPositionChanged(object? sender, TimeSpan e)
@@ -123,17 +161,30 @@ public sealed class NowPlaying : View
 
     private void OnSongChanged(object? sender, Song e)
     {
-        this.songLabel.Text = e.Title ?? "no song";
-        this.artistLabel.Text = e.Artist.Name ?? "no artist";
+        Logging.Information($"Song changed: {e.Title}");
+        this.songLabel.Text = e.Title ?? Messages.NO_SONG;
+        this.artistLabel.Text = e.Artist.Name ?? Messages.NO_ARTIST;
+
+        // Only bother downloading the album art if it has changed.
+        if (e.Album.ThumbnailUrl is not null && albumArtUrl != e.Album.ThumbnailUrl)
+        {
+            albumArtUrl = e.Album.ThumbnailUrl;
+            httpClient.GetAsync(e.Album.ThumbnailUrl).ContinueWith((task) =>
+            {
+                var image = Image.Load<Rgba32>(task.Result.Content.ReadAsStream());
+                Logging.Information($"Album art loaded: {e.Title}");
+                this.albumArtView.SetImage(image);
+            });
+        }
     }
 
     private void Reset()
     {
-        this.songLabel.Text = "no song";
-        this.artistLabel.Text = "no artist";
+        this.songLabel.Text = Messages.NO_SONG;
+        this.artistLabel.Text = Messages.NO_ARTIST;
         this.positionLabel.Text = "00:00";
         this.durationLabel.Text = "00:00";
-        this.volumeLabel.Text = $"volume: {(int)Math.Round(playerService.Volume * 100)}%";
+        this.volumeLabel.Text = string.Format(Messages.VOLUME, (int)Math.Round(playerService.Volume * 100));
         this.progressBar.Fraction = 0.0f;
     }
 }

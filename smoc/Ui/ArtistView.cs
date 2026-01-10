@@ -21,8 +21,10 @@ public sealed class ArtistView : View
         public const string SEARCHING = "searching...";
         public const string LOADING = "loading...";
         public const string NO_ARTISTS_FOUND = "no artists found";
+        public const string SELECT_ARTIST = "select an artist";
         public const string NO_SONGS = "no songs";
     }
+
     private readonly SongTable songTable;
     private readonly SearchResultsList searchResults;
     private readonly Label searchResultsLabel;
@@ -46,9 +48,9 @@ public sealed class ArtistView : View
             X = Pos.Absolute(0),
             Y = Pos.Absolute(0),
             Width = Dim.Absolute(30),
-            Height = Dim.Fill()
+            Height = Dim.Fill(),
         };
-        searchResults.SelectedItemChanged += OnArtistSelected;
+        searchResults.OpenSelectedItem += OnArtistSelected;
         searchResults.BorderStyle = LineStyle.Single;
 
         songTable = new SongTable()
@@ -74,7 +76,7 @@ public sealed class ArtistView : View
             X = Pos.Right(searchResults) + 1,
             Y = Pos.Center(),
             Width = songTable.Width - 2,
-            Text = Messages.NO_SONGS,
+            Text = Messages.SELECT_ARTIST,
             TextAlignment = Alignment.Center
         };
 
@@ -102,7 +104,7 @@ public sealed class ArtistView : View
         var albums = await streamingClient.GetAlbumsByArtistAsync(selectedArtist.Item);
         if (albums.Count == 0)
         {
-            ResetSongsTable();
+            ResetSongsTable(Messages.NO_SONGS);
             return;
         }
 
@@ -111,7 +113,7 @@ public sealed class ArtistView : View
 
         if (!songs.Any())
         {
-            ResetSongsTable();
+            ResetSongsTable(Messages.NO_SONGS);
             return;
         }
 
@@ -159,7 +161,7 @@ public sealed class ArtistView : View
         searchResults.Source = null;
     }
 
-    private void ResetSongsTable(string message = Messages.NO_SONGS)
+    private void ResetSongsTable(string message = Messages.SELECT_ARTIST)
     {
         songsLabel.Visible = true;
         songsLabel.Text = message;
