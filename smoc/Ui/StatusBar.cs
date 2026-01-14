@@ -58,9 +58,38 @@ public sealed class StatusBar : View
         this.stateLabel.Padding!.Thickness = defaultMargin;
         Add(this.modeLabel, this.versionLabel, this.stateLabel);
 
-        playerService.SongChanged += (_, __) => UpdateState();
-        playerService.PositionChanged += (_, __) => UpdateState();
-        playerService.PlaybackStateChanged += (_, __) => UpdateState();
+        playerService.SongChanged += OnSongChanged;
+        playerService.PositionChanged += OnPositionChanged;
+        playerService.PlaybackStateChanged += OnPlaybackStateChanged;
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        playerService.SongChanged -= OnSongChanged;
+        playerService.PositionChanged -= OnPositionChanged;
+        playerService.PlaybackStateChanged -= OnPlaybackStateChanged;
+        base.Dispose(disposing);
+    }
+
+    private TimeSpan lastPosition;
+
+    private void OnPositionChanged(object? sender, TimeSpan e)
+    {
+        if (e.Subtract(lastPosition) > TimeSpan.FromSeconds(1))
+        {
+            lastPosition = e;
+            UpdateState();
+        }
+    }
+
+    private void OnSongChanged(object? sender, Song e)
+    {
+        UpdateState();
+    }
+
+    private void OnPlaybackStateChanged(object? sender, PlaybackState e)
+    {
+        UpdateState();
     }
 
     private void UpdateState()

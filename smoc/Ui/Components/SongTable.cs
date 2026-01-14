@@ -65,11 +65,13 @@ public sealed class SongTable : TableView
         songTableData = CreateDataTable(columns);
         Table = new DataTableSource(songTableData);
         songs = [];
+        CanFocus = false;
     }
 
     public void SetSongs(IEnumerable<Song> songs)
     {
         ClearSongs();
+        CanFocus = true;
         this.songs = songs.ToList();
         foreach (var song in this.songs)
         {
@@ -124,6 +126,7 @@ public sealed class SongTable : TableView
         songs.Clear();
         songTableData.Clear();
         SelectedRow = 0;
+        CanFocus = false;
     }
 
     protected override void OnFrameChanged(in Rectangle frame)

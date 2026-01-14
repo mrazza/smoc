@@ -48,6 +48,14 @@ public sealed class PlayerView : View
         songTable.SongSelected += OnSongSelected;
     }
 
+    protected override void Dispose(bool disposing)
+    {
+        playerService.QueueChanged -= OnQueueChanged;
+        playerService.SongChanged -= OnSongChanged;
+        songTable.SongSelected -= OnSongSelected;
+        base.Dispose(disposing);
+    }
+
     protected override void OnVisibleChanged()
     {
         base.OnVisibleChanged();

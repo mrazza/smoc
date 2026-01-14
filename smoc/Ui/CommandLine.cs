@@ -46,7 +46,7 @@ public sealed class CommandLine : View
     {
         ClearError();
         errorLabel.Text = message;
-        errorTimeoutTracker = App!.AddTimeout(TimeSpan.FromSeconds(5), () => { ClearError(); return true; });
+        errorTimeoutTracker = App!.AddTimeout(TimeSpan.FromSeconds(5), () => { ClearError(); return false; });
     }
 
     protected override bool OnKeyDownNotHandled(Key key)

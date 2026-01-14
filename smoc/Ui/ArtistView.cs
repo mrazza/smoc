@@ -85,6 +85,13 @@ public sealed class ArtistView : View
         commandService.RegisterCommand("a", OnArtistSearchCommand);
     }
 
+    protected override void Dispose(bool disposing)
+    {
+        searchResults.OpenSelectedItem -= OnArtistSelected;
+        songTable.SongSelected -= OnSongSelected;
+        base.Dispose(disposing);
+    }
+
     private async void OnSongSelected(object? sender, Song e)
     {
         playerService.ClearPlaybackQueue();
