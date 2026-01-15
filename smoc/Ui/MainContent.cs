@@ -9,6 +9,7 @@ public sealed class MainContent : View
 {
     private readonly ArtistView artistView;
     private readonly PlayerView playerView;
+    private readonly SongView songView;
     private readonly MainWindow mainWindow;
 
     private View? currentView;
@@ -29,7 +30,11 @@ public sealed class MainContent : View
         {
             Visible = false
         };
-        Add(artistView, playerView);
+        songView = new SongView(mainWindow, commandService, streamingClient)
+        {
+            Visible = false
+        };
+        Add(artistView, playerView, songView);
     }
 
     public void SetMode(Mode mode)
@@ -43,6 +48,7 @@ public sealed class MainContent : View
         {
             Mode.Player => playerView,
             Mode.Artist => artistView,
+            Mode.Song => songView,
             _ => throw new ArgumentException("Invalid mode"),
         };
         currentView!.Visible = true;

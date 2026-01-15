@@ -17,11 +17,12 @@ public sealed class NowPlaying : View
 {
     private static class Messages
     {
-        public const string NO_SONG = "no song";
+        public const string NO_SONG = "no track";
         public const string NO_ARTIST = "no artist";
         public const string VOLUME = "volume: {0}%";
     }
 
+    private readonly MainWindow mainWindow;
     private readonly PlayerService playerService;
     private string? albumArtUrl;
     private readonly SixelImageView albumArtView;
@@ -33,8 +34,9 @@ public sealed class NowPlaying : View
     private readonly Label volumeLabel;
     private readonly HttpClient httpClient;
 
-    public NowPlaying(PlayerService playerService, CommandService commandService)
+    public NowPlaying(MainWindow mainWindow, PlayerService playerService, CommandService commandService)
     {
+        this.mainWindow = mainWindow;
         this.playerService = playerService;
         this.httpClient = new HttpClient();
         this.albumArtUrl = null;
@@ -140,7 +142,8 @@ public sealed class NowPlaying : View
 
         if (!int.TryParse(splitArgs[0], out int volume) || volume < 0 || volume > 100)
         {
-            Logging.Warning($"Invalid volume: {args}");
+            Logging.Warning($"Invalid volume: {splitArgs[0]}");
+            mainWindow.DisplayError($"invalid volume: {splitArgs[0]} ([0-100] expected)");
             return;
         }
 
@@ -187,8 +190,8 @@ public sealed class NowPlaying : View
     {
         this.songLabel.Text = Messages.NO_SONG;
         this.artistLabel.Text = Messages.NO_ARTIST;
-        this.positionLabel.Text = "00:00";
-        this.durationLabel.Text = "00:00";
+        this.positionLabel.Text = "--:--";
+        this.durationLabel.Text = "--:--";
         this.volumeLabel.Text = string.Format(Messages.VOLUME, (int)Math.Round(playerService.Volume * 100));
         this.progressBar.Fraction = 0.0f;
     }

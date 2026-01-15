@@ -35,7 +35,7 @@ public sealed class MainWindow : Runnable
         this.streamingClient = streamingClient;
         playerService = new PlayerService(streamingClient);
         commandService = new CommandService();
-        nowPlaying = new NowPlaying(playerService, commandService);
+        nowPlaying = new NowPlaying(this, playerService, commandService);
         commandLine = new CommandLine()
         {
             Y = Pos.AnchorEnd()
@@ -55,7 +55,7 @@ public sealed class MainWindow : Runnable
         {
             if (args.Length > 0)
             {
-                commandLine.DisplayError($"Unexpected trailing characters: {args}");
+                commandLine.DisplayError($"unexpected trailing characters: {args}");
             }
             else
             {
@@ -81,7 +81,7 @@ public sealed class MainWindow : Runnable
             {
                 if (!commandService.ExecuteCommand(command!))
                 {
-                    commandLine.DisplayError($"Not a valid commmand: {command}");
+                    commandLine.DisplayError($"not a valid commmand: {command}");
                 }
             }
         };

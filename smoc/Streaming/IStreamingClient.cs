@@ -4,6 +4,10 @@ public interface IStreamingClient
 {
     Task<List<Artist>> SearchArtistsAsync(string query);
 
+    Task<List<Song>> SearchSongsAsync(string query);
+
+    Task<Song> GetSongAsync(string songId);
+
     Task<Artist> GetArtistAsync(string artistId);
 
     Task<List<Album>> GetAlbumsByArtistAsync(Artist artist);

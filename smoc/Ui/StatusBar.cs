@@ -16,8 +16,8 @@ public sealed class StatusBar : View
         public const string PAUSE = "[PAUSE]";
         public const string STOP = "[STOP]";
         public const string UNKNOWN = "[UNK]";
-        public const string NO_SONG = "No song";
-        public const string NO_ARTIST = "No artist";
+        public const string NO_SONG = "no track";
+        public const string NO_ARTIST = "no artist";
     }
 
     private readonly Label modeLabel;

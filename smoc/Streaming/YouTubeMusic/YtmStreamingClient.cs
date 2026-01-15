@@ -1,4 +1,5 @@
 using System.Net;
+using Terminal.Gui.App;
 using YouTubeMusicAPI.Client;
 using YouTubeMusicAPI.Models.Search;
 using YouTubeMusicAPI.Models.Streaming;
@@ -21,7 +22,39 @@ public sealed class YtmStreamingClient : IStreamingClient
     {
         var search = ytmClient.SearchAsync(query, SearchCategory.Artists);
         var results = await search.FetchItemsAsync(limit: 100);
-        return results.Select(r => new Artist(r.Id, r.Name)).ToList();
+        return results.OfType<ArtistSearchResult>().Select(r => new Artist(r.Id, r.Name)).ToList();
+    }
+
+    public async Task<List<Song>> SearchSongsAsync(string query)
+    {
+        var search = ytmClient.SearchAsync(query, SearchCategory.Songs);
+        var results = await search.FetchItemsAsync(limit: 100);
+        return results.OfType<SongSearchResult>().Where(r => r.Album is not null && r.Artists.Length > 0).Select(
+            r => new Song(
+                r.Id,
+                new Album(
+                    r.Album!.Id!,
+                    new Artist(r.Artists.First().Id!, r.Artists.First().Name),
+                    r.Album.Name,
+                    ThumbnailUrl: r.Thumbnails.OrderBy(t => t.Height).Select(t => t.Url).FirstOrDefault()),
+                r.Name,
+                r.Duration)).ToList();
+    }
+
+    public async Task<Song> GetSongAsync(string songId)
+    {
+        var songInfo = await ytmClient.GetSongVideoInfoAsync(songId);
+        var albumInfo = await ytmClient.GetAlbumInfoAsync(songInfo.Album!.Id!);
+        return new Song(
+            songInfo.Id,
+            new Album(
+                albumInfo.Id,
+                new Artist(albumInfo.Artists.First().Id!, albumInfo.Artists.First().Name),
+                albumInfo.Name,
+                albumInfo.ReleaseYear,
+                albumInfo.Thumbnails.OrderBy(t => t.Height).Select(t => t.Url).FirstOrDefault()),
+            songInfo.Name,
+            songInfo.Duration);
     }
 
     public async Task<Artist> GetArtistAsync(string artistId)
@@ -44,7 +77,7 @@ public sealed class YtmStreamingClient : IStreamingClient
     public async Task<List<Song>> GetSongsByAlbumAsync(Album album)
     {
         var results = await ytmClient.GetAlbumInfoAsync(album.Id);
-        return results.Songs.Select(s => new Song(s.Id!, album, s.SongNumber ?? 0, s.Name, s.Duration)).ToList();
+        return results.Songs.Select(s => new Song(s.Id!, album, s.Name, s.Duration, s.SongNumber)).ToList();
     }
 
     public async Task<SongStream> GetSongStreamAsync(string songId)

@@ -22,7 +22,7 @@ public sealed class ArtistView : View
         public const string LOADING = "loading...";
         public const string NO_ARTISTS_FOUND = "no artists found";
         public const string SELECT_ARTIST = "select an artist";
-        public const string NO_SONGS = "no songs";
+        public const string NO_SONGS = "no tracks found";
     }
 
     private readonly SongTable songTable;

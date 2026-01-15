@@ -9,6 +9,7 @@ using Terminal.Gui.App;
 using Terminal.Gui.Drawing;
 using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
+using static Smoc.Ui.Components.SongTable;
 
 public sealed class PlayerView : View
 {
@@ -30,7 +31,7 @@ public sealed class PlayerView : View
             Y = Pos.Center(),
             Text = "queue is empty"
         };
-        songTable = new SongTable(SongTable.SongTableColumns.All)
+        songTable = new SongTable(SongTableColumns.Album | SongTableColumns.Song | SongTableColumns.Length | SongTableColumns.Year)
         {
             Width = Dim.Fill(),
             Height = Dim.Fill()

@@ -9,5 +9,8 @@ public enum Mode
     Artist,
 
     [DisplayNameAttribute("COMMAND")]
-    Command
+    Command,
+
+    [DisplayNameAttribute("TRACK")]
+    Song
 }

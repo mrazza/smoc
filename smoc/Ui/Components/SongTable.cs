@@ -79,7 +79,7 @@ public sealed class SongTable : TableView
             var values = new object[songTableData.Columns.Count];
             if (columns.HasFlag(SongTableColumns.Number))
             {
-                values[index++] = song.TrackNumber;
+                values[index++] = song.TrackNumber ?? 0;
             }
             if (columns.HasFlag(SongTableColumns.Artist))
             {
@@ -99,7 +99,7 @@ public sealed class SongTable : TableView
             }
             if (columns.HasFlag(SongTableColumns.Year))
             {
-                values[index++] = song.Album.ReleaseYear;
+                values[index++] = song.Album.ReleaseYear ?? 0;
             }
             songTableData.Rows.Add(values);
         }
@@ -211,7 +211,7 @@ public sealed class SongTable : TableView
 
         if (columns.HasFlag(SongTableColumns.Song))
         {
-            dataTable.Columns.Add("Song", typeof(string));
+            dataTable.Columns.Add("Track", typeof(string));
         }
 
         if (columns.HasFlag(SongTableColumns.Length))
