@@ -2,6 +2,7 @@
     "ConfigurationManager.ThrowOnJsonErrors": true,
     "Application.QuitKey": ":",
     "Theme": "default",
+    "SmocConfiguration.LogLevel": "Information",
     "Themes": [
         {
             "default": {
