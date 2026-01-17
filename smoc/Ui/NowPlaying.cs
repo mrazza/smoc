@@ -191,7 +191,7 @@ public sealed class NowPlaying : View
             var token = albumArtCancellationTokenSource.Token;
             var albumResponse = await httpClient.GetAsync(e.Album.ThumbnailUrl, token);
             var image = Image.Load<Rgba32>(albumResponse.Content.ReadAsStream());
-            Logging.Information($"Album art loaded: {e.Title}");
+            Logging.Debug($"Album art loaded: {e.Title}");
             token.ThrowIfCancellationRequested();
             albumArtView.SetImage(image);
         }

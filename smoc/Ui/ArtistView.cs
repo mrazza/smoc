@@ -21,6 +21,8 @@ public sealed class ArtistView : View
         public const string NO_ARTISTS_FOUND = "no artists found";
         public const string SELECT_ARTIST = "select an artist";
         public const string NO_SONGS = "no tracks found";
+        public const string SEARCH_ERROR = "error searching artists";
+        public const string SONG_LOAD_ERROR = "error loading tracks";
     }
 
     private readonly SongTable songTable;
@@ -116,6 +118,7 @@ public sealed class ArtistView : View
         try
         {
             ResetSongsTable(Messages.LOADING);
+            Logging.Information($"Loading artist {selectedArtist.Item.Name}...");
             var albums = await streamingClient.GetAlbumsByArtistAsync(selectedArtist.Item, token);
 
             if (token.IsCancellationRequested) return;
@@ -132,6 +135,8 @@ public sealed class ArtistView : View
             var songs = (await Task.WhenAll(songTasks)).SelectMany(s => s);
 
             if (token.IsCancellationRequested) return;
+
+            Logging.Information($"Loaded {songs.Count()} songs for artist {selectedArtist.Item.Name}.");
 
             if (!songs.Any())
             {
@@ -150,7 +155,8 @@ public sealed class ArtistView : View
         catch (Exception ex)
         {
             Logging.Error($"Error loading artist details: {ex.Message}");
-            ResetSongsTable("Error loading songs");
+            mainWindow.DisplayError(Messages.SONG_LOAD_ERROR);
+            ResetSongsTable(Messages.SONG_LOAD_ERROR);
         }
     }
 
@@ -182,6 +188,8 @@ public sealed class ArtistView : View
 
             if (token.IsCancellationRequested) return;
 
+            Logging.Information($"Found {artists.Count} artists for search '{args}'.");
+
             if (artists.Count == 0)
             {
                 ResetSearchResults(Messages.NO_ARTISTS_FOUND);
@@ -199,7 +207,8 @@ public sealed class ArtistView : View
         catch (Exception ex)
         {
             Logging.Error($"Error searching artists: {ex.Message}");
-            ResetSearchResults("Error searching artists");
+            mainWindow.DisplayError(Messages.SEARCH_ERROR);
+            ResetSearchResults(Messages.SEARCH_ERROR);
         }
     }
 
