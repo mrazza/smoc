@@ -33,7 +33,7 @@ public sealed class MainWindow : Runnable
         CanFocus = true;
 
         this.streamingClient = streamingClient;
-        playerService = new PlayerService(streamingClient);
+        playerService = new PlayerService(this, streamingClient);
         commandService = new CommandService();
         nowPlaying = new NowPlaying(this, playerService, commandService);
         commandLine = new CommandLine()

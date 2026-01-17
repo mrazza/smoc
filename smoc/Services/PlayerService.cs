@@ -1,4 +1,5 @@
 using Smoc.Streaming;
+using Smoc.Ui;
 using SoundFlow.Abstracts.Devices;
 using SoundFlow.Backends.MiniAudio;
 using SoundFlow.Codecs.FFMpeg;
@@ -9,6 +10,7 @@ namespace Smoc.Services;
 
 public sealed class PlayerService : IDisposable
 {
+    private readonly MainWindow mainWindow;
     private readonly IStreamingClient streamingClient;
     private readonly MiniAudioEngine audioEngine;
     private readonly DeviceInfo playbackDeviceInfo;
@@ -40,12 +42,13 @@ public sealed class PlayerService : IDisposable
         set
         {
             this.playbackDevice.MasterMixer.Volume = value;
-            VolumeChanged?.Invoke(this, value);
+            InvokeAppEvent(VolumeChanged, value);
         }
     }
 
-    public PlayerService(IStreamingClient streamingClient)
+    public PlayerService(MainWindow mainWindow, IStreamingClient streamingClient)
     {
+        this.mainWindow = mainWindow;
         this.streamingClient = streamingClient;
         this.audioEngine = new MiniAudioEngine();
         audioEngine.RegisterCodecFactory(new FFmpegCodecFactory());
@@ -63,13 +66,13 @@ public sealed class PlayerService : IDisposable
     public void QueueSong(Song song)
     {
         playbackQueue.Add(song);
-        QueueChanged?.Invoke(this, EventArgs.Empty);
+        InvokeAppEvent(QueueChanged);
     }
 
     public void QueueSongs(IEnumerable<Song> songs)
     {
         playbackQueue.AddRange(songs);
-        QueueChanged?.Invoke(this, EventArgs.Empty);
+        InvokeAppEvent(QueueChanged);
     }
 
     public async Task ChangeTrack(int index)
@@ -87,7 +90,7 @@ public sealed class PlayerService : IDisposable
     public void ClearPlaybackQueue()
     {
         playbackQueue.Clear();
-        QueueChanged?.Invoke(this, EventArgs.Empty);
+        InvokeAppEvent(QueueChanged);
     }
 
     public async Task PlayPause()
@@ -110,7 +113,7 @@ public sealed class PlayerService : IDisposable
             case PlaybackState.Paused:
                 streamPlaybackService?.Play();
                 playbackState = PlaybackState.Playing;
-                PlaybackStateChanged?.Invoke(this, playbackState);
+                InvokeAppEvent(PlaybackStateChanged, playbackState);
                 return;
             case PlaybackState.Stopped:
                 if (playbackQueue.Count == 0)
@@ -120,7 +123,7 @@ public sealed class PlayerService : IDisposable
 
                 streamPlaybackService?.Dispose();
                 playbackState = PlaybackState.Playing;
-                PlaybackStateChanged?.Invoke(this, playbackState);
+                InvokeAppEvent(PlaybackStateChanged, playbackState);
                 await PlayCurrentSong();
                 return;
         }
@@ -135,7 +138,7 @@ public sealed class PlayerService : IDisposable
 
         streamPlaybackService?.Pause();
         playbackState = PlaybackState.Paused;
-        PlaybackStateChanged?.Invoke(this, playbackState);
+        InvokeAppEvent(PlaybackStateChanged, playbackState);
     }
 
     public void Stop()
@@ -146,7 +149,7 @@ public sealed class PlayerService : IDisposable
         }
 
         playbackState = PlaybackState.Stopped;
-        PlaybackStateChanged?.Invoke(this, playbackState);
+        InvokeAppEvent(PlaybackStateChanged, playbackState);
         streamPlaybackService?.Dispose();
         streamPlaybackService = null;
     }
@@ -162,7 +165,7 @@ public sealed class PlayerService : IDisposable
             Logging.Debug($"Reached the end of the queue, stopping playback.");
             currentPlaybackIndex = 0;
             playbackState = PlaybackState.Stopped;
-            PlaybackStateChanged?.Invoke(this, playbackState);
+            InvokeAppEvent(PlaybackStateChanged, playbackState);
         }
         else
         {
@@ -237,13 +240,42 @@ public sealed class PlayerService : IDisposable
 
             streamPlaybackService = new StreamPlaybackService(audioEngine, playbackDevice, songStream.Stream, format);
             streamPlaybackService.StreamEnded += OnStreamEnded;
-            streamPlaybackService.PositionChanged += (sender, args) => PositionChanged?.Invoke(this, args);
+            streamPlaybackService.PositionChanged += (sender, args) => InvokeAppEvent(PositionChanged, args);
             streamPlaybackService.Play();
-            SongChanged?.Invoke(this, currentSong);
+            InvokeAppEvent(SongChanged, currentSong);
         }
         catch (OperationCanceledException)
         {
             Logging.Debug($"Playback setup for {currentSong.Title} cancelled.");
         }
+    }
+
+    /// <summary>
+    /// Invokes an event handler on the UI thread.
+    /// </summary>
+    /// <remarks>
+    /// This is required because many events from the underlying SoundFlow playback system
+    /// can be triggered for audio-specific threads and subscribers will expect all event
+    /// handlers to marshal back to the UI thread.
+    /// </remarks>
+    /// <param name="eventHandler">The event handler to invoke.</param>
+    private void InvokeAppEvent(EventHandler? eventHandler)
+    {
+        mainWindow.App?.Invoke(() => eventHandler?.Invoke(this, EventArgs.Empty));
+    }
+
+    /// <summary>
+    /// Invokes an event handler on the UI thread.
+    /// </summary>
+    /// <remarks>
+    /// This is required because many events from the underlying SoundFlow playback system
+    /// can be triggered for audio-specific threads and subscribers will expect all event
+    /// handlers to marshal back to the UI thread.
+    /// </remarks>
+    /// <param name="eventHandler">The event handler to invoke.</param>
+    /// <param name="args">The arguments to pass to the event handler.</param>
+    private void InvokeAppEvent<T>(EventHandler<T>? eventHandler, T args)
+    {
+        mainWindow.App?.Invoke(() => eventHandler?.Invoke(this, args));
     }
 }
