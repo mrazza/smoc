@@ -1,9 +1,10 @@
 using System.Data;
 using System.Drawing;
 using Smoc.Streaming;
-using Terminal.Gui.App;
 using Terminal.Gui.Configuration;
 using Terminal.Gui.Drawing;
+using Terminal.Gui.Input;
+using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
 
 namespace Smoc.Ui.Components;
@@ -66,6 +67,13 @@ public sealed class SongTable : TableView
         Table = new DataTableSource(songTableData);
         songs = [];
         CanFocus = false;
+
+        // We don't bind left and right as directional keys here because the table
+        // selects the entire row and we want to use left and right for navigation.
+        VimKeyBindings.AddDirectionalKeyBindings(KeyBindings, bindLeftRight: false);
+        VimKeyBindings.AddNavigationKeyBindings(KeyBindings, bindUpDown: false);
+        KeyBindings.Remove(Key.CursorRight);
+        KeyBindings.Remove(Key.CursorLeft);
     }
 
     public void SetSongs(IEnumerable<Song> songs)
@@ -102,6 +110,16 @@ public sealed class SongTable : TableView
                 values[index++] = song.Album.ReleaseYear ?? 0;
             }
             songTableData.Rows.Add(values);
+        }
+    }
+
+    protected override void OnHasFocusChanged(bool newHasFocus, View? previousFocusedView, View? focusedView)
+    {
+        base.OnHasFocusChanged(newHasFocus, previousFocusedView, focusedView);
+
+        if (newHasFocus && SelectedRow == -1 && songTableData.Rows.Count > 0)
+        {
+            SelectedRow = 0;
         }
     }
 
