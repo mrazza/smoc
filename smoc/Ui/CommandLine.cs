@@ -44,6 +44,7 @@ public sealed class CommandLine : View
 
     public void DisplayError(string message)
     {
+        Logging.Warning($"Displaying error: {message}");
         ClearError();
         errorLabel.Text = message;
         errorTimeoutTracker = App!.AddTimeout(TimeSpan.FromSeconds(5), () => { ClearError(); return false; });

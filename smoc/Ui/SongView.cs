@@ -16,6 +16,7 @@ public sealed class SongView : View
     {
         public const string SEARCHING = "searching...";
         public const string NO_SONGS = "no tracks found";
+        public const string SEARCH_ERROR = "error searching tracks";
     }
 
     private readonly MainWindow mainWindow;
@@ -93,6 +94,8 @@ public sealed class SongView : View
 
             if (token.IsCancellationRequested) return;
 
+            Logging.Information($"Found {songs.Count} tracks for search '{args}'.");
+
             if (songs.Count == 0)
             {
                 ResetTable(Messages.NO_SONGS);
@@ -110,7 +113,8 @@ public sealed class SongView : View
         catch (Exception ex)
         {
             Logging.Error($"Error searching tracks: {ex.Message}");
-            ResetTable("Error searching tracks");
+            mainWindow.DisplayError(Messages.SEARCH_ERROR);
+            ResetTable(Messages.SEARCH_ERROR);
         }
     }
 
