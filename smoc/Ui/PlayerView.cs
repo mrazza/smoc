@@ -1,6 +1,7 @@
 namespace Smoc.Ui;
 
 using System;
+using System.Threading;
 using Smoc.Services;
 using Smoc.Streaming;
 using Smoc.Ui.Components;
@@ -17,6 +18,7 @@ public sealed class PlayerView : View
     private readonly Label noSongsLabel;
     private readonly PlayerService playerService;
     private readonly MainWindow mainWindow;
+    private CancellationTokenSource? cts;
 
     public PlayerView(MainWindow mainWindow, CommandService commandService, PlayerService playerService)
     {
@@ -51,6 +53,8 @@ public sealed class PlayerView : View
 
     protected override void Dispose(bool disposing)
     {
+        cts?.Cancel();
+        cts?.Dispose();
         playerService.QueueChanged -= OnQueueChanged;
         playerService.SongChanged -= OnSongChanged;
         songTable.SongSelected -= OnSongSelected;
@@ -68,9 +72,26 @@ public sealed class PlayerView : View
         }
     }
 
+    private CancellationToken StartNewOperation()
+    {
+        cts?.Cancel();
+        cts?.Dispose();
+        cts = new CancellationTokenSource();
+        return cts.Token;
+    }
+
     private async void OnSongSelected(object? sender, Song e)
     {
-        await playerService.ChangeTrack(songTable.SelectedRow);
+        var cancellationToken = StartNewOperation();
+
+        try
+        {
+            await playerService.ChangeTrack(songTable.SelectedRow, cancellationToken);
+        }
+        catch (Exception) when (cts?.IsCancellationRequested == true)
+        {
+            return;
+        }
     }
 
     private void OnSongChanged(object? sender, Song e)
