@@ -71,7 +71,7 @@ public sealed class PlayerService : IDisposable
         QueueChanged?.Invoke(this, EventArgs.Empty);
     }
 
-    public async Task ChangeTrack(int index)
+    public async Task ChangeTrack(int index, CancellationToken cancellationToken = default)
     {
         if (index < 0 || index >= playbackQueue.Count)
         {
@@ -80,7 +80,7 @@ public sealed class PlayerService : IDisposable
 
         Stop();
         currentPlaybackIndex = index;
-        await Play();
+        await Play(cancellationToken);
     }
 
     public void ClearPlaybackQueue()
@@ -102,7 +102,7 @@ public sealed class PlayerService : IDisposable
         }
     }
 
-    public async Task Play()
+    public async Task Play(CancellationToken cancellationToken = default)
     {
         switch (playbackState)
         {
@@ -120,7 +120,7 @@ public sealed class PlayerService : IDisposable
                 streamPlaybackService?.Dispose();
                 playbackState = PlaybackState.Playing;
                 PlaybackStateChanged?.Invoke(this, playbackState);
-                await PlayCurrentSong();
+                await PlayCurrentSong(cancellationToken);
                 return;
         }
     }
@@ -187,7 +187,7 @@ public sealed class PlayerService : IDisposable
         return playbackQueue[currentPlaybackIndex];
     }
 
-    private async Task PlayCurrentSong()
+    private async Task PlayCurrentSong(CancellationToken cancellationToken = default)
     {
         if (GetCurrentSong() is not Song currentSong)
         {
@@ -195,7 +195,7 @@ public sealed class PlayerService : IDisposable
         }
 
         Logging.Debug($"Starting playback for {currentSong.Title} ({currentSong.Id})...");
-        var songStream = await streamingClient.GetSongStreamAsync(currentSong.Id);
+        var songStream = await streamingClient.GetSongStreamAsync(currentSong.Id, cancellationToken);
         Logging.Debug($"Received stream for {currentSong.Title} ({currentSong.Id}), decoding format...");
 
         var codec = songStream.Codec;
