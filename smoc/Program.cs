@@ -1,6 +1,7 @@
 using System.CommandLine;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
+using Smoc.Configuration;
 using Smoc.Streaming;
 using Smoc.Streaming.YouTubeMusic;
 using Smoc.Ui;
@@ -44,13 +45,13 @@ public static class Program
                 var configFile = File.ReadAllText(CONFIG_PATH);
                 ConfigurationManager.RuntimeConfig = configFile;
             }
-            Console.WriteLine(ConfigurationManager.RuntimeConfig);
+
             ConfigurationManager.Enable(ConfigLocations.AppResources | ConfigLocations.Runtime);
 
             using IApplication application = Application.Create().Init();
 
             using ILoggerFactory factory = LoggerFactory.Create(
-                builder => builder.SetMinimumLevel(LogLevel.Debug).AddFile(LOG_PATH, LogLevel.Debug, retainedFileCountLimit: 2));
+                builder => builder.SetMinimumLevel(SmocConfiguration.LogLevel).AddFile(LOG_PATH, SmocConfiguration.LogLevel, retainedFileCountLimit: 2));
             ILogger logger = factory.CreateLogger("SMoC");
             Logging.Logger = logger;
             logger.LogInformation("SMoC starting...");
