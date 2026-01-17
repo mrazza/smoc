@@ -22,14 +22,18 @@ public sealed class YtmStreamingClient : IStreamingClient
     public async Task<List<Artist>> SearchArtistsAsync(string query, CancellationToken cancellationToken = default)
     {
         var search = ytmClient.SearchAsync(query, SearchCategory.Artists);
+        cancellationToken.ThrowIfCancellationRequested();
         var results = await search.FetchItemsAsync(limit: 100);
+        cancellationToken.ThrowIfCancellationRequested();
         return results.OfType<ArtistSearchResult>().Select(r => new Artist(r.Id, r.Name)).ToList();
     }
 
     public async Task<List<Song>> SearchSongsAsync(string query, CancellationToken cancellationToken = default)
     {
         var search = ytmClient.SearchAsync(query, SearchCategory.Songs);
+        cancellationToken.ThrowIfCancellationRequested();
         var results = await search.FetchItemsAsync(limit: 100);
+        cancellationToken.ThrowIfCancellationRequested();
         return results.OfType<SongSearchResult>().Where(r => r.Album is not null && r.Artists.Length > 0).Select(
             r => new Song(
                 r.Id,
@@ -44,8 +48,11 @@ public sealed class YtmStreamingClient : IStreamingClient
 
     public async Task<Song> GetSongAsync(string songId, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var songInfo = await ytmClient.GetSongVideoInfoAsync(songId);
+        cancellationToken.ThrowIfCancellationRequested();
         var albumInfo = await ytmClient.GetAlbumInfoAsync(songInfo.Album!.Id!);
+        cancellationToken.ThrowIfCancellationRequested();
         return new Song(
             songInfo.Id,
             new Album(
@@ -60,13 +67,17 @@ public sealed class YtmStreamingClient : IStreamingClient
 
     public async Task<Artist> GetArtistAsync(string artistId, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var result = await ytmClient.GetArtistInfoAsync(artistId);
+        cancellationToken.ThrowIfCancellationRequested();
         return new Artist(result.Id, result.Name);
     }
 
     public async Task<List<Album>> GetAlbumsByArtistAsync(Artist artist, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var results = await ytmClient.GetArtistInfoAsync(artist.Id);
+        cancellationToken.ThrowIfCancellationRequested();
         return results.Albums.Select(s => new Album(
             s.Id,
             artist,
@@ -77,7 +88,9 @@ public sealed class YtmStreamingClient : IStreamingClient
 
     public async Task<List<Song>> GetSongsByAlbumAsync(Album album, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var results = await ytmClient.GetAlbumInfoAsync(album.Id);
+        cancellationToken.ThrowIfCancellationRequested();
         return results.Songs.Select(s => new Song(s.Id!, album, s.Name, s.Duration, s.SongNumber)).ToList();
     }
 
@@ -86,12 +99,16 @@ public sealed class YtmStreamingClient : IStreamingClient
         if (authedYtmClient == null)
             throw new InvalidOperationException("No authed YTM client privided.");
 
+        cancellationToken.ThrowIfCancellationRequested();
         var streamingData = await authedYtmClient.GetStreamingDataAsync(songId);
+        cancellationToken.ThrowIfCancellationRequested();
         var highestAudioStreamInfo = streamingData.StreamInfo
             .OfType<AudioStreamInfo>()
             .OrderByDescending(info => info.Bitrate)
             .First();
+        cancellationToken.ThrowIfCancellationRequested();
         var stream = await highestAudioStreamInfo.GetStreamAsync();
+        cancellationToken.ThrowIfCancellationRequested();
         return new SongStream(songId, highestAudioStreamInfo.Container.Codecs, stream);
     }
 
