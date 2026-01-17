@@ -1,11 +1,7 @@
 using System.Reflection;
-using Microsoft.VisualBasic;
 using Smoc.Services;
 using Smoc.Streaming;
-using Smoc.Streaming.YouTubeMusic;
-using Smoc.Ui.Components;
 using Smoc.Ui.Models;
-using Terminal.Gui.App;
 using Terminal.Gui.Input;
 using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;

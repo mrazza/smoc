@@ -3,14 +3,12 @@ namespace Smoc.Ui;
 using System;
 using System.Collections.ObjectModel;
 using System.Data;
-using System.Drawing;
 using Smoc.Services;
 using Smoc.Streaming;
 using Smoc.Ui.Components;
 using Smoc.Ui.Models;
 using Terminal.Gui.App;
 using Terminal.Gui.Drawing;
-using Terminal.Gui.Input;
 using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
 

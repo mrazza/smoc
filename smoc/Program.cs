@@ -56,9 +56,15 @@ public static class Program
             logger.LogInformation("SMoC starting...");
 
             application.Mouse.IsMouseDisabled = true;
+            VimKeyBindings.AddNavigationKeyBindings(application.Keyboard.KeyBindings);
             IStreamingClient streamingClient = CreateStreamingClient();
             using var window = new MainWindow(streamingClient);
-            application.Run(window);
+            application.Run(window, (e) =>
+            {
+                Logging.Error(e.ToString());
+                window.DisplayError(e.Message);
+                return true;
+            });
         });
 
         await rootCommand.Parse(args).InvokeAsync();

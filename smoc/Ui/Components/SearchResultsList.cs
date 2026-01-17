@@ -10,6 +10,7 @@ public sealed class SearchResultsList : ListView
     public SearchResultsList()
         : base()
     {
+        VimKeyBindings.AddDirectionalKeyBindings(KeyBindings);
     }
 
     protected override bool OnKeyDown(Key key)

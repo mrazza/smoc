@@ -1,6 +1,5 @@
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Processing;
 using Smoc.Services;
 using Smoc.Streaming;
 using Smoc.Ui.Components;
@@ -9,7 +8,6 @@ using Terminal.Gui.Drawing;
 using Terminal.Gui.Input;
 using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
-using Color = Terminal.Gui.Drawing.Color;
 
 namespace Smoc.Ui;
 
