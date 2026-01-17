@@ -111,6 +111,7 @@ public sealed class PlayerService : IDisposable
         switch (playbackState)
         {
             case PlaybackState.Paused:
+                Logging.Debug("Resuming playback...");
                 streamPlaybackService?.Play();
                 playbackState = PlaybackState.Playing;
                 InvokeAppEvent(PlaybackStateChanged, playbackState);
@@ -118,15 +119,19 @@ public sealed class PlayerService : IDisposable
             case PlaybackState.Stopped:
                 if (playbackQueue.Count == 0)
                 {
+                    Logging.Debug("No songs in queue, cannot start playback.");
                     return;
                 }
 
+                Logging.Debug("Starting playback...");
                 streamPlaybackService?.Dispose();
                 playbackState = PlaybackState.Playing;
                 InvokeAppEvent(PlaybackStateChanged, playbackState);
                 await PlayCurrentSong();
                 return;
         }
+
+        Logging.Debug($"Playback requested when in invalid state {playbackState}.");
     }
 
     public void Pause()
@@ -135,6 +140,8 @@ public sealed class PlayerService : IDisposable
         {
             return;
         }
+
+        Logging.Debug("Pausing playback...");
 
         streamPlaybackService?.Pause();
         playbackState = PlaybackState.Paused;
@@ -147,6 +154,8 @@ public sealed class PlayerService : IDisposable
         {
             return;
         }
+
+        Logging.Debug("Stopping playback...");
 
         playbackState = PlaybackState.Stopped;
         InvokeAppEvent(PlaybackStateChanged, playbackState);
