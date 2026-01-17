@@ -18,6 +18,7 @@ public sealed class PlayerService : IDisposable
     private int currentPlaybackIndex;
     private PlaybackState playbackState;
     private StreamPlaybackService? streamPlaybackService;
+    private CancellationTokenSource? playbackCts;
 
     public event EventHandler<float>? VolumeChanged;
     public event EventHandler<Song>? SongChanged;
@@ -173,6 +174,8 @@ public sealed class PlayerService : IDisposable
     public void Dispose()
     {
         Stop();
+        playbackCts?.Cancel();
+        playbackCts?.Dispose();
         playbackDevice.Dispose();
         audioEngine.Dispose();
     }
@@ -194,30 +197,53 @@ public sealed class PlayerService : IDisposable
             throw new InvalidOperationException("No song in queue");
         }
 
-        Logging.Debug($"Starting playback for {currentSong.Title} ({currentSong.Id})...");
-        var songStream = await streamingClient.GetSongStreamAsync(currentSong.Id);
-        Logging.Debug($"Received stream for {currentSong.Title} ({currentSong.Id}), decoding format...");
+        // Cancel any previous playback setup
+        playbackCts?.Cancel();
+        playbackCts?.Dispose();
+        playbackCts = new CancellationTokenSource();
+        var token = playbackCts.Token;
 
-        var codec = songStream.Codec;
-        if (codec.StartsWith("mp4a"))
+        try
         {
-            codec = "m4a";
+            Logging.Debug($"Starting playback for {currentSong.Title} ({currentSong.Id})...");
+            var songStream = await streamingClient.GetSongStreamAsync(currentSong.Id, token);
+
+            if (token.IsCancellationRequested) return;
+
+            Logging.Debug($"Received stream for {currentSong.Title} ({currentSong.Id}), decoding format...");
+
+            var codec = songStream.Codec;
+            if (codec.StartsWith("mp4a"))
+            {
+                codec = "m4a";
+            }
+
+            // Check again before expensive operations
+            if (token.IsCancellationRequested) return;
+
+            using var decoder = audioEngine.CreateDecoder(songStream.Stream, codec, AudioFormat.DvdHq);
+
+            var format = new AudioFormat
+            {
+                Format = decoder.SampleFormat,
+                Channels = decoder.Channels,
+                SampleRate = decoder.SampleRate,
+                Layout = AudioFormat.GetLayoutFromChannels(decoder.Channels)
+            };
+            Logging.Debug($"Decoded format for {currentSong.Title} ({currentSong.Id}): {format.Format}, {format.Channels}, {format.SampleRate}, {format.Layout}");
+
+            // Final check before starting playback service
+            if (token.IsCancellationRequested) return;
+
+            streamPlaybackService = new StreamPlaybackService(audioEngine, playbackDevice, songStream.Stream, format);
+            streamPlaybackService.StreamEnded += OnStreamEnded;
+            streamPlaybackService.PositionChanged += (sender, args) => PositionChanged?.Invoke(this, args);
+            streamPlaybackService.Play();
+            SongChanged?.Invoke(this, currentSong);
         }
-
-        using var decoder = audioEngine.CreateDecoder(songStream.Stream, codec, AudioFormat.DvdHq);
-
-        var format = new AudioFormat
+        catch (OperationCanceledException)
         {
-            Format = decoder.SampleFormat,
-            Channels = decoder.Channels,
-            SampleRate = decoder.SampleRate,
-            Layout = AudioFormat.GetLayoutFromChannels(decoder.Channels)
-        };
-        Logging.Debug($"Decoded format for {currentSong.Title} ({currentSong.Id}): {format.Format}, {format.Channels}, {format.SampleRate}, {format.Layout}");
-        streamPlaybackService = new StreamPlaybackService(audioEngine, playbackDevice, songStream.Stream, format);
-        streamPlaybackService.StreamEnded += OnStreamEnded;
-        streamPlaybackService.PositionChanged += (sender, args) => PositionChanged?.Invoke(this, args);
-        streamPlaybackService.Play();
-        SongChanged?.Invoke(this, currentSong);
+            Logging.Debug($"Playback setup for {currentSong.Title} cancelled.");
+        }
     }
 }
