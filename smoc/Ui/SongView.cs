@@ -23,6 +23,8 @@ public sealed class SongView : View
     private readonly Label songsLabel;
     private readonly IStreamingClient streamingClient;
 
+    private CancellationTokenSource? searchCts;
+
     public SongView(MainWindow mainWindow, CommandService commandService, IStreamingClient streamingClient)
     {
         this.mainWindow = mainWindow;
@@ -54,6 +56,8 @@ public sealed class SongView : View
 
     protected override void Dispose(bool disposing)
     {
+        searchCts?.Cancel();
+        searchCts?.Dispose();
         songTable.SongSelected -= OnSongSelected;
         base.Dispose(disposing);
     }
@@ -77,19 +81,40 @@ public sealed class SongView : View
             args = args[1..];
         }
 
+        // Cancel previous search
+        searchCts?.Cancel();
+        searchCts?.Dispose();
+        searchCts = new CancellationTokenSource();
+        var token = searchCts.Token;
+
         ResetTable();
 
-        Logging.Information($"Searching for track {args}...");
-        var songs = await streamingClient.SearchSongsAsync(args);
-        if (songs.Count == 0)
+        try
         {
-            ResetTable(Messages.NO_SONGS);
-            return;
-        }
+            Logging.Information($"Searching for track {args}...");
+            var songs = await streamingClient.SearchSongsAsync(args, token);
 
-        songTable.Style.ShowHeaders = true;
-        songsLabel.Visible = false;
-        songTable.SetSongs(songs);
+            if (token.IsCancellationRequested) return;
+
+            if (songs.Count == 0)
+            {
+                ResetTable(Messages.NO_SONGS);
+                return;
+            }
+
+            songTable.Style.ShowHeaders = true;
+            songsLabel.Visible = false;
+            songTable.SetSongs(songs);
+        }
+        catch (OperationCanceledException)
+        {
+            // Ignore
+        }
+        catch (Exception ex)
+        {
+            Logging.Error($"Error searching tracks: {ex.Message}");
+            ResetTable("Error searching tracks");
+        }
     }
 
     private void ResetTable(string message = Messages.SEARCHING)
