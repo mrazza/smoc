@@ -7,6 +7,11 @@ A TUI music player for streaming services. The currently implemented streaming s
 
 This project is not supported or endorsed by Google. The same warnings and disclamers for the well-known [yt-dlp](https://github.com/yt-dlp/yt-dlp) project apply here.
 
+This project is made possible by:
+- [Terminal.Gui](https://github.com/gui-cs/Terminal.Gui) - TUI Framework
+- [SoundFlow](https://github.com/LSXPrime/SoundFlow) - Cross-platform Audio
+- [YouTubeMusicAPI](https://github.com/IcySnex/YouTubeMusicAPI) - C# YouTube Music API Client
+
 ## Commands
 SMoC operates via a vim-style command bar. Switching between views and performing many actions occur via the bottom command bar. Much like vim, hitting the `:` key will activate COMMAND mode. The following commands are supported:
 - `:a`: Switch to the ARTIST mode
@@ -15,11 +20,23 @@ SMoC operates via a vim-style command bar. Switching between views and performin
 - `:t/<track name>`: Switch to the TRACK mode and search for a given track
 - `:np`: Switch to the now playing mode (current playback queue)
 - `:v/<volume>`: Change volume to the specified value
+- `:q`: Quit
+
+## Browsing and Tables
+Browsing elements in a table can be done with either directional arrow keys (`up`, `down`, `left`, `right`) or vim bindings (`h`, `j`, `k`, `l`). The current active table can be changed by either navigating left and right or pressing tab. Actions can be performed on the currently selected element by either pressing an action shortcut (below) or pressing `enter` which will bring up a context-specific action pop-over.
+
+### Track Tables
+TODO: List action bindings
+
+### Search Tables
+TODO: List action bindings
 
 ## Cookies
-In order to play most tracks, you will need to authenticate with a Google acocunt that has a value YouTube Music Subscription.
+In order to play most tracks, you will need to authenticate with a Google acocunt that has a valid YouTube Music Subscription.
 
 ### Browser Auth Setup Steps
+It is recommended to do this in a new incognito/private window and immediately closing the window without logging out.
+
 1. Open YouTube Music in your browser - ensure you are logged in.
 1. Open web developer tools (F12).
 1. Open Network tab and locate a POST request to `music.youtube.com`.
