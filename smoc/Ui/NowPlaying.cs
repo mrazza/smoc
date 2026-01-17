@@ -128,7 +128,7 @@ public sealed class NowPlaying : View
 
     private bool? OnHotKey(ICommandContext? ctx)
     {
-        playerService.PlayPause();
+        _ = playerService.PlayPause();
         return true;
     }
 

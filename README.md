@@ -11,6 +11,8 @@ This project is not supported or endorsed by Google. The same warnings and discl
 SMoC operates via a vim-style command bar. Switching between views and performing many actions occur via the bottom command bar. Much like vim, hitting the `:` key will activate COMMAND mode. The following commands are supported:
 - `:a`: Switch to the ARTIST mode
 - `:a/<artist name>`: Switch to the ARTIST mode and search for a given artist
+- `:t`: Switch to the TRACK mode
+- `:t/<track name>`: Switch to the TRACK mode and search for a given track
 - `:np`: Switch to the now playing mode (current playback queue)
 - `:v/<volume>`: Change volume to the specified value
 
