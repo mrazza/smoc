@@ -22,6 +22,7 @@ public sealed class SongView : View
     private readonly SongTable songTable;
     private readonly Label songsLabel;
     private readonly IStreamingClient streamingClient;
+    private CancellationTokenSource? _cts;
 
     public SongView(MainWindow mainWindow, CommandService commandService, IStreamingClient streamingClient)
     {
@@ -54,8 +55,18 @@ public sealed class SongView : View
 
     protected override void Dispose(bool disposing)
     {
+        _cts?.Cancel();
+        _cts?.Dispose();
         songTable.SongSelected -= OnSongSelected;
         base.Dispose(disposing);
+    }
+
+    private CancellationToken StartNewOperation()
+    {
+        _cts?.Cancel();
+        _cts?.Dispose();
+        _cts = new CancellationTokenSource();
+        return _cts.Token;
     }
 
     private void OnSongSelected(object? sender, Song e)
@@ -66,30 +77,39 @@ public sealed class SongView : View
     private async void OnTrackSearchCommand(string command, string args)
     {
         mainWindow.SetMode(Mode.Song);
+        var cancellationToken = StartNewOperation();
 
-        if (args.Length == 0)
+        try
         {
+            if (args.Length == 0)
+            {
+                return;
+            }
+
+            if (args[0] == '/')
+            {
+                args = args[1..];
+            }
+
+            ResetTable();
+
+            Logging.Information($"Searching for track {args}...");
+            var songs = await streamingClient.SearchSongsAsync(args, cancellationToken);
+            if (songs.Count == 0)
+            {
+                ResetTable(Messages.NO_SONGS);
+                return;
+            }
+
+            songTable.Style.ShowHeaders = true;
+            songsLabel.Visible = false;
+            songTable.SetSongs(songs);
+        }
+        catch (Exception) when (_cts?.IsCancellationRequested == true)
+        {
+            // Operation was cancelled, silently discard results
             return;
         }
-
-        if (args[0] == '/')
-        {
-            args = args[1..];
-        }
-
-        ResetTable();
-
-        Logging.Information($"Searching for track {args}...");
-        var songs = await streamingClient.SearchSongsAsync(args);
-        if (songs.Count == 0)
-        {
-            ResetTable(Messages.NO_SONGS);
-            return;
-        }
-
-        songTable.Style.ShowHeaders = true;
-        songsLabel.Visible = false;
-        songTable.SetSongs(songs);
     }
 
     private void ResetTable(string message = Messages.SEARCHING)
