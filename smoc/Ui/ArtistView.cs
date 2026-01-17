@@ -90,11 +90,7 @@ public sealed class ArtistView : View
 
     protected override void Dispose(bool disposing)
     {
-        searchCts?.Cancel();
-        searchCts?.Dispose();
-        selectArtistCts?.Cancel();
-        selectArtistCts?.Dispose();
-
+        CancelPendingSearches();
         searchResults.OpenSelectedItem -= OnArtistSelected;
         songTable.SongSelected -= OnSongSelected;
         base.Dispose(disposing);
@@ -115,9 +111,7 @@ public sealed class ArtistView : View
             return;
         }
 
-        // Cancel previous selection loading
-        selectArtistCts?.Cancel();
-        selectArtistCts?.Dispose();
+        CancelPendingSearches();
         selectArtistCts = new CancellationTokenSource();
         var token = selectArtistCts.Token;
 
@@ -176,15 +170,8 @@ public sealed class ArtistView : View
             args = args[1..];
         }
 
-        // Cancel previous search and selection
-        searchCts?.Cancel();
-        searchCts?.Dispose();
+        CancelPendingSearches();
         searchCts = new CancellationTokenSource();
-        // Also cancel any loading artist details, since we are searching anew (Artist view logic)
-        selectArtistCts?.Cancel();
-        selectArtistCts?.Dispose();
-        selectArtistCts = null;
-
         var token = searchCts.Token;
 
         try
@@ -216,6 +203,16 @@ public sealed class ArtistView : View
             Logging.Error($"Error searching artists: {ex.Message}");
             ResetSearchResults("Error searching artists");
         }
+    }
+
+    private void CancelPendingSearches()
+    {
+        searchCts?.Cancel();
+        searchCts?.Dispose();
+        searchCts = null;
+        selectArtistCts?.Cancel();
+        selectArtistCts?.Dispose();
+        selectArtistCts = null;
     }
 
     private void ResetSearchResults(string message = Messages.SEARCHING)

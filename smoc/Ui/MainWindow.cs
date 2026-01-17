@@ -124,7 +124,7 @@ public sealed class MainWindow : Runnable
         return true;
     }
 
-    private string GetModeDisplayName(Mode mode)
+    private static string GetModeDisplayName(Mode mode)
     {
         FieldInfo? fieldInfo = typeof(Mode).GetField(mode.ToString());
         if (fieldInfo is not null)

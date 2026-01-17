@@ -56,8 +56,7 @@ public sealed class SongView : View
 
     protected override void Dispose(bool disposing)
     {
-        searchCts?.Cancel();
-        searchCts?.Dispose();
+        CancelPendingSearches();
         songTable.SongSelected -= OnSongSelected;
         base.Dispose(disposing);
     }
@@ -81,9 +80,7 @@ public sealed class SongView : View
             args = args[1..];
         }
 
-        // Cancel previous search
-        searchCts?.Cancel();
-        searchCts?.Dispose();
+        CancelPendingSearches();
         searchCts = new CancellationTokenSource();
         var token = searchCts.Token;
 
@@ -115,6 +112,13 @@ public sealed class SongView : View
             Logging.Error($"Error searching tracks: {ex.Message}");
             ResetTable("Error searching tracks");
         }
+    }
+
+    private void CancelPendingSearches()
+    {
+        searchCts?.Cancel();
+        searchCts?.Dispose();
+        searchCts = null;
     }
 
     private void ResetTable(string message = Messages.SEARCHING)
