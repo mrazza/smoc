@@ -25,6 +25,8 @@ public sealed class ArtistView : View
         public const string NO_SONGS = "no tracks found";
     }
 
+    private CancellationTokenSource? cts;
+
     private readonly SongTable songTable;
     private readonly SearchResultsList searchResults;
     private readonly Label searchResultsLabel;
@@ -85,8 +87,18 @@ public sealed class ArtistView : View
         commandService.RegisterCommand("a", OnArtistSearchCommand);
     }
 
+    private CancellationToken StartNewOperation()
+    {
+        cts?.Cancel();
+        cts?.Dispose();
+        cts = new CancellationTokenSource();
+        return cts.Token;
+    }
+
     protected override void Dispose(bool disposing)
     {
+        cts?.Cancel();
+        cts?.Dispose();
         searchResults.OpenSelectedItem -= OnArtistSelected;
         songTable.SongSelected -= OnSongSelected;
         base.Dispose(disposing);
@@ -94,70 +106,96 @@ public sealed class ArtistView : View
 
     private async void OnSongSelected(object? sender, Song e)
     {
-        playerService.ClearPlaybackQueue();
-        playerService.QueueSongs(songTable.GetSongs());
-        await playerService.ChangeTrack(songTable.SelectedRow);
+        var cancellationToken = StartNewOperation();
+
+        try
+        {
+            playerService.ClearPlaybackQueue();
+            playerService.QueueSongs(songTable.GetSongs());
+            await playerService.ChangeTrack(songTable.SelectedRow);
+        }
+        catch (Exception) when (cancellationToken.IsCancellationRequested)
+        {
+            return;
+        }
     }
 
     private async void OnArtistSelected(object? sender, ListViewItemEventArgs e)
     {
-        if (e.Value is not SearchResultRow<Artist> selectedArtist)
+        var cancellationToken = StartNewOperation();
+
+        try
         {
-            ResetSongsTable();
+            if (e.Value is not SearchResultRow<Artist> selectedArtist)
+            {
+                ResetSongsTable();
+                return;
+            }
+
+            ResetSongsTable(Messages.LOADING);
+            var albums = await streamingClient.GetAlbumsByArtistAsync(selectedArtist.Item);
+            if (albums.Count == 0)
+            {
+                ResetSongsTable(Messages.NO_SONGS);
+                return;
+            }
+
+            var songTasks = albums.Select(album => streamingClient.GetSongsByAlbumAsync(album));
+            var songs = (await Task.WhenAll(songTasks)).SelectMany(s => s);
+
+            if (!songs.Any())
+            {
+                ResetSongsTable(Messages.NO_SONGS);
+                return;
+            }
+
+            songTable.SetSongs(songs);
+            songTable.Style.ShowHeaders = true;
+            songsLabel.Visible = false;
+        }
+        catch (Exception) when (cancellationToken.IsCancellationRequested)
+        {
             return;
         }
-
-        ResetSongsTable(Messages.LOADING);
-        var albums = await streamingClient.GetAlbumsByArtistAsync(selectedArtist.Item);
-        if (albums.Count == 0)
-        {
-            ResetSongsTable(Messages.NO_SONGS);
-            return;
-        }
-
-        var songTasks = albums.Select(album => streamingClient.GetSongsByAlbumAsync(album));
-        var songs = (await Task.WhenAll(songTasks)).SelectMany(s => s);
-
-        if (!songs.Any())
-        {
-            ResetSongsTable(Messages.NO_SONGS);
-            return;
-        }
-
-        songTable.SetSongs(songs);
-        songTable.Style.ShowHeaders = true;
-        songsLabel.Visible = false;
     }
 
     private async void OnArtistSearchCommand(string command, string args)
     {
         mainWindow.SetMode(Mode.Artist);
+        var cancellationToken = StartNewOperation();
 
-        if (args.Length == 0)
+        try
+        {
+            if (args.Length == 0)
+            {
+                return;
+            }
+
+            if (args[0] == '/')
+            {
+                args = args[1..];
+            }
+
+            Logging.Information($"Searching for artist {args}...");
+
+            ResetSongsTable();
+            ResetSearchResults();
+            var artists = await streamingClient.SearchArtistsAsync(args);
+
+            if (artists.Count == 0)
+            {
+                ResetSearchResults(Messages.NO_ARTISTS_FOUND);
+                return;
+            }
+
+            await searchResults.SetSourceAsync(new ObservableCollection<SearchResultRow<Artist>>(artists.Select(artist => new SearchResultRow<Artist>(artist, artist.Name))));
+            searchResults.SelectedItem = 0;
+            searchResultsLabel.Visible = false;
+        }
+        catch (Exception) when (cancellationToken.IsCancellationRequested)
         {
             return;
         }
-
-        if (args[0] == '/')
-        {
-            args = args[1..];
-        }
-
-        Logging.Information($"Searching for artist {args}...");
-
-        ResetSongsTable();
-        ResetSearchResults();
-        var artists = await streamingClient.SearchArtistsAsync(args);
-
-        if (artists.Count == 0)
-        {
-            ResetSearchResults(Messages.NO_ARTISTS_FOUND);
-            return;
-        }
-
-        await searchResults.SetSourceAsync(new ObservableCollection<SearchResultRow<Artist>>(artists.Select(artist => new SearchResultRow<Artist>(artist, artist.Name))));
-        searchResults.SelectedItem = 0;
-        searchResultsLabel.Visible = false;
     }
 
     private void ResetSearchResults(string message = Messages.SEARCHING)
