@@ -60,25 +60,19 @@ public sealed class CommandLine : View
         return base.OnKeyDownNotHandled(key);
     }
 
-    protected override bool OnHasFocusChanging(bool currentHasFocus, bool newHasFocus, View? currentFocused, View? newFocused)
+    protected override void OnHasFocusChanged(bool newHasFocus, View? previousFocusedView, View? focusedView)
     {
-        var cancel = base.OnHasFocusChanging(currentHasFocus, newHasFocus, currentFocused, newFocused);
-
-        if (!cancel)
+        base.OnHasFocusChanged(newHasFocus, previousFocusedView, focusedView);
+        if (newHasFocus)
         {
-            if (newHasFocus)
-            {
-                ClearError();
-                commandTextField.InsertText(":");
-            }
-            else
-            {
-                commandTextField.DeleteAll();
-                commandTextField.ClearHistoryChanges();
-            }
+            ClearError();
+            commandTextField.InsertText(":");
         }
-
-        return cancel;
+        else
+        {
+            commandTextField.DeleteAll();
+            commandTextField.ClearHistoryChanges();
+        }
     }
 
     private void ClearError()

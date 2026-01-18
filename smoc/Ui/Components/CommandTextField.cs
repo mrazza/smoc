@@ -1,3 +1,4 @@
+using Terminal.Gui.Drivers;
 using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
 
@@ -10,6 +11,7 @@ public sealed class CommandTextField : TextField
     {
         CanFocus = true;
         TabStop = TabBehavior.NoStop;
+        Cursor = new Cursor { Style = CursorStyle.Default };
     }
 
     protected override bool OnAdvancingFocus(NavigationDirection direction, TabBehavior? behavior)
