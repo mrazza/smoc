@@ -86,20 +86,37 @@ public sealed class SongView : View
         }
 
         // Always update the menu item actions with current song context
-        var menuItems = songActionPopover.Root!.SubViews.OfType<MenuItem>().ToList();
+        var root = songActionPopover.Root;
+        if (root is null) return;
+
+        var menuItems = root.SubViews.OfType<MenuItem>().ToList();
         if (menuItems.Count >= 4)
         {
             menuItems[0].Action = async () =>
             {
-                playerService.ClearPlaybackQueue();
-                playerService.QueueSongs(songsFromHere);
-                await playerService.ChangeTrack(0);
+                try
+                {
+                    playerService.ClearPlaybackQueue();
+                    playerService.QueueSongs(songsFromHere);
+                    await playerService.ChangeTrack(0);
+                }
+                catch (Exception ex)
+                {
+                    Logging.Error($"Error starting playback: {ex.Message}");
+                }
             };
             menuItems[1].Action = async () =>
             {
-                playerService.ClearPlaybackQueue();
-                playerService.QueueSong(selectedSong);
-                await playerService.ChangeTrack(0);
+                try
+                {
+                    playerService.ClearPlaybackQueue();
+                    playerService.QueueSong(selectedSong);
+                    await playerService.ChangeTrack(0);
+                }
+                catch (Exception ex)
+                {
+                    Logging.Error($"Error starting playback: {ex.Message}");
+                }
             };
             menuItems[2].Action = () => playerService.InsertAfterCurrent(selectedSong);
             menuItems[3].Action = () => playerService.QueueSong(selectedSong);
