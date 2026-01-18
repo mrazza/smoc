@@ -112,7 +112,7 @@ public sealed class SongView : View
         else
         {
             // Update the menu item actions with current song context
-            var menuItems = songActionPopover.SubViews.OfType<MenuItem>().ToList();
+            var menuItems = songActionPopover.Root!.SubViews.OfType<MenuItem>().ToList();
             if (menuItems.Count >= 4)
             {
                 menuItems[0].Action = async () =>
