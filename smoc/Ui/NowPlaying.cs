@@ -50,7 +50,9 @@ public sealed class NowPlaying : View
             Y = Pos.Absolute(0),
             Width = Dim.Absolute(7),
             Height = Dim.Fill(),
-            BorderStyle = LineStyle.Dashed
+            BorderStyle = LineStyle.Dashed,
+            TextAlignment = Alignment.Center,
+            Text = "??"
         };
         albumArtView.Margin!.Thickness = new Thickness(0, 0, 1, 0);
 
@@ -183,7 +185,11 @@ public sealed class NowPlaying : View
         this.artistLabel.Text = e.Artist.Name ?? Messages.NO_ARTIST;
 
         // Only bother downloading the album art if it has changed.
-        if (e.Album.ThumbnailUrl is not null && albumArtUrl != e.Album.ThumbnailUrl)
+        if (e.Album.ThumbnailUrl is null || e.Album.ThumbnailUrl.Length == 0)
+        {
+            albumArtView.ClearImage();
+        }
+        else if (albumArtUrl != e.Album.ThumbnailUrl)
         {
             albumArtUrl = e.Album.ThumbnailUrl;
             albumArtCancellationTokenSource?.Cancel();

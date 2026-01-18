@@ -21,6 +21,19 @@ public sealed class SixelImageView : View
         encoder = new SixelEncoder();
     }
 
+    public void ClearImage()
+    {
+        if (image is null)
+        {
+            return;
+        }
+
+        image = null;
+        sixelToRender = null;
+        App!.Driver!.GetSixels().Clear();
+        SetNeedsDraw();
+    }
+
     public void SetImage(Image<Rgba32> image)
     {
         this.image = image;
