@@ -71,15 +71,9 @@ public sealed class StatusBar : View
         base.Dispose(disposing);
     }
 
-    private TimeSpan lastPosition;
-
     private void OnPositionChanged(object? sender, TimeSpan e)
     {
-        if (e.Subtract(lastPosition) > TimeSpan.FromSeconds(1))
-        {
-            lastPosition = e;
-            UpdateState();
-        }
+        UpdateState();
     }
 
     private void OnSongChanged(object? sender, Song e)
@@ -94,36 +88,33 @@ public sealed class StatusBar : View
 
     private void UpdateState()
     {
-        App?.Invoke(() =>
+        string playbackStatePrefix = playerService.PlaybackState switch
         {
-            string playbackStatePrefix = playerService.PlaybackState switch
-            {
-                PlaybackState.Playing => Messages.PLAY,
-                PlaybackState.Paused => Messages.PAUSE,
-                PlaybackState.Stopped => Messages.STOP,
-                _ => Messages.UNKNOWN
-            };
+            PlaybackState.Playing => Messages.PLAY,
+            PlaybackState.Paused => Messages.PAUSE,
+            PlaybackState.Stopped => Messages.STOP,
+            _ => Messages.UNKNOWN
+        };
 
-            string songName = playerService.CurrentSong?.Title ?? Messages.NO_SONG;
-            string artistName = playerService.CurrentSong?.Artist.Name ?? Messages.NO_ARTIST;
-            string songDuration = playerService.Duration.ToString("mm\\:ss");
-            string songPosition = playerService.CurrentTime.ToString("mm\\:ss");
-            this.stateLabel.Text = $"{playbackStatePrefix} {artistName} - {songName} [{songPosition}/{songDuration}]";
-        });
+        string songName = playerService.CurrentSong?.Title ?? Messages.NO_SONG;
+        string artistName = playerService.CurrentSong?.Artist.Name ?? Messages.NO_ARTIST;
+        string songDuration = playerService.Duration.ToString("mm\\:ss");
+        string songPosition = playerService.CurrentTime.ToString("mm\\:ss");
+        stateLabel.Text = $"{playbackStatePrefix} {artistName} - {songName} [{songPosition}/{songDuration}]";
     }
 
     internal string GetMode()
     {
-        return this.modeLabel.Text;
+        return modeLabel.Text;
     }
 
     public void SetMode(string mode)
     {
-        this.modeLabel.Text = mode;
+        modeLabel.Text = mode;
     }
 
     public void SetState(string state)
     {
-        this.stateLabel.Text = state;
+        stateLabel.Text = state;
     }
 }
