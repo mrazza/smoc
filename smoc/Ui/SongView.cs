@@ -1,3 +1,4 @@
+using System.Drawing;
 using Smoc.Services;
 using Smoc.Streaming;
 using Smoc.Ui.Components;
@@ -26,6 +27,7 @@ public sealed class SongView : View
     private readonly PlayerService playerService;
 
     private CancellationTokenSource? searchCts;
+    private PopoverMenu? songActionPopover;
 
     public SongView(MainWindow mainWindow, CommandService commandService, IStreamingClient streamingClient, PlayerService playerService)
     {
@@ -66,7 +68,74 @@ public sealed class SongView : View
 
     private void OnSongSelected(object? sender, Song e)
     {
-        mainWindow.DisplayError("playing from song view not implemented.");
+        var selectedSong = e;
+        var selectedIndex = songTable.SelectedRow;
+        var songsFromHere = songTable.GetSelectedSongAndFollowingSongs();
+
+        if (songActionPopover is null)
+        {
+            songActionPopover = new PopoverMenu(
+            [
+                new MenuItem
+                {
+                    Title = "_Play All from Here",
+                    Action = async () =>
+                    {
+                        playerService.ClearPlaybackQueue();
+                        playerService.QueueSongs(songsFromHere);
+                        await playerService.ChangeTrack(0);
+                    }
+                },
+                new MenuItem
+                {
+                    Title = "Play _Only This",
+                    Action = async () =>
+                    {
+                        playerService.ClearPlaybackQueue();
+                        playerService.QueueSong(selectedSong);
+                        await playerService.ChangeTrack(0);
+                    }
+                },
+                new MenuItem
+                {
+                    Title = "Play _Next",
+                    Action = () => playerService.InsertAfterCurrent(selectedSong)
+                },
+                new MenuItem
+                {
+                    Title = "_Add to Queue",
+                    Action = () => playerService.QueueSong(selectedSong)
+                }
+            ]);
+            App!.Popover?.Register(songActionPopover);
+        }
+        else
+        {
+            // Update the menu item actions with current song context
+            var menuItems = songActionPopover.SubViews.OfType<MenuItem>().ToList();
+            if (menuItems.Count >= 4)
+            {
+                menuItems[0].Action = async () =>
+                {
+                    playerService.ClearPlaybackQueue();
+                    playerService.QueueSongs(songsFromHere);
+                    await playerService.ChangeTrack(0);
+                };
+                menuItems[1].Action = async () =>
+                {
+                    playerService.ClearPlaybackQueue();
+                    playerService.QueueSong(selectedSong);
+                    await playerService.ChangeTrack(0);
+                };
+                menuItems[2].Action = () => playerService.InsertAfterCurrent(selectedSong);
+                menuItems[3].Action = () => playerService.QueueSong(selectedSong);
+            }
+        }
+
+        var position = new Point(
+            songTable.FrameToScreen().X,
+            songTable.FrameToScreen().Y + songTable.SelectedRow + 1);
+        songActionPopover.MakeVisible(position);
     }
 
     private async void OnTrackSearchCommand(string command, string args)
