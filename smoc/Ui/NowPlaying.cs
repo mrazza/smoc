@@ -168,7 +168,7 @@ public sealed class NowPlaying : View
         }
     }
 
-    private void OnSongChanged(object? sender, Song e)
+    private async void OnSongChanged(object? sender, Song e)
     {
         Logging.Information($"Song changed: {e.Title}");
         this.songLabel.Text = e.Title ?? Messages.NO_SONG;
@@ -181,13 +181,11 @@ public sealed class NowPlaying : View
             albumArtCancellationTokenSource?.Cancel();
             albumArtCancellationTokenSource = new CancellationTokenSource();
             var token = albumArtCancellationTokenSource.Token;
-            httpClient.GetAsync(e.Album.ThumbnailUrl, token).ContinueWith((task) =>
-            {
-                var image = Image.Load<Rgba32>(task.Result.Content.ReadAsStream());
-                Logging.Information($"Album art loaded: {e.Title}");
-                token.ThrowIfCancellationRequested();
-                this.albumArtView.SetImage(image);
-            });
+            var albumResponse = await httpClient.GetAsync(e.Album.ThumbnailUrl, token);
+            var image = Image.Load<Rgba32>(albumResponse.Content.ReadAsStream());
+            Logging.Information($"Album art loaded: {e.Title}");
+            token.ThrowIfCancellationRequested();
+            albumArtView.SetImage(image);
         }
     }
 
