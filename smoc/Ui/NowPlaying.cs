@@ -161,7 +161,7 @@ public sealed class NowPlaying : View
         this.positionLabel.Text = e.ToString("mm\\:ss");
         this.durationLabel.Text = playerService.Duration.ToString("mm\\:ss");
 
-        var progress = (float)Math.Round(e / playerService.Duration, 4);
+        var progress = (float)Math.Round(e / playerService.Duration, 2);
         if (this.progressBar.Fraction != progress)
         {
             this.progressBar.Fraction = progress;
