@@ -75,6 +75,50 @@ public sealed class PlayerService : IDisposable
         InvokeAppEvent(QueueChanged);
     }
 
+    public void QueueNext(Song song)
+    {
+        if (playbackQueue.Count == 0)
+        {
+            QueueSong(song);
+            return;
+        }
+
+        var insertIndex = currentPlaybackIndex + 1;
+        if (insertIndex > playbackQueue.Count)
+        {
+            playbackQueue.Add(song);
+        }
+        else
+        {
+            playbackQueue.Insert(insertIndex, song);
+        }
+        InvokeAppEvent(QueueChanged);
+    }
+
+    public void QueueNext(IEnumerable<Song> songs)
+    {
+        if (playbackQueue.Count == 0)
+        {
+            QueueSongs(songs);
+            return;
+        }
+
+        var insertIndex = currentPlaybackIndex + 1;
+        if (insertIndex > playbackQueue.Count)
+        {
+            playbackQueue.AddRange(songs);
+        }
+        else
+        {
+            playbackQueue.InsertRange(insertIndex, songs);
+        }
+        InvokeAppEvent(QueueChanged);
+    }
+
+    public void QueueLast(Song song) => QueueSong(song);
+
+    public void QueueLast(IEnumerable<Song> songs) => QueueSongs(songs);
+
     public async Task ChangeTrack(int index)
     {
         if (index < 0 || index >= playbackQueue.Count)

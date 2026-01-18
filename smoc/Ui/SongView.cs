@@ -2,10 +2,12 @@ using Smoc.Services;
 using Smoc.Streaming;
 using Smoc.Ui.Components;
 using Smoc.Ui.Models;
+using Terminal.Gui;
 using Terminal.Gui.App;
 using Terminal.Gui.Drawing;
 using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
+using System.Drawing;
 using static Smoc.Ui.Components.SongTable;
 
 namespace Smoc.Ui;
@@ -23,13 +25,15 @@ public sealed class SongView : View
     private readonly SongTable songTable;
     private readonly Label songsLabel;
     private readonly IStreamingClient streamingClient;
+    private readonly PlayerService playerService;
 
     private CancellationTokenSource? searchCts;
 
-    public SongView(MainWindow mainWindow, CommandService commandService, IStreamingClient streamingClient)
+    public SongView(MainWindow mainWindow, CommandService commandService, IStreamingClient streamingClient, PlayerService playerService)
     {
         this.mainWindow = mainWindow;
         this.streamingClient = streamingClient;
+        this.playerService = playerService;
 
         Width = Dim.Fill();
         Height = Dim.Fill();
@@ -64,7 +68,42 @@ public sealed class SongView : View
 
     private void OnSongSelected(object? sender, Song e)
     {
-        mainWindow.DisplayError("playing from song view not implemented.");
+        var menu = new Smoc.Ui.Menus.SongContextMenu(playerService, e, songTable.GetSelectedSongAndFollowingSongs());
+
+        // Register the menu so it can be shown
+        App?.Popover?.Register(menu);
+
+        // Calculate position
+        var cellPoint = songTable.CellToScreen(0, songTable.SelectedRow);
+        if (cellPoint is { } p)
+        {
+            var tableScreenPos = songTable.FrameToScreen();
+            var offset = songTable.GetAdornmentsThickness();
+
+            // Default to below the row
+            var targetY = tableScreenPos.Y + offset.Top + p.Y + 1;
+
+            // Check if there is space below
+            int menuHeight = menu.RequiredHeight;
+            var screenHeight = App?.Screen.Height ?? 25;
+
+            if (targetY + menuHeight > screenHeight)
+            {
+                // Not enough space below, put it above
+                targetY = tableScreenPos.Y + offset.Top + p.Y - menuHeight + 2;
+            }
+
+            var screenPoint = new Point(
+                tableScreenPos.X + offset.Left + p.X,
+                targetY
+            );
+            menu.MakeVisible(screenPoint);
+        }
+        else
+        {
+            menu.MakeVisible();
+        }
+        menu.SetFocus();
     }
 
     private async void OnTrackSearchCommand(string command, string args)

@@ -30,7 +30,7 @@ public sealed class MainContent : View
         {
             Visible = false
         };
-        songView = new SongView(mainWindow, commandService, streamingClient)
+        songView = new SongView(mainWindow, commandService, streamingClient, playerService)
         {
             Visible = false
         };
