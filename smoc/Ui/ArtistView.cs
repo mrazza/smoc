@@ -37,7 +37,7 @@ public sealed class ArtistView : View
 
     private CancellationTokenSource? searchCts;
     private CancellationTokenSource? selectArtistCts;
-    private PopoverMenu? songActionPopover;
+    private SongActionPopoverHelper? songActionPopoverHelper;
 
     public ArtistView(MainWindow mainWindow, CommandService commandService, IStreamingClient streamingClient, PlayerService playerService)
     {
@@ -95,69 +95,23 @@ public sealed class ArtistView : View
         CancelPendingSearches();
         searchResults.OpenSelectedItem -= OnArtistSelected;
         songTable.SongSelected -= OnSongSelected;
-        songActionPopover?.Dispose();
+        songActionPopoverHelper?.Dispose();
         base.Dispose(disposing);
     }
 
     private void OnSongSelected(object? sender, Song e)
     {
+        songActionPopoverHelper ??= new SongActionPopoverHelper(playerService, this);
+
         var selectedSong = e;
         var selectedIndex = songTable.SelectedRow;
         var allSongs = songTable.GetSongs();
 
-        if (songActionPopover is null)
-        {
-            songActionPopover = new PopoverMenu(
-            [
-                new MenuItem { Title = "_Play All from Here" },
-                new MenuItem { Title = "Play _Only This" },
-                new MenuItem { Title = "Play _Next" },
-                new MenuItem { Title = "_Add to Queue" }
-            ]);
-            App!.Popover?.Register(songActionPopover);
-        }
-
-        // Always update the menu item actions with current song context
-        var root = songActionPopover.Root;
-        if (root is null) return;
-
-        var menuItems = root.SubViews.OfType<MenuItem>().ToList();
-        if (menuItems.Count >= 4)
-        {
-            menuItems[0].Action = async () =>
-            {
-                try
-                {
-                    playerService.ClearPlaybackQueue();
-                    playerService.QueueSongs(allSongs);
-                    await playerService.ChangeTrack(selectedIndex);
-                }
-                catch (Exception ex)
-                {
-                    Logging.Error($"Error starting playback: {ex.Message}");
-                }
-            };
-            menuItems[1].Action = async () =>
-            {
-                try
-                {
-                    playerService.ClearPlaybackQueue();
-                    playerService.QueueSong(selectedSong);
-                    await playerService.ChangeTrack(0);
-                }
-                catch (Exception ex)
-                {
-                    Logging.Error($"Error starting playback: {ex.Message}");
-                }
-            };
-            menuItems[2].Action = () => playerService.InsertAfterCurrent(selectedSong);
-            menuItems[3].Action = () => playerService.QueueSong(selectedSong);
-        }
-
         var position = new Point(
             songTable.FrameToScreen().X,
             songTable.FrameToScreen().Y + songTable.SelectedRow + 1);
-        songActionPopover.MakeVisible(position);
+
+        songActionPopoverHelper.Show(selectedSong, allSongs, selectedIndex, position);
     }
 
     private async void OnArtistSelected(object? sender, ListViewItemEventArgs e)
