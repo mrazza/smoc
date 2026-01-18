@@ -3,10 +3,12 @@ namespace Smoc.Ui;
 using System;
 using System.Collections.ObjectModel;
 using System.Data;
+using System.Drawing;
 using Smoc.Services;
 using Smoc.Streaming;
 using Smoc.Ui.Components;
 using Smoc.Ui.Models;
+using Terminal.Gui;
 using Terminal.Gui.App;
 using Terminal.Gui.Drawing;
 using Terminal.Gui.ViewBase;
@@ -96,11 +98,47 @@ public sealed class ArtistView : View
         base.Dispose(disposing);
     }
 
-    private async void OnSongSelected(object? sender, Song e)
+    private void OnSongSelected(object? sender, Song e)
     {
-        playerService.ClearPlaybackQueue();
-        playerService.QueueSongs(songTable.GetSongs());
-        await playerService.ChangeTrack(songTable.SelectedRow);
+        var menu = new Smoc.Ui.Menus.SongContextMenu(playerService, e, songTable.GetSelectedSongAndFollowingSongs());
+
+        // Register the menu so it can be shown
+        App?.Popover?.Register(menu);
+
+        // Calculate position
+        var cellPoint = songTable.CellToScreen(0, songTable.SelectedRow);
+        if (cellPoint is { } p)
+        {
+            var tableScreenPos = songTable.FrameToScreen();
+            var offset = songTable.GetAdornmentsThickness();
+
+            // Default to below the row
+            var targetY = tableScreenPos.Y + offset.Top + p.Y + 1;
+
+            // Check if there is space below
+            int menuHeight = menu.RequiredHeight;
+            var screenHeight = App?.Screen.Height ?? 25;
+
+            if (targetY + menuHeight > screenHeight)
+            {
+                // Not enough space below, put it above
+                // We want the bottom of the menu to be at the top of the row?
+                // Or just shift it up by height?
+                // Let's position it so the bottom of the menu is at p.Y
+                targetY = tableScreenPos.Y + offset.Top + p.Y - menuHeight + 2;
+            }
+
+            var screenPoint = new Point(
+                tableScreenPos.X + offset.Left + p.X,
+                targetY
+            );
+            menu.MakeVisible(screenPoint);
+        }
+        else
+        {
+            menu.MakeVisible();
+        }
+        menu.SetFocus();
     }
 
     private async void OnArtistSelected(object? sender, ListViewItemEventArgs e)
