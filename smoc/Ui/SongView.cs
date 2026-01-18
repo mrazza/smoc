@@ -63,6 +63,7 @@ public sealed class SongView : View
     {
         CancelPendingSearches();
         songTable.SongSelected -= OnSongSelected;
+        songActionPopover?.Dispose();
         base.Dispose(disposing);
     }
 
@@ -76,60 +77,32 @@ public sealed class SongView : View
         {
             songActionPopover = new PopoverMenu(
             [
-                new MenuItem
-                {
-                    Title = "_Play All from Here",
-                    Action = async () =>
-                    {
-                        playerService.ClearPlaybackQueue();
-                        playerService.QueueSongs(songsFromHere);
-                        await playerService.ChangeTrack(0);
-                    }
-                },
-                new MenuItem
-                {
-                    Title = "Play _Only This",
-                    Action = async () =>
-                    {
-                        playerService.ClearPlaybackQueue();
-                        playerService.QueueSong(selectedSong);
-                        await playerService.ChangeTrack(0);
-                    }
-                },
-                new MenuItem
-                {
-                    Title = "Play _Next",
-                    Action = () => playerService.InsertAfterCurrent(selectedSong)
-                },
-                new MenuItem
-                {
-                    Title = "_Add to Queue",
-                    Action = () => playerService.QueueSong(selectedSong)
-                }
+                new MenuItem { Title = "_Play All from Here" },
+                new MenuItem { Title = "Play _Only This" },
+                new MenuItem { Title = "Play _Next" },
+                new MenuItem { Title = "_Add to Queue" }
             ]);
             App!.Popover?.Register(songActionPopover);
         }
-        else
+
+        // Always update the menu item actions with current song context
+        var menuItems = songActionPopover.Root!.SubViews.OfType<MenuItem>().ToList();
+        if (menuItems.Count >= 4)
         {
-            // Update the menu item actions with current song context
-            var menuItems = songActionPopover.Root!.SubViews.OfType<MenuItem>().ToList();
-            if (menuItems.Count >= 4)
+            menuItems[0].Action = async () =>
             {
-                menuItems[0].Action = async () =>
-                {
-                    playerService.ClearPlaybackQueue();
-                    playerService.QueueSongs(songsFromHere);
-                    await playerService.ChangeTrack(0);
-                };
-                menuItems[1].Action = async () =>
-                {
-                    playerService.ClearPlaybackQueue();
-                    playerService.QueueSong(selectedSong);
-                    await playerService.ChangeTrack(0);
-                };
-                menuItems[2].Action = () => playerService.InsertAfterCurrent(selectedSong);
-                menuItems[3].Action = () => playerService.QueueSong(selectedSong);
-            }
+                playerService.ClearPlaybackQueue();
+                playerService.QueueSongs(songsFromHere);
+                await playerService.ChangeTrack(0);
+            };
+            menuItems[1].Action = async () =>
+            {
+                playerService.ClearPlaybackQueue();
+                playerService.QueueSong(selectedSong);
+                await playerService.ChangeTrack(0);
+            };
+            menuItems[2].Action = () => playerService.InsertAfterCurrent(selectedSong);
+            menuItems[3].Action = () => playerService.QueueSong(selectedSong);
         }
 
         var position = new Point(
