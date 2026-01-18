@@ -49,6 +49,7 @@ public sealed class SongTable : TableView
         : base()
     {
         FullRowSelect = true;
+        MultiSelect = false;
 
         Style.SmoothHorizontalScrolling = true;
         Style.AlwaysShowHeaders = true;
