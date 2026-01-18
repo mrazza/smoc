@@ -3,6 +3,7 @@ namespace Smoc.Ui;
 using System;
 using System.Collections.ObjectModel;
 using System.Data;
+using System.Drawing;
 using Smoc.Services;
 using Smoc.Streaming;
 using Smoc.Ui.Components;
@@ -36,6 +37,7 @@ public sealed class ArtistView : View
 
     private CancellationTokenSource? searchCts;
     private CancellationTokenSource? selectArtistCts;
+    private PopoverMenu? songActionPopover;
 
     public ArtistView(MainWindow mainWindow, CommandService commandService, IStreamingClient streamingClient, PlayerService playerService)
     {
@@ -96,11 +98,76 @@ public sealed class ArtistView : View
         base.Dispose(disposing);
     }
 
-    private async void OnSongSelected(object? sender, Song e)
+    private void OnSongSelected(object? sender, Song e)
     {
-        playerService.ClearPlaybackQueue();
-        playerService.QueueSongs(songTable.GetSongs());
-        await playerService.ChangeTrack(songTable.SelectedRow);
+        var selectedSong = e;
+        var selectedIndex = songTable.SelectedRow;
+        var allSongs = songTable.GetSongs();
+
+        if (songActionPopover is null)
+        {
+            songActionPopover = new PopoverMenu(
+            [
+                new MenuItem
+                {
+                    Title = "_Play All from Here",
+                    Action = async () =>
+                    {
+                        playerService.ClearPlaybackQueue();
+                        playerService.QueueSongs(allSongs);
+                        await playerService.ChangeTrack(selectedIndex);
+                    }
+                },
+                new MenuItem
+                {
+                    Title = "Play _Only This",
+                    Action = async () =>
+                    {
+                        playerService.ClearPlaybackQueue();
+                        playerService.QueueSong(selectedSong);
+                        await playerService.ChangeTrack(0);
+                    }
+                },
+                new MenuItem
+                {
+                    Title = "Play _Next",
+                    Action = () => playerService.InsertAfterCurrent(selectedSong)
+                },
+                new MenuItem
+                {
+                    Title = "_Add to Queue",
+                    Action = () => playerService.QueueSong(selectedSong)
+                }
+            ]);
+            App!.Popover?.Register(songActionPopover);
+        }
+        else
+        {
+            // Update the menu item actions with current song context
+            var menuItems = songActionPopover.SubViews.OfType<MenuItem>().ToList();
+            if (menuItems.Count >= 4)
+            {
+                menuItems[0].Action = async () =>
+                {
+                    playerService.ClearPlaybackQueue();
+                    playerService.QueueSongs(allSongs);
+                    await playerService.ChangeTrack(selectedIndex);
+                };
+                menuItems[1].Action = async () =>
+                {
+                    playerService.ClearPlaybackQueue();
+                    playerService.QueueSong(selectedSong);
+                    await playerService.ChangeTrack(0);
+                };
+                menuItems[2].Action = () => playerService.InsertAfterCurrent(selectedSong);
+                menuItems[3].Action = () => playerService.QueueSong(selectedSong);
+            }
+        }
+
+        var position = new Point(
+            songTable.FrameToScreen().X,
+            songTable.FrameToScreen().Y + songTable.SelectedRow + 1);
+        songActionPopover.MakeVisible(position);
     }
 
     private async void OnArtistSelected(object? sender, ListViewItemEventArgs e)
