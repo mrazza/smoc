@@ -75,6 +75,19 @@ public sealed class PlayerService : IDisposable
         InvokeAppEvent(QueueChanged);
     }
 
+    public void InsertAfterCurrent(Song song)
+    {
+        if (playbackQueue.Count == 0)
+        {
+            playbackQueue.Insert(0, song);
+        }
+        else
+        {
+            playbackQueue.Insert(currentPlaybackIndex + 1, song);
+        }
+        InvokeAppEvent(QueueChanged);
+    }
+
     public async Task ChangeTrack(int index)
     {
         if (index < 0 || index >= playbackQueue.Count)
