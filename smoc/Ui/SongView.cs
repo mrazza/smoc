@@ -23,13 +23,15 @@ public sealed class SongView : View
     private readonly SongTable songTable;
     private readonly Label songsLabel;
     private readonly IStreamingClient streamingClient;
+    private readonly PlayerService playerService;
 
     private CancellationTokenSource? searchCts;
 
-    public SongView(MainWindow mainWindow, CommandService commandService, IStreamingClient streamingClient)
+    public SongView(MainWindow mainWindow, CommandService commandService, IStreamingClient streamingClient, PlayerService playerService)
     {
         this.mainWindow = mainWindow;
         this.streamingClient = streamingClient;
+        this.playerService = playerService;
 
         Width = Dim.Fill();
         Height = Dim.Fill();
