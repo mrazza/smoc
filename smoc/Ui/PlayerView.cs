@@ -30,7 +30,7 @@ public sealed class PlayerView : View
             Y = Pos.Center(),
             Text = "queue is empty"
         };
-        songTable = new SongTable(SongTableColumns.Album | SongTableColumns.Song | SongTableColumns.Length | SongTableColumns.Year)
+        songTable = new SongTable(SongTableColumns.Artist | SongTableColumns.Album | SongTableColumns.Song | SongTableColumns.Length | SongTableColumns.Year)
         {
             Width = Dim.Fill(),
             Height = Dim.Fill()
