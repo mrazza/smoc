@@ -40,29 +40,45 @@ public sealed class SixelImageView : View
     {
         base.OnDrawingContent(context);
 
-        if (sixelSupportDetector is null)
-        {
-            // We delay initialization of sixel support detector until it's needed and we
-            // have confidence the driver is accurate.
-            sixelSupportDetector = new SixelSupportDetector(App!.Driver);
-            sixelSupportDetector.Detect((result) =>
-            {
-                sixelSupportResult = result;
-                UpdateSixelData();
-                SetNeedsDraw();
-            });
-        }
-        else if (sixelSupportResult is not null && sixelSupportResult.IsSupported && sixelToRender is not null)
+        if (sixelSupportResult is not null && sixelSupportResult.IsSupported && sixelToRender is not null)
         {
             if (!App!.Driver!.GetSixels().Contains(sixelToRender))
             {
                 App!.Driver!.GetSixels().Clear();
                 App!.Driver!.GetSixels().Enqueue(sixelToRender);
             }
+
+            context?.AddDrawnRectangle(RenderableArea);
+
+            return true;
+        }
+        else
+        {
+            if (sixelSupportDetector is null)
+            {
+                // We delay initialization of sixel support detector until it's needed and we
+                // have confidence the driver is accurate.
+                sixelSupportDetector = new SixelSupportDetector(App!.Driver);
+                sixelSupportDetector.Detect((result) =>
+                {
+                    App!.Invoke(() =>
+                    {
+                        sixelSupportResult = result;
+                        UpdateSixelData();
+                        SetNeedsDraw();
+                    });
+                });
+            }
         }
 
-        return true;
+        return false;
     }
+
+    private System.Drawing.Rectangle RenderableArea => new(
+        Frame.X + (Margin?.Thickness.Left ?? 0),
+        Frame.Y + (Margin?.Thickness.Top ?? 0),
+        Frame.Width - (Margin?.Thickness.Horizontal ?? 0),
+        Frame.Height - (Margin?.Thickness.Vertical ?? 0));
 
     private void UpdateSixelData()
     {
@@ -72,11 +88,11 @@ public sealed class SixelImageView : View
         }
 
         var resizedImage = image.Clone(
-            i => i.Resize(FrameToScreen().Width * sixelSupportResult!.Resolution.Width, FrameToScreen().Height * sixelSupportResult!.Resolution.Height));
+            i => i.Resize(RenderableArea.Width * sixelSupportResult!.Resolution.Width, RenderableArea.Height * sixelSupportResult!.Resolution.Height));
         sixelToRender = new SixelToRender()
         {
             SixelData = encoder.EncodeSixel(ConvertToColorArray(resizedImage)),
-            ScreenPosition = new System.Drawing.Point(Frame.X, Frame.Y)
+            ScreenPosition = new System.Drawing.Point(RenderableArea.X, RenderableArea.Y)
         };
     }
 

@@ -43,14 +43,14 @@ public sealed class NowPlaying : View
         this.albumArtUrl = null;
         Width = Dim.Fill();
         Height = Dim.Absolute(3);
-        Padding!.Thickness = new Thickness(1, 0, 1, 0);
+        Padding!.Thickness = new Thickness(0, 0, 1, 0);
         CanFocus = false;
 
         this.albumArtView = new SixelImageView()
         {
-            X = Pos.Absolute(0),
+            X = Pos.Absolute(1),
             Y = Pos.Absolute(0),
-            Width = Dim.Absolute(6),
+            Width = Dim.Absolute(7),
             Height = Dim.Fill(),
             BorderStyle = LineStyle.Dashed
         };
@@ -112,6 +112,7 @@ public sealed class NowPlaying : View
         playerService.SongChanged += OnSongChanged;
         playerService.PositionChanged += OnPositionChanged;
         playerService.VolumeChanged += OnVolumeChanged;
+        playerService.PlaybackStateChanged += OnPlaybackStateChanged;
 
         commandService.RegisterCommand("v", OnSetVolumeCommand);
         AddCommand(Command.HotKey, OnHotKey);
@@ -123,6 +124,7 @@ public sealed class NowPlaying : View
         playerService.SongChanged -= OnSongChanged;
         playerService.PositionChanged -= OnPositionChanged;
         playerService.VolumeChanged -= OnVolumeChanged;
+        playerService.PlaybackStateChanged -= OnPlaybackStateChanged;
         httpClient.Dispose();
         base.Dispose(disposing);
     }
@@ -165,6 +167,14 @@ public sealed class NowPlaying : View
         if (this.progressBar.Fraction != progress)
         {
             this.progressBar.Fraction = progress;
+        }
+    }
+
+    private void OnPlaybackStateChanged(object? sender, PlaybackState e)
+    {
+        if (e == PlaybackState.Playing || e == PlaybackState.Paused)
+        {
+            OnSongChanged(sender, playerService.CurrentSong!);
         }
     }
 
