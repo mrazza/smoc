@@ -33,6 +33,7 @@ public sealed class NowPlaying : View
     private readonly Label durationLabel;
     private readonly Label volumeLabel;
     private readonly HttpClient httpClient;
+    private CancellationTokenSource? albumArtCancellationTokenSource;
 
     public NowPlaying(MainWindow mainWindow, PlayerService playerService, CommandService commandService)
     {
@@ -177,10 +178,14 @@ public sealed class NowPlaying : View
         if (e.Album.ThumbnailUrl is not null && albumArtUrl != e.Album.ThumbnailUrl)
         {
             albumArtUrl = e.Album.ThumbnailUrl;
-            httpClient.GetAsync(e.Album.ThumbnailUrl).ContinueWith((task) =>
+            albumArtCancellationTokenSource?.Cancel();
+            albumArtCancellationTokenSource = new CancellationTokenSource();
+            var token = albumArtCancellationTokenSource.Token;
+            httpClient.GetAsync(e.Album.ThumbnailUrl, token).ContinueWith((task) =>
             {
                 var image = Image.Load<Rgba32>(task.Result.Content.ReadAsStream());
                 Logging.Information($"Album art loaded: {e.Title}");
+                token.ThrowIfCancellationRequested();
                 this.albumArtView.SetImage(image);
             });
         }
