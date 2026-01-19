@@ -6,6 +6,9 @@ using SoundFlow.Structs;
 
 namespace Smoc.Services;
 
+/// <summary>
+/// Internal service responsible for managing the playback of a single audio stream.
+/// </summary>
 internal sealed class StreamPlaybackService : IDisposable {
   private readonly MiniAudioEngine _audioEngine;
   private readonly Stream _songStream;
@@ -14,11 +17,29 @@ internal sealed class StreamPlaybackService : IDisposable {
   private readonly AssetDataProvider _streamDataProvider;
   private readonly SoundPlayer _soundPlayer;
 
+  /// <summary>
+  /// Occurs when the stream reaches its end.
+  /// </summary>
   public event EventHandler? StreamEnded;
+
+  /// <summary>
+  /// Occurs when the playback position changes.
+  /// </summary>
   public event EventHandler<TimeSpan>? PositionChanged;
 
+  /// <summary>
+  /// Gets the total duration of the stream.
+  /// </summary>
   public TimeSpan Duration => TimeSpan.FromSeconds(_soundPlayer.Duration);
+
+  /// <summary>
+  /// Gets the current playback time.
+  /// </summary>
   public TimeSpan Time => TimeSpan.FromSeconds(_soundPlayer.Time);
+
+  /// <summary>
+  /// Gets the playback progress as a normalized value between 0.0 and 1.0.
+  /// </summary>
   public float Progress => _soundPlayer.Time / _soundPlayer.Duration;
 
   public StreamPlaybackService(MiniAudioEngine audioEngine, AudioPlaybackDevice playbackDevice, Stream songStream, AudioFormat audioFormat) {

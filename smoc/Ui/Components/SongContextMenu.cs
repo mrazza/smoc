@@ -5,6 +5,9 @@ using Terminal.Gui.Views;
 
 namespace Smoc.Ui.Components;
 
+/// <summary>
+/// A context menu for songs in the <see cref="SongTable" />, providing playback options.
+/// </summary>
 public sealed class SongContextMenu : PopoverMenu {
   private static class Messages {
     public const string PLAY_ALL = "_play all from here";
@@ -13,6 +16,11 @@ public sealed class SongContextMenu : PopoverMenu {
     public const string ADD_TO_QUEUE = "_queue last";
   }
 
+  /// <summary>
+  /// Initializes a new instance of the <see cref="SongContextMenu"/> class.
+  /// </summary>
+  /// <param name="playerService">The player service to control playback.</param>
+  /// <param name="songTable">The song table to get selection from.</param>
   public SongContextMenu(PlayerService playerService, SongTable songTable)
       : base(CreateMenuItems(playerService, songTable)) {
     // Default PopoverMenu binds Left/Right for navigation (Bar behavior).
@@ -39,6 +47,9 @@ public sealed class SongContextMenu : PopoverMenu {
     App!.Popover?.Register(this);
   }
 
+  /// <summary>
+  /// The height required to display all menu items.
+  /// </summary>
   public int RequiredHeight => Root?.SubViews.Count ?? 0;
 
   private static IEnumerable<MenuItem> CreateMenuItems(PlayerService playerService, SongTable songTable) {

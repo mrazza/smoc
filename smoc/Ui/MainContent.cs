@@ -5,6 +5,9 @@ using Terminal.Gui.ViewBase;
 
 namespace Smoc.Ui;
 
+/// <summary>
+/// The main content area of the application, manages switching between different views based on the current mode.
+/// </summary>
 public sealed class MainContent : View {
   private readonly ArtistView _artistView;
   private readonly PlayerView _playerView;
@@ -13,6 +16,13 @@ public sealed class MainContent : View {
 
   private View? _currentView;
 
+  /// <summary>
+  /// Initializes a new instance of the <see cref="MainContent"/> class.
+  /// </summary>
+  /// <param name="mainWindow">The main window reference.</param>
+  /// <param name="commandService">The command service.</param>
+  /// <param name="playerService">The player service.</param>
+  /// <param name="streamingClient">The streaming client.</param>
   public MainContent(MainWindow mainWindow, CommandService commandService, PlayerService playerService, IStreamingClient streamingClient) {
     _mainWindow = mainWindow;
     Width = Dim.Fill();
@@ -32,6 +42,11 @@ public sealed class MainContent : View {
     Add(_artistView, _playerView, _songView);
   }
 
+  /// <summary>
+  /// Switches the visible view to match the specified mode.
+  /// </summary>
+  /// <param name="mode">The mode to switch to.</param>
+  /// <exception cref="ArgumentException">Thrown if the mode is invalid.</exception>
   public void SetMode(Mode mode) {
     if (_currentView is not null) {
       _currentView.Visible = false;

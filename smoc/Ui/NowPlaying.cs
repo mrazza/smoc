@@ -11,6 +11,9 @@ using Terminal.Gui.Views;
 
 namespace Smoc.Ui;
 
+/// <summary>
+/// A view that displays the currently playing track information, including album art, progress, and volume.
+/// </summary>
 public sealed class NowPlaying : View {
   private static class Messages {
     public const string NO_SONG = "no track";
@@ -31,6 +34,12 @@ public sealed class NowPlaying : View {
   private readonly HttpClient _httpClient;
   private CancellationTokenSource? _albumArtCancellationTokenSource;
 
+  /// <summary>
+  /// Initializes a new instance of the <see cref="NowPlaying"/> class.
+  /// </summary>
+  /// <param name="mainWindow">The main window reference.</param>
+  /// <param name="playerService">The player service for playback information.</param>
+  /// <param name="commandService">The command service for registering volume commands.</param>
   public NowPlaying(MainWindow mainWindow, PlayerService playerService, CommandService commandService) {
     _mainWindow = mainWindow;
     _playerService = playerService;

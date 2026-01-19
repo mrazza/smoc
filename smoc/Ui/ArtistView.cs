@@ -13,7 +13,14 @@ using Terminal.Gui.Drawing;
 using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
 
+/// <summary>
+/// The primary view for the ARTIST mode.
+/// It displays a list of artists and allows the user to search for artists.
+/// </summary>
 public sealed class ArtistView : View {
+  /// <summary>
+  /// Human-readable messages used in the view.
+  /// </summary>
   private static class Messages {
     public const string SEARCHING = "searching...";
     public const string LOADING = "loading...";
@@ -37,6 +44,13 @@ public sealed class ArtistView : View {
   private CancellationTokenSource? _searchCts;
   private CancellationTokenSource? _selectArtistCts;
 
+  /// <summary>
+  /// Initializes a new instance of the <see cref="ArtistView"/> class.
+  /// </summary>
+  /// <param name="mainWindow">The main window reference.</param>
+  /// <param name="commandService">The command service for registering search commands.</param>
+  /// <param name="streamingClient">The client for fetching artist data.</param>
+  /// <param name="playerService">The player service for playback options.</param>
   public ArtistView(MainWindow mainWindow, CommandService commandService, IStreamingClient streamingClient, PlayerService playerService) {
     _mainWindow = mainWindow;
     _streamingClient = streamingClient;

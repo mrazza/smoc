@@ -4,6 +4,10 @@ using Terminal.Gui.Views;
 
 namespace Smoc.Ui.Components;
 
+/// <summary>
+/// A specialized TextField used for command input that does not
+/// participate in standard tab navigation and prevents focus from advancing.
+/// </summary>
 public sealed class CommandTextField : TextField {
   public CommandTextField()
       : base() {

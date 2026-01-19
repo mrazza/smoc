@@ -7,6 +7,9 @@ using Color = Terminal.Gui.Drawing.Color;
 
 namespace Smoc.Ui.Components;
 
+/// <summary>
+/// A view that renders images using Sixel graphics sequences.
+/// </summary>
 public sealed class SixelImageView : View {
   private SixelSupportDetector? _sixelSupportDetector;
   private SixelSupportResult? _sixelSupportResult;
@@ -14,11 +17,18 @@ public sealed class SixelImageView : View {
   private SixelToRender? _sixelToRender;
   private readonly SixelEncoder _encoder;
 
+  /// <summary>
+  /// Initializes a new instance of the <see cref="SixelImageView"/> class.
+  /// </summary>
+  /// <param name="image">The initial image to display.</param>
   public SixelImageView(Image<Rgba32>? image = null) {
     _image = image;
     _encoder = new SixelEncoder();
   }
 
+  /// <summary>
+  /// Clears the currently displayed image.
+  /// </summary>
   public void ClearImage() {
     if (_image is null) {
       return;
@@ -30,6 +40,10 @@ public sealed class SixelImageView : View {
     SetNeedsDraw();
   }
 
+  /// <summary>
+  /// Sets a new image to display.
+  /// </summary>
+  /// <param name="image">The image to display.</param>
   public void SetImage(Image<Rgba32> image) {
     _image = image;
     _sixelToRender = null;

@@ -9,7 +9,13 @@ using Terminal.Gui.Views;
 
 namespace Smoc.Ui.Components;
 
+/// <summary>
+/// A table view for displaying a list of songs with configurable columns.
+/// </summary>
 public sealed class SongTable : TableView {
+  /// <summary>
+  /// Flags indicating which columns to display in the table.
+  /// </summary>
   [Flags]
   public enum SongTableColumns {
     Number = 0x1,
@@ -27,6 +33,15 @@ public sealed class SongTable : TableView {
   private List<Song> _songs;
   private int _highlightedRow = -1;
 
+  /// <summary>
+  /// Gets or sets the index of the highlighted row.
+  /// </summary>
+  /// <remarks>
+  /// The highlighted row is distinct from the selected row. The highlighted row
+  /// is bolded and not the row triggered for activation. It can be used to identify
+  /// a row that is important but not currently selected by the user -- say the currently
+  /// playing song.
+  /// </remarks>
   public int HighlightedRow {
     get => _highlightedRow;
     set {
@@ -38,8 +53,15 @@ public sealed class SongTable : TableView {
     }
   }
 
+  /// <summary>
+  /// Occurs when a song (or set of songs) is selected (e.g. by pressing Enter).
+  /// </summary>
   public event EventHandler<List<Song>>? SongSelected;
 
+  /// <summary>
+  /// Initializes a new instance of the <see cref="SongTable"/> class.
+  /// </summary>
+  /// <param name="columns">Flags to specify which columns to show.</param>
   public SongTable(SongTableColumns columns = SongTableColumns.Number | SongTableColumns.Album | SongTableColumns.Song | SongTableColumns.Length | SongTableColumns.Year)
       : base() {
     FullRowSelect = true;
@@ -71,6 +93,10 @@ public sealed class SongTable : TableView {
     KeyBindings.Remove(Key.Space);
   }
 
+  /// <summary>
+  /// Sets the list of songs to display in the table.
+  /// </summary>
+  /// <param name="songs">The songs to display.</param>
   public void SetSongs(IEnumerable<Song> songs) {
     ClearSongs();
     CanFocus = true;
@@ -113,15 +139,24 @@ public sealed class SongTable : TableView {
     return base.OnCellActivated(args);
   }
 
+  /// <summary>
+  /// Gets the list of songs currently in the table.
+  /// </summary>
   public List<Song> GetSongs() {
     return _songs.ToList();
   }
 
+  /// <summary>
+  /// Gets the list of currently selected songs.
+  /// </summary>
   public List<Song> GetSelectedSongs() {
     return MultiSelectedRegions.Where(_ => MultiSelect).Select(region => Enumerable.Range(region.Rectangle.Y, region.Rectangle.Height))
         .FirstOrDefault()?.Select(index => _songs[index]).ToList() ?? [_songs[SelectedRow]];
   }
 
+  /// <summary>
+  /// Clears all songs from the table.
+  /// </summary>
   public void ClearSongs() {
     _songs.Clear();
     _songTableData.Clear();
@@ -129,6 +164,11 @@ public sealed class SongTable : TableView {
     CanFocus = false;
   }
 
+  /// <summary>
+  /// Gets the position of the selected row relative to the view's frame.
+  /// </summary>
+  /// <returns>The point coordinate of the selected row.</returns>
+  /// <exception cref="InvalidOperationException">Thrown if no row is selected or visible.</exception>
   public Point GetSelectedRowFramePosition() {
     if (CellToScreen(0, SelectedRow) is { } cellPoint) {
       return new Point(cellPoint.X, cellPoint.Y);
@@ -137,6 +177,11 @@ public sealed class SongTable : TableView {
     throw new InvalidOperationException("no row selected or row is not visible");
   }
 
+  /// <summary>
+  /// Gets the screen position of the selected row.
+  /// </summary>
+  /// <returns>The screen coordinate of the selected row.</returns>
+  /// <exception cref="InvalidOperationException">Thrown if no row is selected or visible.</exception>
   public Point GetSelectedRowScreenPosition() {
     if (CellToScreen(0, SelectedRow) is { } cellPoint) {
       var tableScreenPos = FrameToScreen();
