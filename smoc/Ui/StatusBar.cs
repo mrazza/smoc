@@ -8,113 +8,98 @@ using Terminal.Gui.Views;
 
 namespace Smoc.Ui;
 
-public sealed class StatusBar : View
-{
-    private static class Messages
-    {
-        public const string PLAY = "[PLAY]";
-        public const string PAUSE = "[PAUSE]";
-        public const string STOP = "[STOP]";
-        public const string UNKNOWN = "[UNK]";
-        public const string NO_SONG = "no track";
-        public const string NO_ARTIST = "no artist";
-    }
+public sealed class StatusBar : View {
+  private static class Messages {
+    public const string PLAY = "[PLAY]";
+    public const string PAUSE = "[PAUSE]";
+    public const string STOP = "[STOP]";
+    public const string UNKNOWN = "[UNK]";
+    public const string NO_SONG = "no track";
+    public const string NO_ARTIST = "no artist";
+  }
 
-    private readonly Label modeLabel;
-    private readonly Label versionLabel;
-    private readonly Label stateLabel;
-    private readonly PlayerService playerService;
+  private readonly Label _modeLabel;
+  private readonly Label _versionLabel;
+  private readonly Label _stateLabel;
+  private readonly PlayerService _playerService;
 
-    public StatusBar(PlayerService playerService)
-    {
-        this.playerService = playerService;
-        Width = Dim.Fill();
-        Height = Dim.Absolute(1);
+  public StatusBar(PlayerService playerService) {
+    _playerService = playerService;
+    Width = Dim.Fill();
+    Height = Dim.Absolute(1);
 
-        SetScheme(SchemeManager.GetScheme("StatusBar"));
+    SetScheme(SchemeManager.GetScheme("StatusBar"));
 
-        this.modeLabel = new Label()
-        {
-            Height = Dim.Fill()
-        };
-        this.versionLabel = new Label()
-        {
-            X = Pos.AnchorEnd(),
-            Height = Dim.Fill(),
-            Text = Program.PRODUCT_NAME + " v" + Assembly.GetEntryAssembly()!.GetName().Version!.ToString(3)
-        };
-        this.stateLabel = new Label()
-        {
-            X = Pos.Right(this.modeLabel),
-            Width = Dim.Fill() - Dim.Func((view) => view!.Frame.Width, this.versionLabel),
-            Height = Dim.Fill()
-        };
-        Terminal.Gui.Drawing.Scheme majorSectionScheme = SchemeManager.GetScheme("StatusBar_Mode");
-        this.versionLabel.SetScheme(majorSectionScheme);
-        this.modeLabel.SetScheme(majorSectionScheme);
-        Thickness defaultMargin = new(1, 0, 1, 0);
-        this.versionLabel.Padding!.Thickness = defaultMargin;
-        this.modeLabel.Padding!.Thickness = defaultMargin;
-        this.stateLabel.Padding!.Thickness = defaultMargin;
-        Add(this.modeLabel, this.versionLabel, this.stateLabel);
+    _modeLabel = new Label() {
+      Height = Dim.Fill()
+    };
+    _versionLabel = new Label() {
+      X = Pos.AnchorEnd(),
+      Height = Dim.Fill(),
+      Text = Program.ProductName + " v" + Assembly.GetEntryAssembly()!.GetName().Version!.ToString(3)
+    };
+    _stateLabel = new Label() {
+      X = Pos.Right(_modeLabel),
+      Width = Dim.Fill() - Dim.Func((view) => view!.Frame.Width, _versionLabel),
+      Height = Dim.Fill()
+    };
+    Terminal.Gui.Drawing.Scheme majorSectionScheme = SchemeManager.GetScheme("StatusBar_Mode");
+    _versionLabel.SetScheme(majorSectionScheme);
+    _modeLabel.SetScheme(majorSectionScheme);
+    Thickness defaultMargin = new(1, 0, 1, 0);
+    _versionLabel.Padding!.Thickness = defaultMargin;
+    _modeLabel.Padding!.Thickness = defaultMargin;
+    _stateLabel.Padding!.Thickness = defaultMargin;
+    Add(_modeLabel, _versionLabel, _stateLabel);
 
-        playerService.SongChanged += OnSongChanged;
-        playerService.PositionChanged += OnPositionChanged;
-        playerService.PlaybackStateChanged += OnPlaybackStateChanged;
-    }
+    playerService.SongChanged += OnSongChanged;
+    playerService.PositionChanged += OnPositionChanged;
+    playerService.PlaybackStateChanged += OnPlaybackStateChanged;
+  }
 
-    protected override void Dispose(bool disposing)
-    {
-        playerService.SongChanged -= OnSongChanged;
-        playerService.PositionChanged -= OnPositionChanged;
-        playerService.PlaybackStateChanged -= OnPlaybackStateChanged;
-        base.Dispose(disposing);
-    }
+  protected override void Dispose(bool disposing) {
+    _playerService.SongChanged -= OnSongChanged;
+    _playerService.PositionChanged -= OnPositionChanged;
+    _playerService.PlaybackStateChanged -= OnPlaybackStateChanged;
+    base.Dispose(disposing);
+  }
 
-    private void OnPositionChanged(object? sender, TimeSpan e)
-    {
-        UpdateState();
-    }
+  private void OnPositionChanged(object? sender, TimeSpan e) {
+    UpdateState();
+  }
 
-    private void OnSongChanged(object? sender, Song e)
-    {
-        UpdateState();
-    }
+  private void OnSongChanged(object? sender, Song e) {
+    UpdateState();
+  }
 
-    private void OnPlaybackStateChanged(object? sender, PlaybackState e)
-    {
-        UpdateState();
-    }
+  private void OnPlaybackStateChanged(object? sender, PlaybackState e) {
+    UpdateState();
+  }
 
-    private void UpdateState()
-    {
-        string playbackStatePrefix = playerService.PlaybackState switch
-        {
-            PlaybackState.Playing => Messages.PLAY,
-            PlaybackState.Paused => Messages.PAUSE,
-            PlaybackState.Stopped => Messages.STOP,
-            _ => Messages.UNKNOWN
-        };
+  private void UpdateState() {
+    string playbackStatePrefix = _playerService.PlaybackState switch {
+      PlaybackState.Playing => Messages.PLAY,
+      PlaybackState.Paused => Messages.PAUSE,
+      PlaybackState.Stopped => Messages.STOP,
+      _ => Messages.UNKNOWN
+    };
 
-        string songName = playerService.CurrentSong?.Title ?? Messages.NO_SONG;
-        string artistName = playerService.CurrentSong?.Artist.Name ?? Messages.NO_ARTIST;
-        string songDuration = playerService.Duration.ToString("mm\\:ss");
-        string songPosition = playerService.CurrentTime.ToString("mm\\:ss");
-        stateLabel.Text = $"{playbackStatePrefix} {artistName} - {songName} [{songPosition}/{songDuration}]";
-    }
+    string songName = _playerService.CurrentSong?.Title ?? Messages.NO_SONG;
+    string artistName = _playerService.CurrentSong?.Artist.Name ?? Messages.NO_ARTIST;
+    string songDuration = _playerService.Duration.ToString("mm\\:ss");
+    string songPosition = _playerService.CurrentTime.ToString("mm\\:ss");
+    _stateLabel.Text = $"{playbackStatePrefix} {artistName} - {songName} [{songPosition}/{songDuration}]";
+  }
 
-    internal string GetMode()
-    {
-        return modeLabel.Text;
-    }
+  internal string GetMode() {
+    return _modeLabel.Text;
+  }
 
-    public void SetMode(string mode)
-    {
-        modeLabel.Text = mode;
-    }
+  public void SetMode(string mode) {
+    _modeLabel.Text = mode;
+  }
 
-    public void SetState(string state)
-    {
-        stateLabel.Text = state;
-    }
+  public void SetState(string state) {
+    _stateLabel.Text = state;
+  }
 }

@@ -4,18 +4,15 @@ using Terminal.Gui.Views;
 
 namespace Smoc.Ui.Components;
 
-public sealed class CommandTextField : TextField
-{
-    public CommandTextField()
-        : base()
-    {
-        CanFocus = true;
-        TabStop = TabBehavior.NoStop;
-        Cursor = new Cursor { Style = CursorStyle.Default };
-    }
+public sealed class CommandTextField : TextField {
+  public CommandTextField()
+      : base() {
+    CanFocus = true;
+    TabStop = TabBehavior.NoStop;
+    Cursor = new Cursor { Style = CursorStyle.Default };
+  }
 
-    protected override bool OnAdvancingFocus(NavigationDirection direction, TabBehavior? behavior)
-    {
-        return true;
-    }
+  protected override bool OnAdvancingFocus(NavigationDirection direction, TabBehavior? behavior) {
+    return true;
+  }
 }

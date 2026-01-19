@@ -1,8 +1,7 @@
 namespace Smoc.Services;
 
-public enum PlaybackState
-{
-    Stopped,
-    Playing,
-    Paused
+public enum PlaybackState {
+  Stopped,
+  Playing,
+  Paused
 }
