@@ -67,6 +67,22 @@
                         }
                     },
                     {
+                        "Menu": {
+                            "Normal": {
+                                "Foreground": "#ebdbb2",
+                                "Background": "#3a3a3a"
+                            },
+                            "Focus": {
+                                "Foreground": "#ebdbb2",
+                                "Background": "#639494"
+                            },
+                            "Active": {
+                                "Foreground": "#ebdbb2",
+                                "Background": "#394e4e"
+                            }
+                        }
+                    },
+                    {
                         "StatusBar": {
                             "Normal": {
                                 "Foreground": "#949494",
