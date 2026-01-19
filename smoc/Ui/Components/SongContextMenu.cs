@@ -20,15 +20,12 @@ public sealed class SongContextMenu : PopoverMenu
     {
         // Default PopoverMenu binds Left/Right for navigation (Bar behavior).
         // specific to Menu behavior we want Up/Down for vertical list.
-
         // Map Up to Previous (Backward)
         AddCommand(Command.Up, ctx => AdvanceFocus(NavigationDirection.Backward, TabBehavior.TabStop));
         KeyBindings.Add(Terminal.Gui.Input.Key.CursorUp, Command.Up);
-
         // Map Down to Next (Forward)
         AddCommand(Command.Down, ctx => AdvanceFocus(NavigationDirection.Forward, TabBehavior.TabStop));
         KeyBindings.Add(Terminal.Gui.Input.Key.CursorDown, Command.Down);
-
         VimKeyBindings.AddDirectionalKeyBindings(KeyBindings);
 
         // Map Esc to Cancel (Close)
