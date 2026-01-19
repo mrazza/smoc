@@ -104,7 +104,7 @@ public sealed class ArtistView : View
     private void OnSongSelected(object? sender, List<Song> songs)
     {
         var tableAdornments = songTable.GetAdornmentsThickness();
-        var yPos = songTable.SelectedRow + tableAdornments.Top + 2;
+        var yPos = songTable.GetSelectedRowFramePosition().Y + tableAdornments.Top + 1;
         int menuHeight = songContextMenu.RequiredHeight;
 
         if (yPos + menuHeight > Frame.Height)

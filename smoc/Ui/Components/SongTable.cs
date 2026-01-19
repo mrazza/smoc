@@ -150,6 +150,16 @@ public sealed class SongTable : TableView
         CanFocus = false;
     }
 
+    public Point GetSelectedRowFramePosition()
+    {
+        if (CellToScreen(0, SelectedRow) is { } cellPoint)
+        {
+            return new Point(cellPoint.X, cellPoint.Y);
+        }
+
+        throw new InvalidOperationException("no row selected or row is not visible");
+    }
+
     public Point GetSelectedRowScreenPosition()
     {
         if (CellToScreen(0, SelectedRow) is { } cellPoint)
