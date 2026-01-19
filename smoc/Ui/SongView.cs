@@ -68,7 +68,7 @@ public sealed class SongView : View
         base.Dispose(disposing);
     }
 
-    private void OnSongSelected(object? sender, Song e)
+    private void OnSongSelected(object? sender, List<Song> songs)
     {
         var tableAdornments = songTable.GetAdornmentsThickness();
         var yPos = songTable.SelectedRow + tableAdornments.Top + 2;

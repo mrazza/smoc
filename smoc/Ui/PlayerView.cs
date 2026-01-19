@@ -33,7 +33,8 @@ public sealed class PlayerView : View
         songTable = new SongTable(SongTableColumns.Artist | SongTableColumns.Album | SongTableColumns.Song | SongTableColumns.Length)
         {
             Width = Dim.Fill(),
-            Height = Dim.Fill()
+            Height = Dim.Fill(),
+            MultiSelect = false // TODO: allow multiple selection for remove/reorder
         };
         songTable.Style.ShowHeaders = false;
         songTable.BorderStyle = LineStyle.Single;
@@ -67,8 +68,13 @@ public sealed class PlayerView : View
         }
     }
 
-    private async void OnSongSelected(object? sender, Song e)
+    private async void OnSongSelected(object? sender, List<Song> songs)
     {
+        if (songs.Count > 1)
+        {
+            throw new InvalidOperationException("Multiple songs cannot be selected when changing active track");
+        }
+
         await playerService.ChangeTrack(songTable.SelectedRow);
     }
 

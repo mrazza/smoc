@@ -63,18 +63,18 @@ public sealed class SongContextMenu : PopoverMenu
         menuItems.Add(new MenuItem(Messages.PLAY_SELECTION, action: async () =>
         {
             playerService.ClearPlaybackQueue();
-            playerService.QueueSong(songTable.GetSelectedSong());
+            playerService.QueueSongs(songTable.GetSelectedSongs());
             await playerService.ChangeTrack(0);
         }));
 
         menuItems.Add(new MenuItem(Messages.PLAY_NEXT, action: () =>
         {
-            playerService.QueueNext(songTable.GetSelectedSong());
+            playerService.QueueNext(songTable.GetSelectedSongs());
         }));
 
         menuItems.Add(new MenuItem(Messages.ADD_TO_QUEUE, action: () =>
         {
-            playerService.QueueLast(songTable.GetSelectedSong());
+            playerService.QueueLast(songTable.GetSelectedSongs());
         }));
 
         return menuItems;
