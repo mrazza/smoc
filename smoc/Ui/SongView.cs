@@ -11,6 +11,9 @@ using static Smoc.Ui.Components.SongTable;
 
 namespace Smoc.Ui;
 
+/// <summary>
+/// A view for searching songs directly.
+/// </summary>
 public sealed class SongView : View {
   private static class Messages {
     public const string SEARCHING = "searching...";
@@ -27,6 +30,13 @@ public sealed class SongView : View {
 
   private CancellationTokenSource? _searchCts;
 
+  /// <summary>
+  /// Initializes a new instance of the <see cref="SongView"/> class.
+  /// </summary>
+  /// <param name="mainWindow">The main window reference.</param>
+  /// <param name="commandService">The command service for registering search commands.</param>
+  /// <param name="streamingClient">The client for searching songs.</param>
+  /// <param name="playerService">The player service for playback options.</param>
   public SongView(MainWindow mainWindow, CommandService commandService, IStreamingClient streamingClient, PlayerService playerService) {
     _mainWindow = mainWindow;
     _streamingClient = streamingClient;

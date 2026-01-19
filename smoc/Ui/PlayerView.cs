@@ -10,12 +10,21 @@ using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
 using static Smoc.Ui.Components.SongTable;
 
+/// <summary>
+/// A view that displays the current playback queue in a table.
+/// </summary>
 public sealed class PlayerView : View {
   private readonly SongTable _songTable;
   private readonly Label _noSongsLabel;
   private readonly PlayerService _playerService;
   private readonly MainWindow _mainWindow;
 
+  /// <summary>
+  /// Initializes a new instance of the <see cref="PlayerView"/> class.
+  /// </summary>
+  /// <param name="mainWindow">The main window reference.</param>
+  /// <param name="commandService">The command service.</param>
+  /// <param name="playerService">The player service for managing the queue.</param>
   public PlayerView(MainWindow mainWindow, CommandService commandService, PlayerService playerService) {
     _mainWindow = mainWindow;
     _playerService = playerService;

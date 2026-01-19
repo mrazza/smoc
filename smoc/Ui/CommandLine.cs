@@ -7,13 +7,22 @@ using Terminal.Gui.Views;
 
 namespace Smoc.Ui;
 
+/// <summary>
+/// The view for the command line at the bottom of the screen.
+/// </summary>
 public sealed class CommandLine : View {
   private readonly CommandTextField _commandTextField;
   private readonly Label _errorLabel;
   private object? _errorTimeoutTracker;
 
+  /// <summary>
+  /// Occurs when the command input is cancelled (e.g. via Esc).
+  /// </summary>
   public event EventHandler? CommandCancelled;
 
+  /// <summary>
+  /// Initializes a new instance of the <see cref="CommandLine"/> class.
+  /// </summary>
   public CommandLine() {
     Width = Dim.Fill();
     Height = Dim.Absolute(1);
@@ -38,6 +47,10 @@ public sealed class CommandLine : View {
     KeyBindings.Add(Key.Esc, Command.Cancel);
   }
 
+  /// <summary>
+  /// Displays a temporary error message in the command line area.
+  /// </summary>
+  /// <param name="message">The message to display.</param>
   public void DisplayError(string message) {
     Logging.Warning($"Displaying error: {message}");
     ClearError();

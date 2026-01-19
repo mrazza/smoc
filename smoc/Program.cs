@@ -22,7 +22,7 @@ public static class Program {
   public static readonly string ProductName = "SMoC";
 
   /// <summary>
-  /// The main entry point for the application.s
+  /// The main entry point for the application.
   /// </summary>
   public static async Task Main(string[] args) {
     RootCommand rootCommand = new RootCommand("Streaming Music over Console (SMoC)");
@@ -65,6 +65,10 @@ public static class Program {
     await rootCommand.Parse(args).InvokeAsync();
   }
 
+  /// <summary>
+  /// Creates a streaming client, optionally using cookies and tokens if available.
+  /// </summary>
+  /// <returns>An initialized <see cref="YtmStreamingClient"/>.</returns>
   private static YtmStreamingClient CreateStreamingClient() {
     if (!File.Exists(_cookiesPath) || !File.Exists(_tokensPath)) {
       Logging.Information("Cookies or tokens not found. Creating new YTM client without authentication.");

@@ -8,6 +8,9 @@ using Terminal.Gui.Views;
 
 namespace Smoc.Ui;
 
+/// <summary>
+/// The main application window management class.
+/// </summary>
 public sealed class MainWindow : Runnable {
   private readonly CommandLine _commandLine;
   private readonly StatusBar _statusBar;
@@ -21,6 +24,10 @@ public sealed class MainWindow : Runnable {
   private View? _preCommandFocusedView;
   private Mode? _preCommandMode;
 
+  /// <summary>
+  /// Initializes a new instance of the <see cref="MainWindow"/> class.
+  /// </summary>
+  /// <param name="streamingClient">The initialized streaming client.</param>
   public MainWindow(IStreamingClient streamingClient) {
     Width = Dim.Fill();
     Height = Dim.Fill();
@@ -75,6 +82,10 @@ public sealed class MainWindow : Runnable {
     _mainContent.SetFocus();
   }
 
+  /// <summary>
+  /// Changes the application's current mode (view).
+  /// </summary>
+  /// <param name="mode">The mode to switch to.</param>
   public void SetMode(Mode mode) {
     if (mode == _currentMode) {
       return;
@@ -91,6 +102,10 @@ public sealed class MainWindow : Runnable {
     _statusBar.SetMode(GetModeDisplayName(mode));
   }
 
+  /// <summary>
+  /// Displays a temporary error message to the user.
+  /// </summary>
+  /// <param name="message">The message to display.</param>
   public void DisplayError(string message) {
     _commandLine.DisplayError(message);
   }

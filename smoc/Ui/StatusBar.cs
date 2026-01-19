@@ -8,6 +8,9 @@ using Terminal.Gui.Views;
 
 namespace Smoc.Ui;
 
+/// <summary>
+/// Displays application status, including mode, version, and playback state.
+/// </summary>
 public sealed class StatusBar : View {
   private static class Messages {
     public const string PLAY = "[PLAY]";
@@ -23,6 +26,10 @@ public sealed class StatusBar : View {
   private readonly Label _stateLabel;
   private readonly PlayerService _playerService;
 
+  /// <summary>
+  /// Initializes a new instance of the <see cref="StatusBar"/> class.
+  /// </summary>
+  /// <param name="playerService">The player service to monitor.</param>
   public StatusBar(PlayerService playerService) {
     _playerService = playerService;
     Width = Dim.Fill();
@@ -95,10 +102,18 @@ public sealed class StatusBar : View {
     return _modeLabel.Text;
   }
 
+  /// <summary>
+  /// Sets the displayed mode text.
+  /// </summary>
+  /// <param name="mode">The mode name to display.</param>
   public void SetMode(string mode) {
     _modeLabel.Text = mode;
   }
 
+  /// <summary>
+  /// Sets the displayed state text manually.
+  /// </summary>
+  /// <param name="state">The state text.</param>
   public void SetState(string state) {
     _stateLabel.Text = state;
   }

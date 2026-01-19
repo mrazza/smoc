@@ -3,7 +3,11 @@ using Terminal.Gui.Views;
 
 namespace Smoc.Ui.Components;
 
+/// <summary>
+/// A ListView specialized for displaying search results, with custom key handling.
+/// </summary>
 public sealed class SearchResultsList : ListView {
+  // TODO: Extract this so that its shared with the actual command bindings
   private static readonly Key CommandKey = new Key(':');
 
   public SearchResultsList()
