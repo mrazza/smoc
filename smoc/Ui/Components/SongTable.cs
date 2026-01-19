@@ -140,12 +140,32 @@ public sealed class SongTable : TableView
         return songs.Skip(SelectedRow).ToList();
     }
 
+    public Song GetSelectedSong()
+    {
+        return songs[SelectedRow];
+    }
+
     public void ClearSongs()
     {
         songs.Clear();
         songTableData.Clear();
         SelectedRow = 0;
         CanFocus = false;
+    }
+
+    public Point GetSelectedRowScreenPosition()
+    {
+        if (CellToScreen(0, SelectedRow) is { } cellPoint)
+        {
+            var tableScreenPos = FrameToScreen();
+            var offset = GetAdornmentsThickness();
+            return new Point(
+                tableScreenPos.X + offset.Left + cellPoint.X,
+                tableScreenPos.Y + offset.Top + cellPoint.Y + 1 // Add 1 to account for the header row
+            );
+        }
+
+        throw new InvalidOperationException("no row selected or row is not visible");
     }
 
     protected override void OnFrameChanged(in Rectangle frame)
