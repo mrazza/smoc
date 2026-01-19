@@ -1,5 +1,4 @@
 using System.Net;
-using Terminal.Gui.App;
 using YouTubeMusicAPI.Client;
 using YouTubeMusicAPI.Models.Search;
 using YouTubeMusicAPI.Models.Streaming;

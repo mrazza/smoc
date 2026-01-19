@@ -1,6 +1,5 @@
 using System.Data;
 using System.Drawing;
-using System.Globalization;
 using Smoc.Streaming;
 using Terminal.Gui.Configuration;
 using Terminal.Gui.Drawing;
