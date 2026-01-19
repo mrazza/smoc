@@ -17,7 +17,7 @@ namespace Smoc.Ui;
 public sealed class SongView : View {
   private static class Messages {
     public const string SEARCHING = "searching...";
-    public const string NO_SONGS = "no tracks found";
+    public const string NO_SONGS = "no tracks";
     public const string SEARCH_ERROR = "error searching tracks";
   }
 
@@ -49,7 +49,7 @@ public sealed class SongView : View {
     _songsLabel = new Label() {
       X = Pos.Center(),
       Y = Pos.Center(),
-      Text = Messages.SEARCHING
+      Text = Messages.NO_SONGS
     };
     _songTable = new SongTable(SongTableColumns.Artist | SongTableColumns.Album | SongTableColumns.Song | SongTableColumns.Length) {
       Width = Dim.Fill(),
