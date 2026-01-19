@@ -8,129 +8,108 @@ using Terminal.Gui.Views;
 
 namespace Smoc.Ui;
 
-public sealed class MainWindow : Runnable
-{
-    private readonly CommandLine commandLine;
-    private readonly StatusBar statusBar;
-    private readonly MainContent mainContent;
-    private readonly NowPlaying nowPlaying;
-    private readonly PlayerService playerService;
-    private readonly CommandService commandService;
-    private readonly IStreamingClient streamingClient;
+public sealed class MainWindow : Runnable {
+  private readonly CommandLine _commandLine;
+  private readonly StatusBar _statusBar;
+  private readonly MainContent _mainContent;
+  private readonly NowPlaying _nowPlaying;
+  private readonly PlayerService _playerService;
+  private readonly CommandService _commandService;
+  private readonly IStreamingClient _streamingClient;
 
-    private Mode? currentMode;
-    private View? preCommandFocusedView;
-    private Mode? preCommandMode;
+  private Mode? _currentMode;
+  private View? _preCommandFocusedView;
+  private Mode? _preCommandMode;
 
-    public MainWindow(IStreamingClient streamingClient)
-    {
-        Width = Dim.Fill();
-        Height = Dim.Fill();
-        CanFocus = true;
+  public MainWindow(IStreamingClient streamingClient) {
+    Width = Dim.Fill();
+    Height = Dim.Fill();
+    CanFocus = true;
 
-        this.streamingClient = streamingClient;
-        playerService = new PlayerService(this, streamingClient);
-        commandService = new CommandService();
-        nowPlaying = new NowPlaying(this, playerService, commandService);
-        commandLine = new CommandLine()
-        {
-            Y = Pos.AnchorEnd()
-        };
-        statusBar = new StatusBar(playerService)
-        {
-            Y = Pos.Top(commandLine) - 1
-        };
-        mainContent = new MainContent(this, commandService, playerService, streamingClient)
-        {
-            Y = Pos.Bottom(nowPlaying),
-            Height = Dim.Fill() - statusBar.Height - commandLine.Height
-        };
-        Add(nowPlaying, mainContent, statusBar, commandLine);
+    this._streamingClient = streamingClient;
+    _playerService = new PlayerService(this, streamingClient);
+    _commandService = new CommandService();
+    _nowPlaying = new NowPlaying(this, _playerService, _commandService);
+    _commandLine = new CommandLine() {
+      Y = Pos.AnchorEnd()
+    };
+    _statusBar = new StatusBar(_playerService) {
+      Y = Pos.Top(_commandLine) - 1
+    };
+    _mainContent = new MainContent(this, _commandService, _playerService, streamingClient) {
+      Y = Pos.Bottom(_nowPlaying),
+      Height = Dim.Fill() - _statusBar.Height - _commandLine.Height
+    };
+    Add(_nowPlaying, _mainContent, _statusBar, _commandLine);
 
-        commandService.RegisterCommand("q", (_, args) =>
-        {
-            if (args.Length > 0)
-            {
-                commandLine.DisplayError($"unexpected trailing characters: {args}");
-            }
-            else
-            {
-                App!.RequestStop();
-            }
-        });
+    _commandService.RegisterCommand("q", (_, args) => {
+      if (args.Length > 0) {
+        _commandLine.DisplayError($"unexpected trailing characters: {args}");
+      }
+      else {
+        App!.RequestStop();
+      }
+    });
 
-        AddCommand(Command.HotKey, OnCommandLineHotKey);
-        HotKeyBindings.Add(new Key(':'), this, Command.HotKey);
+    AddCommand(Command.HotKey, OnCommandLineHotKey);
+    HotKeyBindings.Add(new Key(':'), this, Command.HotKey);
 
-        commandLine.CommandCancelled += (sender, e) =>
-        {
-            SetMode(preCommandMode!.Value);
-            preCommandFocusedView?.SetFocus();
-        };
-        commandLine.Accepted += (sender, e) =>
-        {
-            var command = (e.Context as CommandContext<string>?)?.Binding;
-            SetMode(preCommandMode!.Value);
-            preCommandFocusedView?.SetFocus();
+    _commandLine.CommandCancelled += (sender, e) => {
+      SetMode(_preCommandMode!.Value);
+      _preCommandFocusedView?.SetFocus();
+    };
+    _commandLine.Accepted += (sender, e) => {
+      var command = (e.Context as CommandContext<string>?)?.Binding;
+      SetMode(_preCommandMode!.Value);
+      _preCommandFocusedView?.SetFocus();
 
-            if (command is not null && command.Length > 0)
-            {
-                if (!commandService.ExecuteCommand(command!))
-                {
-                    commandLine.DisplayError($"not a valid commmand: {command}");
-                }
-            }
-        };
-
-        currentMode = null;
-        SetMode(Mode.Player);
-        mainContent.SetFocus();
-    }
-
-    public void SetMode(Mode mode)
-    {
-        if (mode == currentMode)
-        {
-            return;
+      if (command is not null && command.Length > 0) {
+        if (!_commandService.ExecuteCommand(command!)) {
+          _commandLine.DisplayError($"not a valid commmand: {command}");
         }
+      }
+    };
 
-        if (mode != Mode.Command)
-        {
-            mainContent.SetMode(mode);
-        }
-        else
-        {
-            commandLine.SetFocus();
-        }
+    _currentMode = null;
+    SetMode(Mode.Player);
+    _mainContent.SetFocus();
+  }
 
-        currentMode = mode;
-        statusBar.SetMode(GetModeDisplayName(mode));
+  public void SetMode(Mode mode) {
+    if (mode == _currentMode) {
+      return;
     }
 
-    public void DisplayError(string message)
-    {
-        commandLine.DisplayError(message);
+    if (mode != Mode.Command) {
+      _mainContent.SetMode(mode);
+    }
+    else {
+      _commandLine.SetFocus();
     }
 
-    private bool? OnCommandLineHotKey(ICommandContext? context)
-    {
-        preCommandMode = currentMode;
-        preCommandFocusedView = MostFocused;
-        SetMode(Mode.Command);
-        return true;
-    }
+    _currentMode = mode;
+    _statusBar.SetMode(GetModeDisplayName(mode));
+  }
 
-    private static string GetModeDisplayName(Mode mode)
-    {
-        FieldInfo? fieldInfo = typeof(Mode).GetField(mode.ToString());
-        if (fieldInfo is not null)
-        {
-            object[] attributes = fieldInfo.GetCustomAttributes(typeof(DisplayNameAttribute), true);
-            if (attributes.Length > 0)
-            {
-                return ((DisplayNameAttribute)attributes[0]).DisplayName;
-            }
-        }
-        throw new ArgumentException("Invalid mode");
+  public void DisplayError(string message) {
+    _commandLine.DisplayError(message);
+  }
+
+  private bool? OnCommandLineHotKey(ICommandContext? context) {
+    _preCommandMode = _currentMode;
+    _preCommandFocusedView = MostFocused;
+    SetMode(Mode.Command);
+    return true;
+  }
+
+  private static string GetModeDisplayName(Mode mode) {
+    FieldInfo? fieldInfo = typeof(Mode).GetField(mode.ToString());
+    if (fieldInfo is not null) {
+      object[] attributes = fieldInfo.GetCustomAttributes(typeof(DisplayNameAttribute), true);
+      if (attributes.Length > 0) {
+        return ((DisplayNameAttribute)attributes[0]).DisplayName;
+      }
     }
+    throw new ArgumentException("Invalid mode");
+  }
 }
