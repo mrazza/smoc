@@ -5,7 +5,7 @@ A TUI music player for streaming services. The currently implemented streaming s
 
 ![screenshot](smoc_example.png)
 
-This project is not supported or endorsed by Google. The same warnings and disclamers for the well-known [yt-dlp](https://github.com/yt-dlp/yt-dlp) project apply here.
+This project is not supported or endorsed by Google. In fact, it has nothing to do with Google or YouTube; this is purely a hobby project. The same warnings and disclamers for the well-known [yt-dlp](https://github.com/yt-dlp/yt-dlp) project apply here.
 
 This project is made possible by:
 - [Terminal.Gui](https://github.com/gui-cs/Terminal.Gui) - TUI Framework
@@ -44,3 +44,10 @@ It is recommended to do this in a new incognito/private window and immediately c
 
 ### PO Token and Visitor Data
 More recently, additional tokens are often needed. SMoC can generate these for you if you have provided a valid cookie in the `cookie.txt` file. Run `smoc --gentokens`; this will create a `tokens.json` file in the same config directory.
+
+## Development
+SMoC is currently in active development. Please report any issues you may encounter.
+
+This project is written in C# using the .NET 10 SDK. We're following the [Google C# Style Guide](https://google.github.io/styleguide/csharp-style.html).
+
+Commits follow the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) specification with branches and PRs following [Conventional Branch](https://conventional-branch.github.io/).
