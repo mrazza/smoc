@@ -1,5 +1,6 @@
 using System.Data;
 using System.Drawing;
+using System.Globalization;
 using Smoc.Streaming;
 using Terminal.Gui.Configuration;
 using Terminal.Gui.Drawing;
@@ -43,13 +44,12 @@ public sealed class SongTable : TableView
         }
     }
 
-    public event EventHandler<Song>? SongSelected;
+    public event EventHandler<List<Song>>? SongSelected;
 
     public SongTable(SongTableColumns columns = SongTableColumns.Number | SongTableColumns.Album | SongTableColumns.Song | SongTableColumns.Length | SongTableColumns.Year)
         : base()
     {
         FullRowSelect = true;
-        MultiSelect = false;
 
         Style.SmoothHorizontalScrolling = true;
         Style.AlwaysShowHeaders = true;
@@ -75,6 +75,7 @@ public sealed class SongTable : TableView
         VimKeyBindings.AddNavigationKeyBindings(KeyBindings, bindUpDown: false);
         KeyBindings.Remove(Key.CursorRight);
         KeyBindings.Remove(Key.CursorLeft);
+        KeyBindings.Remove(Key.Space);
     }
 
     public void SetSongs(IEnumerable<Song> songs)
@@ -126,7 +127,7 @@ public sealed class SongTable : TableView
 
     protected override bool OnCellActivated(CellActivatedEventArgs args)
     {
-        SongSelected?.Invoke(this, songs[SelectedRow]);
+        SongSelected?.Invoke(this, GetSelectedSongs());
         return base.OnCellActivated(args);
     }
 
@@ -135,14 +136,10 @@ public sealed class SongTable : TableView
         return songs.ToList();
     }
 
-    public List<Song> GetSelectedSongAndFollowingSongs()
+    public List<Song> GetSelectedSongs()
     {
-        return songs.Skip(SelectedRow).ToList();
-    }
-
-    public Song GetSelectedSong()
-    {
-        return songs[SelectedRow];
+        return MultiSelectedRegions.Where(_ => MultiSelect).Select(region => Enumerable.Range(region.Rectangle.Y, region.Rectangle.Height))
+            .FirstOrDefault()?.Select(index => songs[index]).ToList() ?? [songs[SelectedRow]];
     }
 
     public void ClearSongs()

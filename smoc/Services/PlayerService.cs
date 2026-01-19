@@ -63,11 +63,7 @@ public sealed class PlayerService : IDisposable
         this.streamPlaybackService = null;
     }
 
-    public void QueueSong(Song song)
-    {
-        playbackQueue.Add(song);
-        InvokeAppEvent(QueueChanged);
-    }
+    public void QueueSong(Song song) => QueueSongs([song]);
 
     public void QueueSongs(IEnumerable<Song> songs)
     {
