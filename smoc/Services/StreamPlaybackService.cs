@@ -1,10 +1,8 @@
-using Smoc.Streaming;
 using SoundFlow.Abstracts.Devices;
 using SoundFlow.Backends.MiniAudio;
 using SoundFlow.Components;
 using SoundFlow.Providers;
 using SoundFlow.Structs;
-using Terminal.Gui.App;
 
 namespace Smoc.Services;
 
