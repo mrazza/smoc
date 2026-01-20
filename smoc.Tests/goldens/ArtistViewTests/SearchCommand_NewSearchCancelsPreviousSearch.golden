@@ -1,5 +1,6 @@
-ArtistViewTests.ArtistCommand_ShowsEmptyUi_0:
+ArtistViewTests.SearchCommand_NewSearchCancelsPreviousSearch_0:
 ┌────────────────────────────┐┌────────────────────────────────────────────────────────────────────┐
+│Goose                       ││                                                                    │
 │                            ││                                                                    │
 │                            ││                                                                    │
 │                            ││                                                                    │
@@ -7,8 +8,7 @@ ArtistViewTests.ArtistCommand_ShowsEmptyUi_0:
 │                            ││                                                                    │
 │                            ││                                                                    │
 │                            ││                                                                    │
-│                            ││                                                                    │
-│      no artists found      ││                         select an artist                           │
+│                            ││                         select an artist                           │
 │                            ││                                                                    │
 │                            ││                                                                    │
 │                            ││                                                                    │

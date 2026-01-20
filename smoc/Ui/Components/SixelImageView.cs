@@ -69,8 +69,7 @@ public sealed class SixelImageView : View {
       context?.AddDrawnRectangle(RenderableArea);
 
       return true;
-    }
-    else {
+    } else {
       if (_sixelSupportDetector is null) {
         // We delay initialization of sixel support detector until it's needed and we
         // have confidence the driver is accurate.

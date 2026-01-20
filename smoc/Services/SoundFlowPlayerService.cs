@@ -102,8 +102,7 @@ public sealed class SoundFlowPlayerService : IPlayerService {
     var insertIndex = _currentPlaybackIndex + 1;
     if (insertIndex > _playbackQueue.Count) {
       _playbackQueue.Add(song);
-    }
-    else {
+    } else {
       _playbackQueue.Insert(insertIndex, song);
     }
     InvokeAppEvent(QueueChanged);
@@ -119,8 +118,7 @@ public sealed class SoundFlowPlayerService : IPlayerService {
     var insertIndex = _currentPlaybackIndex + 1;
     if (insertIndex > _playbackQueue.Count) {
       _playbackQueue.AddRange(songs);
-    }
-    else {
+    } else {
       _playbackQueue.InsertRange(insertIndex, songs);
     }
     InvokeAppEvent(QueueChanged);
@@ -224,8 +222,7 @@ public sealed class SoundFlowPlayerService : IPlayerService {
       _currentPlaybackIndex = 0;
       _playbackState = PlaybackState.Stopped;
       InvokeAppEvent(PlaybackStateChanged, _playbackState);
-    }
-    else {
+    } else {
       Logging.Debug($"Playing next song...");
       await PlayCurrentSong();
     }
@@ -292,8 +289,7 @@ public sealed class SoundFlowPlayerService : IPlayerService {
       _streamPlaybackService.PositionChanged += (sender, args) => InvokeAppEvent(PositionChanged, args);
       _streamPlaybackService.Play();
       InvokeAppEvent(SongChanged, currentSong);
-    }
-    catch (OperationCanceledException) {
+    } catch (OperationCanceledException) {
       Logging.Debug($"Playback setup for {currentSong.Title} cancelled.");
     }
   }

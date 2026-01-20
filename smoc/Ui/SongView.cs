@@ -119,11 +119,9 @@ public sealed class SongView : View {
       _songTable.Style.ShowHeaders = true;
       _songsLabel.Visible = false;
       _songTable.SetSongs(songs);
-    }
-    catch (OperationCanceledException) {
+    } catch (OperationCanceledException) {
       // Ignore
-    }
-    catch (Exception ex) {
+    } catch (Exception ex) {
       Logging.Error($"Error searching tracks: {ex.Message}");
       _mainWindow.DisplayError(Messages.SEARCH_ERROR);
       ResetTable(Messages.SEARCH_ERROR);

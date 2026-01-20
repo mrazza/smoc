@@ -50,7 +50,7 @@ public sealed class StatusBar : View {
       Width = Dim.Fill() - Dim.Func((view) => view!.Frame.Width, _versionLabel),
       Height = Dim.Fill()
     };
-    Terminal.Gui.Drawing.Scheme majorSectionScheme = SchemeManager.GetScheme("StatusBar_Mode");
+    var majorSectionScheme = SchemeManager.GetScheme("StatusBar_Mode");
     _versionLabel.SetScheme(majorSectionScheme);
     _modeLabel.SetScheme(majorSectionScheme);
     Thickness defaultMargin = new(1, 0, 1, 0);

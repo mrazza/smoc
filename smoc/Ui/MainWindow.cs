@@ -52,8 +52,7 @@ public sealed class MainWindow : Runnable, IMainWindow {
     _commandService.RegisterCommand("q", (_, args) => {
       if (args.Length > 0) {
         _commandLine.DisplayError($"unexpected trailing characters: {args}");
-      }
-      else {
+      } else {
         App!.RequestStop();
       }
     });
@@ -90,8 +89,7 @@ public sealed class MainWindow : Runnable, IMainWindow {
 
     if (mode != Mode.Command) {
       _mainContent.SetMode(mode);
-    }
-    else {
+    } else {
       _commandLine.SetFocus();
     }
 

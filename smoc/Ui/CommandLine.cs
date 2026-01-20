@@ -71,8 +71,7 @@ public sealed class CommandLine : View {
     if (newHasFocus) {
       ClearError();
       _commandTextField.InsertText(":");
-    }
-    else {
+    } else {
       _commandTextField.DeleteAll();
       _commandTextField.ClearHistoryChanges();
     }

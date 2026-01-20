@@ -1,14 +1,14 @@
-ArtistViewTests.SearchCommand_SongsFound_ShowsResults_0:
+ArtistViewTests.ArtistSelected_NoAlbums_ShowsNoSongs_0:
 ┌────────────────────────────┐┌────────────────────────────────────────────────────────────────────┐
-│Radiohead                   ││#   Album                    Track                    Length Year   │
-│                            ││1   OK Computer              Paranoid Android         5:00   1970   │
-│                            ││2   OK Computer              Climbing Up the Walls    3:00   1970   │
+│Radiohead                   ││                                                                    │
 │                            ││                                                                    │
 │                            ││                                                                    │
 │                            ││                                                                    │
 │                            ││                                                                    │
 │                            ││                                                                    │
 │                            ││                                                                    │
+│                            ││                                                                    │
+│                            ││                          no tracks found                           │
 │                            ││                                                                    │
 │                            ││                                                                    │
 │                            ││                                                                    │

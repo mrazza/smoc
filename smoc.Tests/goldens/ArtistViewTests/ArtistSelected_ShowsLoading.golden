@@ -1,4 +1,4 @@
-ArtistViewTests.SearchCommand_AlbumLookupApiFailure_ShowsError_0:
+ArtistViewTests.ArtistSelected_ShowsLoading_0:
 ┌────────────────────────────┐┌────────────────────────────────────────────────────────────────────┐
 │Radiohead                   ││                                                                    │
 │                            ││                                                                    │
@@ -8,7 +8,7 @@ ArtistViewTests.SearchCommand_AlbumLookupApiFailure_ShowsError_0:
 │                            ││                                                                    │
 │                            ││                                                                    │
 │                            ││                                                                    │
-│                            ││                       error loading tracks                         │
+│                            ││                            loading...                              │
 │                            ││                                                                    │
 │                            ││                                                                    │
 │                            ││                                                                    │
