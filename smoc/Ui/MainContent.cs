@@ -23,7 +23,7 @@ public sealed class MainContent : View {
   /// <param name="commandService">The command service.</param>
   /// <param name="playerService">The player service.</param>
   /// <param name="streamingClient">The streaming client.</param>
-  public MainContent(MainWindow mainWindow, CommandService commandService, PlayerService playerService, IStreamingClient streamingClient) {
+  public MainContent(MainWindow mainWindow, CommandService commandService, IPlayerService playerService, IStreamingClient streamingClient) {
     _mainWindow = mainWindow;
     Width = Dim.Fill();
     Height = Dim.Fill();

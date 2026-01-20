@@ -24,13 +24,13 @@ public sealed class StatusBar : View {
   private readonly Label _modeLabel;
   private readonly Label _versionLabel;
   private readonly Label _stateLabel;
-  private readonly PlayerService _playerService;
+  private readonly IPlayerService _playerService;
 
   /// <summary>
   /// Initializes a new instance of the <see cref="StatusBar"/> class.
   /// </summary>
   /// <param name="playerService">The player service to monitor.</param>
-  public StatusBar(PlayerService playerService) {
+  public StatusBar(IPlayerService playerService) {
     _playerService = playerService;
     Width = Dim.Fill();
     Height = Dim.Absolute(1);
