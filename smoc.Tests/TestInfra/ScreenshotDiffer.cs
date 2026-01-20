@@ -1,7 +1,7 @@
 using System.Reflection;
 using System.Runtime.CompilerServices;
 
-namespace smoc.Tests.Infra;
+namespace smoc.Tests.TestInfra;
 
 public class ScreenshotDiffer {
   private readonly ITestOutputHelper _output;

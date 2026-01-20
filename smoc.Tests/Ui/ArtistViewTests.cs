@@ -1,24 +1,15 @@
-
 using Moq;
 using Smoc.Services;
 using Smoc.Streaming;
 using Smoc.Ui;
-using Smoc.Ui.Components;
 using Smoc.Ui.Models;
-using System.Collections.ObjectModel;
-using Terminal.Gui;
-using Terminal.Gui.Views; // Required for Window, ListView
+using Terminal.Gui.Views;
 using TerminalGuiFluentTesting;
-using Xunit;
-using System.Text;
-using Terminal.Gui.Drivers;
-using Acornima.Ast;
 using smoc.Tests.Fakes;
-using System.ComponentModel.DataAnnotations;
 using Terminal.Gui.Input;
-using smoc.Tests.Infra;
+using smoc.Tests.TestInfra;
 
-namespace smoc.Tests;
+namespace smoc.Tests.Ui;
 
 public class ArtistViewTests {
   private readonly Mock<IStreamingClient> _mockStreamingClient;
