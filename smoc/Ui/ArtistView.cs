@@ -39,7 +39,7 @@ public sealed class ArtistView : View {
 
   private readonly MainWindow _mainWindow;
   private readonly IStreamingClient _streamingClient;
-  private readonly PlayerService _playerService;
+  private readonly IPlayerService _playerService;
 
   private CancellationTokenSource? _searchCts;
   private CancellationTokenSource? _selectArtistCts;
@@ -51,7 +51,7 @@ public sealed class ArtistView : View {
   /// <param name="commandService">The command service for registering search commands.</param>
   /// <param name="streamingClient">The client for fetching artist data.</param>
   /// <param name="playerService">The player service for playback options.</param>
-  public ArtistView(MainWindow mainWindow, CommandService commandService, IStreamingClient streamingClient, PlayerService playerService) {
+  public ArtistView(MainWindow mainWindow, CommandService commandService, IStreamingClient streamingClient, IPlayerService playerService) {
     _mainWindow = mainWindow;
     _streamingClient = streamingClient;
     _playerService = playerService;

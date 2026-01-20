@@ -16,7 +16,7 @@ public sealed class MainWindow : Runnable {
   private readonly StatusBar _statusBar;
   private readonly MainContent _mainContent;
   private readonly NowPlaying _nowPlaying;
-  private readonly PlayerService _playerService;
+  private readonly IPlayerService _playerService;
   private readonly CommandService _commandService;
   private readonly IStreamingClient _streamingClient;
 
@@ -34,7 +34,7 @@ public sealed class MainWindow : Runnable {
     CanFocus = true;
 
     this._streamingClient = streamingClient;
-    _playerService = new PlayerService(this, streamingClient);
+    _playerService = new SoundFlowPlayerService(this, streamingClient);
     _commandService = new CommandService();
     _nowPlaying = new NowPlaying(this, _playerService, _commandService);
     _commandLine = new CommandLine() {

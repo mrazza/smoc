@@ -26,7 +26,7 @@ public sealed class SongView : View {
   private readonly SongContextMenu _songContextMenu;
   private readonly Label _songsLabel;
   private readonly IStreamingClient _streamingClient;
-  private readonly PlayerService _playerService;
+  private readonly IPlayerService _playerService;
 
   private CancellationTokenSource? _searchCts;
 
@@ -37,7 +37,7 @@ public sealed class SongView : View {
   /// <param name="commandService">The command service for registering search commands.</param>
   /// <param name="streamingClient">The client for searching songs.</param>
   /// <param name="playerService">The player service for playback options.</param>
-  public SongView(MainWindow mainWindow, CommandService commandService, IStreamingClient streamingClient, PlayerService playerService) {
+  public SongView(MainWindow mainWindow, CommandService commandService, IStreamingClient streamingClient, IPlayerService playerService) {
     _mainWindow = mainWindow;
     _streamingClient = streamingClient;
     _playerService = playerService;

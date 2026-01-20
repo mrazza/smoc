@@ -22,7 +22,7 @@ public sealed class NowPlaying : View {
   }
 
   private readonly MainWindow _mainWindow;
-  private readonly PlayerService _playerService;
+  private readonly IPlayerService _playerService;
   private string? _albumArtUrl;
   private readonly SixelImageView _albumArtView;
   private readonly Label _songLabel;
@@ -40,7 +40,7 @@ public sealed class NowPlaying : View {
   /// <param name="mainWindow">The main window reference.</param>
   /// <param name="playerService">The player service for playback information.</param>
   /// <param name="commandService">The command service for registering volume commands.</param>
-  public NowPlaying(MainWindow mainWindow, PlayerService playerService, CommandService commandService) {
+  public NowPlaying(MainWindow mainWindow, IPlayerService playerService, CommandService commandService) {
     _mainWindow = mainWindow;
     _playerService = playerService;
     _httpClient = new HttpClient();

@@ -9,9 +9,9 @@ using Terminal.Gui.App;
 namespace Smoc.Services;
 
 /// <summary>
-/// Orchestrates audio playback, queue management, and interaction with the audio playback engine.
+/// An IPlayerService implementation that uses SoundFlow for audio playback.
 /// </summary>
-public sealed class PlayerService : IDisposable {
+public sealed class SoundFlowPlayerService : IPlayerService {
   private readonly MainWindow _mainWindow;
   private readonly IStreamingClient _streamingClient;
   private readonly MiniAudioEngine _audioEngine;
@@ -24,69 +24,43 @@ public sealed class PlayerService : IDisposable {
   private StreamPlaybackService? _streamPlaybackService;
   private CancellationTokenSource? _playbackCts;
 
-  /// <summary>
-  /// Occurs when the master volume level changes.
-  /// </summary>
+  /// <inheritdoc/>
   public event EventHandler<float>? VolumeChanged;
 
-  /// <summary>
-  /// Occurs when the currently playing song changes.
-  /// </summary>
+  /// <inheritdoc/>
   public event EventHandler<Song>? SongChanged;
 
-  /// <summary>
-  /// Occurs when the playback state (Playing, Paused, Stopped) changes.
-  /// </summary>
+  /// <inheritdoc/>
   public event EventHandler<PlaybackState>? PlaybackStateChanged;
 
-  /// <summary>
-  /// Occurs when the playback position changes (e.g. during playback).
-  /// </summary>
+  /// <inheritdoc/>
   public event EventHandler<TimeSpan>? PositionChanged;
 
-  /// <summary>
-  /// Occurs when the playback queue changes (songs added, removed, or reordered).
-  /// </summary>
+  /// <inheritdoc/>
   public event EventHandler? QueueChanged;
 
-  /// <summary>
-  /// Gets the current state of playback.
-  /// </summary>
+  /// <inheritdoc/>
   public PlaybackState PlaybackState => this._playbackState;
 
-  /// <summary>
-  /// Gets the currently playing song, or null if no song is playing or the queue is empty.
-  /// </summary>
+  /// <inheritdoc/>
   public Song? CurrentSong => GetCurrentSong();
 
-  /// <summary>
-  /// Gets the current playback position; or <see cref="TimeSpan.Zero"/> if no song is playing.
-  /// </summary>
+  /// <inheritdoc/>
   public TimeSpan CurrentTime => this._streamPlaybackService?.Time ?? TimeSpan.Zero;
 
-  /// <summary>
-  /// Gets the duration of the current song; or <see cref="TimeSpan.Zero"/> if no song is playing.
-  /// </summary>
+  /// <inheritdoc/>
   public TimeSpan Duration => this._streamPlaybackService?.Duration ?? TimeSpan.Zero;
 
-  /// <summary>
-  /// Gets the current playback progress (0.0 to 1.0); or 0 if no song is playing.
-  /// </summary>
+  /// <inheritdoc/>
   public float Progress => this._streamPlaybackService?.Progress ?? 0;
 
-  /// <summary>
-  /// Gets a copy of the current playback queue.
-  /// </summary>
+  /// <inheritdoc/>
   public IEnumerable<Song> GetCurrentPlaybackQueue() => _playbackQueue.ToList();
 
-  /// <summary>
-  /// Gets the index of the currently playing song in the queue.
-  /// </summary>
+  /// <inheritdoc/>
   public int CurrentPlaybackIndex => _currentPlaybackIndex;
 
-  /// <summary>
-  /// Gets or sets the master volume (0.0 to 1.0).
-  /// </summary>
+  /// <inheritdoc/>
   public float Volume {
     get => this._playbackDevice.MasterMixer.Volume;
     set {
@@ -95,7 +69,7 @@ public sealed class PlayerService : IDisposable {
     }
   }
 
-  public PlayerService(MainWindow mainWindow, IStreamingClient streamingClient) {
+  public SoundFlowPlayerService(MainWindow mainWindow, IStreamingClient streamingClient) {
     _mainWindow = mainWindow;
     _streamingClient = streamingClient;
     _audioEngine = new MiniAudioEngine();
@@ -111,10 +85,7 @@ public sealed class PlayerService : IDisposable {
     _streamPlaybackService = null;
   }
 
-  /// <summary>
-  /// Adds a song to the queue immediately after the current song (or at the end if no song is playing).
-  /// </summary>
-  /// <param name="song">The song to queue next.</param>
+  /// <inheritdoc/>
   public void QueueSong(Song song) => QueueSongs([song]);
 
   public void QueueSongs(IEnumerable<Song> songs) {
@@ -138,10 +109,7 @@ public sealed class PlayerService : IDisposable {
     InvokeAppEvent(QueueChanged);
   }
 
-  /// <summary>
-  /// Adds multiple songs to the queue immediately after the current song.
-  /// </summary>
-  /// <param name="songs">The songs to queue next.</param>
+  /// <inheritdoc/>
   public void QueueNext(IEnumerable<Song> songs) {
     if (_playbackQueue.Count == 0) {
       QueueSongs(songs);
@@ -158,23 +126,13 @@ public sealed class PlayerService : IDisposable {
     InvokeAppEvent(QueueChanged);
   }
 
-  /// <summary>
-  /// Adds a song to the very end of the queue.
-  /// </summary>
-  /// <param name="song">The song to add.</param>
+  /// <inheritdoc/>
   public void QueueLast(Song song) => QueueSong(song);
 
-  /// <summary>
-  /// Adds multiple songs to the very end of the queue.
-  /// </summary>
-  /// <param name="songs">The songs to add.</param>
+  /// <inheritdoc/>
   public void QueueLast(IEnumerable<Song> songs) => QueueSongs(songs);
 
-  /// <summary>
-  /// Skips to a specific track in the queue by index.
-  /// </summary>
-  /// <param name="index">The zero-based index of the track in the queue.</param>
-  /// <exception cref="ArgumentOutOfRangeException">Thrown if the index is out of range.</exception>
+  /// <inheritdoc/>
   public async Task ChangeTrack(int index) {
     if (index < 0 || index >= _playbackQueue.Count) {
       throw new ArgumentOutOfRangeException(nameof(index));
@@ -185,17 +143,13 @@ public sealed class PlayerService : IDisposable {
     await Play();
   }
 
-  /// <summary>
-  /// Clears the entire playback queue.
-  /// </summary>
+  /// <inheritdoc/>
   public void ClearPlaybackQueue() {
     _playbackQueue.Clear();
     InvokeAppEvent(QueueChanged);
   }
 
-  /// <summary>
-  /// Toggles between playing and paused states.
-  /// </summary>
+  /// <inheritdoc/>
   public async Task PlayPause() {
     switch (_playbackState) {
       case PlaybackState.Playing:
@@ -207,9 +161,7 @@ public sealed class PlayerService : IDisposable {
     }
   }
 
-  /// <summary>
-  /// Starts or resumes playback.
-  /// </summary>
+  /// <inheritdoc/>
   public async Task Play() {
     switch (_playbackState) {
       case PlaybackState.Paused:
@@ -235,9 +187,7 @@ public sealed class PlayerService : IDisposable {
     Logging.Debug($"Playback requested when in invalid state {_playbackState}.");
   }
 
-  /// <summary>
-  /// Pauses playback.
-  /// </summary>
+  /// <inheritdoc/>
   public void Pause() {
     if (_playbackState != PlaybackState.Playing) {
       return;
@@ -250,9 +200,7 @@ public sealed class PlayerService : IDisposable {
     InvokeAppEvent(PlaybackStateChanged, _playbackState);
   }
 
-  /// <summary>
-  /// Stops playback and resets the playback state to Stopped.
-  /// </summary>
+  /// <inheritdoc/>
   public void Stop() {
     if (_playbackState == PlaybackState.Stopped) {
       return;

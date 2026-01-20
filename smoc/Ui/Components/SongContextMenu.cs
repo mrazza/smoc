@@ -21,7 +21,7 @@ public sealed class SongContextMenu : PopoverMenu {
   /// </summary>
   /// <param name="playerService">The player service to control playback.</param>
   /// <param name="songTable">The song table to get selection from.</param>
-  public SongContextMenu(PlayerService playerService, SongTable songTable)
+  public SongContextMenu(IPlayerService playerService, SongTable songTable)
       : base(CreateMenuItems(playerService, songTable)) {
     // Default PopoverMenu binds Left/Right for navigation (Bar behavior).
     // specific to Menu behavior we want Up/Down for vertical list.
@@ -52,7 +52,7 @@ public sealed class SongContextMenu : PopoverMenu {
   /// </summary>
   public int RequiredHeight => Root?.SubViews.Count ?? 0;
 
-  private static IEnumerable<MenuItem> CreateMenuItems(PlayerService playerService, SongTable songTable) {
+  private static IEnumerable<MenuItem> CreateMenuItems(IPlayerService playerService, SongTable songTable) {
     var menuItems = new List<MenuItem>();
 
     menuItems.Add(new MenuItem(Messages.PLAY_ALL, action: async () => {
