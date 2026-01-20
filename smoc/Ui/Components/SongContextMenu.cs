@@ -27,10 +27,10 @@ public sealed class SongContextMenu : PopoverMenu {
     // specific to Menu behavior we want Up/Down for vertical list.
     // Map Up to Previous (Backward)
     AddCommand(Command.Up, ctx => AdvanceFocus(NavigationDirection.Backward, TabBehavior.TabStop));
-    KeyBindings.Add(Terminal.Gui.Input.Key.CursorUp, Command.Up);
+    KeyBindings.Add(Key.CursorUp, Command.Up);
     // Map Down to Next (Forward)
     AddCommand(Command.Down, ctx => AdvanceFocus(NavigationDirection.Forward, TabBehavior.TabStop));
-    KeyBindings.Add(Terminal.Gui.Input.Key.CursorDown, Command.Down);
+    KeyBindings.Add(Key.CursorDown, Command.Down);
     VimKeyBindings.AddDirectionalKeyBindings(KeyBindings);
 
     // Map Esc to Cancel (Close)
@@ -38,7 +38,7 @@ public sealed class SongContextMenu : PopoverMenu {
       Visible = false;
       return true;
     });
-    KeyBindings.Add(Terminal.Gui.Input.Key.Esc, Command.Cancel);
+    KeyBindings.ReplaceCommands(Key.Esc, Command.Cancel);
   }
 
   public override void EndInit() {

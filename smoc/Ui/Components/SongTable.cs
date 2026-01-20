@@ -1,6 +1,8 @@
+using System.CommandLine;
 using System.Data;
 using System.Drawing;
 using Smoc.Streaming;
+using Terminal.Gui.App;
 using Terminal.Gui.Configuration;
 using Terminal.Gui.Drawing;
 using Terminal.Gui.Input;
@@ -74,9 +76,14 @@ public sealed class SongTable : TableView {
     Style.ShowHorizontalHeaderUnderline = false;
     BorderStyle = LineStyle.Single;
 
-    var highlightedScheme = SchemeManager.GetScheme("TableCurrentTrack");
-    var normalScheme = SchemeManager.GetScheme("TableNormalTracks");
-    Style.RowColorGetter = (args) => args.RowIndex == _highlightedRow ? highlightedScheme : normalScheme;
+    try {
+      var highlightedScheme = SchemeManager.GetScheme("TableCurrentTrack");
+      var normalScheme = SchemeManager.GetScheme("TableNormalTracks");
+      Style.RowColorGetter = (args) => args.RowIndex == _highlightedRow ? highlightedScheme : normalScheme;
+    }
+    catch (KeyNotFoundException) {
+      Logging.Error("SchemeManager.GetScheme() failed to find required schemes");
+    }
 
     _columns = columns;
     _songTableData = CreateDataTable(columns);

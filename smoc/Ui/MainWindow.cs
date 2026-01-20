@@ -11,7 +11,7 @@ namespace Smoc.Ui;
 /// <summary>
 /// The main application window management class.
 /// </summary>
-public sealed class MainWindow : Runnable {
+public sealed class MainWindow : Runnable, IMainWindow {
   private readonly CommandLine _commandLine;
   private readonly StatusBar _statusBar;
   private readonly MainContent _mainContent;
@@ -82,10 +82,7 @@ public sealed class MainWindow : Runnable {
     _mainContent.SetFocus();
   }
 
-  /// <summary>
-  /// Changes the application's current mode (view).
-  /// </summary>
-  /// <param name="mode">The mode to switch to.</param>
+  /// <inheritdoc/>
   public void SetMode(Mode mode) {
     if (mode == _currentMode) {
       return;
@@ -102,10 +99,7 @@ public sealed class MainWindow : Runnable {
     _statusBar.SetMode(GetModeDisplayName(mode));
   }
 
-  /// <summary>
-  /// Displays a temporary error message to the user.
-  /// </summary>
-  /// <param name="message">The message to display.</param>
+  /// <inheritdoc/>
   public void DisplayError(string message) {
     _commandLine.DisplayError(message);
   }
