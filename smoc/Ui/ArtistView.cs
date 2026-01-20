@@ -37,7 +37,7 @@ public sealed class ArtistView : View {
   private readonly Label _searchResultsLabel;
   private readonly Label _songsLabel;
 
-  private readonly MainWindow _mainWindow;
+  private readonly IMainWindow _mainWindow;
   private readonly IStreamingClient _streamingClient;
   private readonly IPlayerService _playerService;
 
@@ -51,7 +51,7 @@ public sealed class ArtistView : View {
   /// <param name="commandService">The command service for registering search commands.</param>
   /// <param name="streamingClient">The client for fetching artist data.</param>
   /// <param name="playerService">The player service for playback options.</param>
-  public ArtistView(MainWindow mainWindow, CommandService commandService, IStreamingClient streamingClient, IPlayerService playerService) {
+  public ArtistView(IMainWindow mainWindow, CommandService commandService, IStreamingClient streamingClient, IPlayerService playerService) {
     _mainWindow = mainWindow;
     _streamingClient = streamingClient;
     _playerService = playerService;
