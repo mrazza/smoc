@@ -175,8 +175,7 @@ public sealed class NowPlaying : View {
     // Only bother downloading the album art if it has changed.
     if (e.Album.ThumbnailUrl is null || e.Album.ThumbnailUrl.Length == 0) {
       _albumArtView.ClearImage();
-    }
-    else if (_albumArtUrl != e.Album.ThumbnailUrl) {
+    } else if (_albumArtUrl != e.Album.ThumbnailUrl) {
       _albumArtUrl = e.Album.ThumbnailUrl;
       _albumArtCancellationTokenSource?.Cancel();
       _albumArtCancellationTokenSource = new CancellationTokenSource();

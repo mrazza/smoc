@@ -29,22 +29,19 @@ public class ScreenshotDiffer {
     string goldenFile;
     if (goldenNum == 0) {
       goldenFile = Path.Combine(goldenPath, callerMember + ".golden");
-    }
-    else {
+    } else {
       goldenFile = Path.Combine(goldenPath, callerMember + $"_{goldenNum}.golden");
     }
 
     if (_updateGoldens) {
       Directory.CreateDirectory(goldenPath);
       File.WriteAllText(goldenFile, actual);
-    }
-    else {
+    } else {
       string golden = File.ReadAllText(goldenFile);
 
       try {
         Assert.Equal(golden, actual);
-      }
-      catch {
+      } catch {
         _output.WriteLine("Expected:");
         _output.WriteLine(golden);
         _output.WriteLine("Actual:");

@@ -80,8 +80,7 @@ public sealed class SongTable : TableView {
       var highlightedScheme = SchemeManager.GetScheme("TableCurrentTrack");
       var normalScheme = SchemeManager.GetScheme("TableNormalTracks");
       Style.RowColorGetter = (args) => args.RowIndex == _highlightedRow ? highlightedScheme : normalScheme;
-    }
-    catch (KeyNotFoundException) {
+    } catch (KeyNotFoundException) {
       Logging.Error("SchemeManager.GetScheme() failed to find required schemes");
     }
 

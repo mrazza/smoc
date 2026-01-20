@@ -87,8 +87,7 @@ public sealed class PlayerView : View {
     if (!queue.Any()) {
       _noSongsLabel.Visible = true;
       _songTable.Style.ShowHeaders = false;
-    }
-    else {
+    } else {
       _noSongsLabel.Visible = false;
       _songTable.Style.ShowHeaders = true;
       _songTable.SetSongs(queue);
