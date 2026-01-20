@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="smoc.Tests/smoc.Tests.csproj" />
+  <Project Path="smoc/smoc.csproj" />
+</Solution>
