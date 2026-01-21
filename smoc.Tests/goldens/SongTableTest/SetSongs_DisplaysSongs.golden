@@ -1,0 +1,22 @@
+SongTableTest.SetSongs_DisplaysSongs_0:
+┌──────────────────────────────────────────────────────────────────────────────────────────────────┐
+│#   Artist                     Album                      Track                     Length Year   │
+│1   Radiohead                  OK Computer                SetSongs_DisplaysSongs_1  5:00   1970   │
+│1   Radiohead                  OK Computer                SetSongs_DisplaysSongs_2  5:00   1970   │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+└──────────────────────────────────────────────────────────────────────────────────────────────────┘
+

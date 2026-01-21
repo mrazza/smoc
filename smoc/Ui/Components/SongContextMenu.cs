@@ -80,7 +80,10 @@ public sealed class SongContextMenu : PopoverMenu {
   }
 
   protected override void Dispose(bool disposing) {
-    App?.Popover?.DeRegister(this);
+    if (disposing && (App?.Popover?.IsRegistered(this) ?? false)) {
+      App?.Popover?.DeRegister(this);
+    }
+
     base.Dispose(disposing);
   }
 }
