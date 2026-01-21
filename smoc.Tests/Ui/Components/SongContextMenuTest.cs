@@ -25,30 +25,37 @@ public class SongContextMenuTest : IDisposable {
     _screenshotDiffer = new ScreenshotDiffer(output);
   }
 
-  private (TerminalGuiFluentTesting.TestContext, SongContextMenu) NewSongContextMenuContext() {
-    var context = With.A<Runnable>(100, 20, TestDriver.ANSI.ToString());
-    var songContextMenu = new SongContextMenu(_mockPlayerService.Object, _songTable);
-    context.Add(songContextMenu);
-    return (context, songContextMenu);
+  private TerminalGuiFluentTesting.TestContext NewContext() {
+    return With.A<Runnable>(100, 20, TestDriver.ANSI.ToString());
+  }
+
+  private SongContextMenu NewSongContextMenu() {
+    return new SongContextMenu(_mockPlayerService.Object, _songTable);
   }
 
   [Fact]
   public void MakeVisible_ShouldDisplayCorrectly() {
-    var (context, songContextMenu) = NewSongContextMenuContext();
+    using var context = NewContext();
+    var songContextMenu = NewSongContextMenu();
+    context.Add(songContextMenu);
     context.Then((_) => songContextMenu.MakeVisible());
     _screenshotDiffer.AssertEqualsGolden(context);
   }
 
   [Fact]
   public void MakeVisible_ShouldSetFocusToFirstItem() {
-    var (context, songContextMenu) = NewSongContextMenuContext();
+    using var context = NewContext();
+    var songContextMenu = NewSongContextMenu();
+    context.Add(songContextMenu);
     context.Then((_) => songContextMenu.MakeVisible());
     Assert.Equal(SongContextMenu.Messages.PLAY_ALL, songContextMenu.MostFocused?.Title);
   }
 
   [Fact]
   public void DownArrow_ShouldMoveFocusToNextItem() {
-    var (context, songContextMenu) = NewSongContextMenuContext();
+    using var context = NewContext();
+    var songContextMenu = NewSongContextMenu();
+    context.Add(songContextMenu);
     context
       .Then((_) => songContextMenu.MakeVisible())
       .KeyDown(Key.CursorDown);
@@ -57,7 +64,9 @@ public class SongContextMenuTest : IDisposable {
 
   [Fact]
   public void VimDown_ShouldMoveFocusToNextItem() {
-    var (context, songContextMenu) = NewSongContextMenuContext();
+    using var context = NewContext();
+    var songContextMenu = NewSongContextMenu();
+    context.Add(songContextMenu);
     context
       .Then((_) => songContextMenu.MakeVisible())
       .KeyDown(Key.J);
@@ -66,7 +75,9 @@ public class SongContextMenuTest : IDisposable {
 
   [Fact]
   public void UpArrow_ShouldMoveFocusToPreviousItem() {
-    var (context, songContextMenu) = NewSongContextMenuContext();
+    using var context = NewContext();
+    var songContextMenu = NewSongContextMenu();
+    context.Add(songContextMenu);
     context
       .Then((_) => songContextMenu.MakeVisible())
       .KeyDown(Key.CursorDown)
@@ -76,7 +87,9 @@ public class SongContextMenuTest : IDisposable {
 
   [Fact]
   public void VimUp_ShouldMoveFocusToPreviousItem() {
-    var (context, songContextMenu) = NewSongContextMenuContext();
+    using var context = NewContext();
+    var songContextMenu = NewSongContextMenu();
+    context.Add(songContextMenu);
     context
       .Then((_) => songContextMenu.MakeVisible())
       .KeyDown(Key.K)
@@ -86,7 +99,9 @@ public class SongContextMenuTest : IDisposable {
 
   [Fact]
   public void PlayAll_QueuesAllTracks() {
-    var (context, songContextMenu) = NewSongContextMenuContext();
+    using var context = NewContext();
+    var songContextMenu = NewSongContextMenu();
+    context.Add(songContextMenu);
     var radiohead = new Artist("123", "Radiohead");
     var okComputer = new Album("321", radiohead, "OK Computer", 1970, "http://url.com/thumb.jpg");
     var paranoidAndroid = new Song("456", okComputer, "Paranoid Android", TimeSpan.FromMinutes(5), 1);
@@ -105,7 +120,9 @@ public class SongContextMenuTest : IDisposable {
 
   [Fact]
   public void PlaySelection__MultiTracks_QueuesSelectedTracks() {
-    var (context, songContextMenu) = NewSongContextMenuContext();
+    using var context = NewContext();
+    var songContextMenu = NewSongContextMenu();
+    context.Add(songContextMenu);
     var radiohead = new Artist("123", "Radiohead");
     var okComputer = new Album("321", radiohead, "OK Computer", 1970, "http://url.com/thumb.jpg");
     var paranoidAndroid = new Song("456", okComputer, "Paranoid Android", TimeSpan.FromMinutes(5), 1);
@@ -127,7 +144,9 @@ public class SongContextMenuTest : IDisposable {
 
   [Fact]
   public void PlaySelection_SingleTrack_QueuesSelectedTrack() {
-    var (context, songContextMenu) = NewSongContextMenuContext();
+    using var context = NewContext();
+    var songContextMenu = NewSongContextMenu();
+    context.Add(songContextMenu);
     var radiohead = new Artist("123", "Radiohead");
     var okComputer = new Album("321", radiohead, "OK Computer", 1970, "http://url.com/thumb.jpg");
     var paranoidAndroid = new Song("456", okComputer, "Paranoid Android", TimeSpan.FromMinutes(5), 1);
@@ -148,7 +167,9 @@ public class SongContextMenuTest : IDisposable {
 
   [Fact]
   public void QueueNext_MultiTracks_QueuesSelectedTracks() {
-    var (context, songContextMenu) = NewSongContextMenuContext();
+    using var context = NewContext();
+    var songContextMenu = NewSongContextMenu();
+    context.Add(songContextMenu);
     var radiohead = new Artist("123", "Radiohead");
     var okComputer = new Album("321", radiohead, "OK Computer", 1970, "http://url.com/thumb.jpg");
     var paranoidAndroid = new Song("456", okComputer, "Paranoid Android", TimeSpan.FromMinutes(5), 1);
@@ -169,7 +190,9 @@ public class SongContextMenuTest : IDisposable {
 
   [Fact]
   public void QueueNext_SingleTrack_QueuesSelectedTrack() {
-    var (context, songContextMenu) = NewSongContextMenuContext();
+    using var context = NewContext();
+    var songContextMenu = NewSongContextMenu();
+    context.Add(songContextMenu);
     var radiohead = new Artist("123", "Radiohead");
     var okComputer = new Album("321", radiohead, "OK Computer", 1970, "http://url.com/thumb.jpg");
     var paranoidAndroid = new Song("456", okComputer, "Paranoid Android", TimeSpan.FromMinutes(5), 1);
@@ -189,7 +212,9 @@ public class SongContextMenuTest : IDisposable {
 
   [Fact]
   public void QueueLast_MultiTracks_QueuesSelectedTracks() {
-    var (context, songContextMenu) = NewSongContextMenuContext();
+    using var context = NewContext();
+    var songContextMenu = NewSongContextMenu();
+    context.Add(songContextMenu);
     var radiohead = new Artist("123", "Radiohead");
     var okComputer = new Album("321", radiohead, "OK Computer", 1970, "http://url.com/thumb.jpg");
     var paranoidAndroid = new Song("456", okComputer, "Paranoid Android", TimeSpan.FromMinutes(5), 1);
@@ -211,7 +236,9 @@ public class SongContextMenuTest : IDisposable {
 
   [Fact]
   public void QueueLast_SingleTrack_QueuesSelectedTrack() {
-    var (context, songContextMenu) = NewSongContextMenuContext();
+    using var context = NewContext();
+    var songContextMenu = NewSongContextMenu();
+    context.Add(songContextMenu);
     var radiohead = new Artist("123", "Radiohead");
     var okComputer = new Album("321", radiohead, "OK Computer", 1970, "http://url.com/thumb.jpg");
     var paranoidAndroid = new Song("456", okComputer, "Paranoid Android", TimeSpan.FromMinutes(5), 1);
@@ -232,7 +259,9 @@ public class SongContextMenuTest : IDisposable {
 
   [Fact]
   public void DownArrow_BottomLoopsToTop() {
-    var (context, songContextMenu) = NewSongContextMenuContext();
+    using var context = NewContext();
+    var songContextMenu = NewSongContextMenu();
+    context.Add(songContextMenu);
     context
       .Then((_) => songContextMenu.MakeVisible())
       .KeyDown(Key.CursorDown)
@@ -244,7 +273,9 @@ public class SongContextMenuTest : IDisposable {
 
   [Fact]
   public void UpArrow_TopLoopsToBottom() {
-    var (context, songContextMenu) = NewSongContextMenuContext();
+    using var context = NewContext();
+    var songContextMenu = NewSongContextMenu();
+    context.Add(songContextMenu);
     context
       .Then((_) => songContextMenu.MakeVisible())
       .KeyDown(Key.CursorUp);
@@ -253,8 +284,9 @@ public class SongContextMenuTest : IDisposable {
 
   [Fact]
   public void Dispose_RemovesPopoverFromApp() {
-    var (context, songContextMenu) = NewSongContextMenuContext();
-    context.Then((_) => songContextMenu.MakeVisible());
+    using var context = NewContext();
+    var songContextMenu = NewSongContextMenu();
+    context.Add(songContextMenu);
     Assert.Equal(songContextMenu, Assert.Single(context.App?.Popover?.Popovers!));
     context.Then((_) => songContextMenu.Dispose());
     Assert.Empty(context.App?.Popover?.Popovers!);
