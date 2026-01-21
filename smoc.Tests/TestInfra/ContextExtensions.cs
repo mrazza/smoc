@@ -3,6 +3,9 @@ using Terminal.Gui.ViewBase;
 
 namespace smoc.Tests.TestInfra;
 
+/// <summary>
+/// Extension methods for <see cref="TerminalGuiFluentTesting.TestContext"/>.
+/// </summary>
 public static class ContextExtensions {
   /// <summary>
   /// Adds a view to the test context and waits for it to be laid out.
