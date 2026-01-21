@@ -85,17 +85,9 @@ public sealed class SoundFlowPlayerService : IPlayerService {
     _streamPlaybackService = null;
   }
 
-  /// <inheritdoc/>
-  public void QueueSong(Song song) => QueueSongs([song]);
-
-  public void QueueSongs(IEnumerable<Song> songs) {
-    _playbackQueue.AddRange(songs);
-    InvokeAppEvent(QueueChanged);
-  }
-
   public void QueueNext(Song song) {
     if (_playbackQueue.Count == 0) {
-      QueueSong(song);
+      QueueLast(song);
       return;
     }
 
@@ -111,7 +103,7 @@ public sealed class SoundFlowPlayerService : IPlayerService {
   /// <inheritdoc/>
   public void QueueNext(IEnumerable<Song> songs) {
     if (_playbackQueue.Count == 0) {
-      QueueSongs(songs);
+      QueueLast(songs);
       return;
     }
 
@@ -125,10 +117,13 @@ public sealed class SoundFlowPlayerService : IPlayerService {
   }
 
   /// <inheritdoc/>
-  public void QueueLast(Song song) => QueueSong(song);
+  public void QueueLast(Song song) => QueueLast(song);
 
   /// <inheritdoc/>
-  public void QueueLast(IEnumerable<Song> songs) => QueueSongs(songs);
+  public void QueueLast(IEnumerable<Song> songs) {
+    _playbackQueue.AddRange(songs);
+    InvokeAppEvent(QueueChanged);
+  }
 
   /// <inheritdoc/>
   public async Task ChangeTrack(int index) {

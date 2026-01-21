@@ -9,7 +9,10 @@ namespace Smoc.Ui.Components;
 /// A context menu for songs in the <see cref="SongTable" />, providing playback options.
 /// </summary>
 public sealed class SongContextMenu : PopoverMenu {
-  private static class Messages {
+  /// <summary>
+  /// Messages for the song context menu. Internally visible for testing purposes.
+  /// </summary>
+  internal static class Messages {
     public const string PLAY_ALL = "_play all from here";
     public const string PLAY_SELECTION = "play selection _only";
     public const string PLAY_NEXT = "queue _next";
@@ -33,12 +36,8 @@ public sealed class SongContextMenu : PopoverMenu {
     KeyBindings.Add(Key.CursorDown, Command.Down);
     VimKeyBindings.AddDirectionalKeyBindings(KeyBindings);
 
-    // Map Esc to Cancel (Close)
-    AddCommand(Command.Cancel, ctx => {
-      Visible = false;
-      return true;
-    });
-    KeyBindings.ReplaceCommands(Key.Esc, Command.Cancel);
+    // Map Esc to Quit (Close Popover)
+    KeyBindings.ReplaceCommands(Key.Esc, Command.Quit);
   }
 
   public override void EndInit() {
@@ -53,27 +52,24 @@ public sealed class SongContextMenu : PopoverMenu {
   public int RequiredHeight => Root?.SubViews.Count ?? 0;
 
   private static IEnumerable<MenuItem> CreateMenuItems(IPlayerService playerService, SongTable songTable) {
-    var menuItems = new List<MenuItem>();
-
-    menuItems.Add(new MenuItem(Messages.PLAY_ALL, action: async () => {
-      playerService.ClearPlaybackQueue();
-      playerService.QueueSongs(songTable.GetSongs());
-      await playerService.ChangeTrack(songTable.SelectedRow);
-    }));
-
-    menuItems.Add(new MenuItem(Messages.PLAY_SELECTION, action: async () => {
-      playerService.ClearPlaybackQueue();
-      playerService.QueueSongs(songTable.GetSelectedSongs());
-      await playerService.ChangeTrack(0);
-    }));
-
-    menuItems.Add(new MenuItem(Messages.PLAY_NEXT, action: () => {
-      playerService.QueueNext(songTable.GetSelectedSongs());
-    }));
-
-    menuItems.Add(new MenuItem(Messages.ADD_TO_QUEUE, action: () => {
-      playerService.QueueLast(songTable.GetSelectedSongs());
-    }));
+    var menuItems = new List<MenuItem> {
+      new(Messages.PLAY_ALL, action: async () => {
+        playerService.ClearPlaybackQueue();
+        playerService.QueueLast(songTable.GetSongs());
+        await playerService.ChangeTrack(songTable.SelectedRow);
+      }),
+      new(Messages.PLAY_SELECTION, action: async () => {
+        playerService.ClearPlaybackQueue();
+        playerService.QueueLast(songTable.GetSelectedSongs());
+        await playerService.ChangeTrack(0);
+      }),
+      new(Messages.PLAY_NEXT, action: () => {
+        playerService.QueueNext(songTable.GetSelectedSongs());
+      }),
+      new(Messages.ADD_TO_QUEUE, action: () => {
+        playerService.QueueLast(songTable.GetSelectedSongs());
+      })
+    };
 
     return menuItems;
   }

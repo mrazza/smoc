@@ -1,4 +1,4 @@
-ArtistViewTests.SearchCommand_ArtistApiFailure_ShowsError_0:
+ArtistViewTest.SearchCommand_ArtistApiFailure_ShowsError_0:
 ┌────────────────────────────┐┌────────────────────────────────────────────────────────────────────┐
 │                            ││                                                                    │
 │                            ││                                                                    │

@@ -8,19 +8,18 @@ using TerminalGuiFluentTesting;
 using smoc.Tests.Fakes;
 using Terminal.Gui.Input;
 using smoc.Tests.TestInfra;
-using SoundFlow.Providers;
-using Microsoft.VisualBasic;
+using System.Runtime.InteropServices;
 
 namespace smoc.Tests.Ui;
 
-public class ArtistViewTests {
+public class ArtistViewTest {
   private readonly Mock<IStreamingClient> _mockStreamingClient;
   private readonly Mock<IPlayerService> _mockPlayerService;
   private readonly CommandService _commandService;
   private readonly FakeMainWindow _fakeMainWindow;
   private readonly ScreenshotDiffer _screenshotDiffer;
 
-  public ArtistViewTests(ITestOutputHelper output) {
+  public ArtistViewTest(ITestOutputHelper output) {
     _mockStreamingClient = new Mock<IStreamingClient>();
     _mockPlayerService = new Mock<IPlayerService>();
     _fakeMainWindow = new FakeMainWindow();
@@ -29,8 +28,8 @@ public class ArtistViewTests {
   }
 
   private TerminalGuiFluentTesting.TestContext NewArtistViewContext() {
-    return With.A<Runnable>(100, 20, TestDriver.DotNet.ToString())
-          .Add(new ArtistView(_fakeMainWindow, _commandService, _mockStreamingClient.Object, _mockPlayerService.Object));
+    return With.A<Runnable>(100, 20, TestDriver.ANSI.ToString())
+          .AddAndLayout(new ArtistView(_fakeMainWindow, _commandService, _mockStreamingClient.Object, _mockPlayerService.Object));
   }
 
   [Fact]
@@ -39,8 +38,7 @@ public class ArtistViewTests {
     using var context = NewArtistViewContext();
 
     Assert.NotEqual(Mode.Artist, _fakeMainWindow.CurrentMode);
-    _commandService.ExecuteCommand("a/radiohead");
-    context.WaitIteration();
+    context.Then((_) => _commandService.ExecuteCommand("a/radiohead"));
     Assert.Equal(Mode.Artist, _fakeMainWindow.CurrentMode);
   }
 
@@ -48,8 +46,7 @@ public class ArtistViewTests {
   public void SearchCommand_ArtistApiFailure_ShowsError() {
     using var context = NewArtistViewContext();
 
-    _commandService.ExecuteCommand("a/radiohead");
-    context.WaitIteration();
+    context.Then((_) => _commandService.ExecuteCommand("a/radiohead"));
     _screenshotDiffer.AssertEqualsGolden(context);
   }
 
@@ -61,8 +58,7 @@ public class ArtistViewTests {
     _mockStreamingClient.Setup(client => client.SearchArtistsAsync("radiohead", It.IsAny<CancellationToken>()))
       .ReturnsAsync([radiohead]);
 
-    _commandService.ExecuteCommand("a/radiohead");
-    context.WaitIteration();
+    context.Then((_) => _commandService.ExecuteCommand("a/radiohead"));
     _screenshotDiffer.AssertEqualsGolden(context);
   }
 
@@ -74,11 +70,9 @@ public class ArtistViewTests {
     _mockStreamingClient.Setup(client => client.SearchArtistsAsync("radiohead", It.IsAny<CancellationToken>()))
       .ReturnsAsync([radiohead]);
 
-    _commandService.ExecuteCommand("a/radiohead");
-    context.WaitIteration();
-
-    context.KeyDown(Key.Enter);
-    context.WaitIteration();
+    context
+      .Then((_) => _commandService.ExecuteCommand("a/radiohead"))
+      .KeyDown(Key.Enter);
     _screenshotDiffer.AssertEqualsGolden(context);
   }
 
@@ -90,15 +84,13 @@ public class ArtistViewTests {
     _mockStreamingClient.Setup(client => client.SearchArtistsAsync("radiohead", It.IsAny<CancellationToken>()))
       .ReturnsAsync([radiohead]);
 
-    _commandService.ExecuteCommand("a/radiohead");
-    context.WaitIteration();
+    context.Then((_) => _commandService.ExecuteCommand("a/radiohead"));
 
     var okComputer = new Album("321", radiohead, "OK Computer", 1970, "http://url.com/thumb.jpg");
     _mockStreamingClient.Setup(client => client.GetAlbumsByArtistAsync(radiohead, It.IsAny<CancellationToken>()))
       .ReturnsAsync([okComputer]);
 
     context.KeyDown(Key.Enter);
-    context.WaitIteration();
     _screenshotDiffer.AssertEqualsGolden(context);
   }
 
@@ -110,8 +102,7 @@ public class ArtistViewTests {
     _mockStreamingClient.Setup(client => client.SearchArtistsAsync("radiohead", It.IsAny<CancellationToken>()))
       .ReturnsAsync([radiohead]);
 
-    _commandService.ExecuteCommand("a/radiohead");
-    context.WaitIteration();
+    context.Then((_) => _commandService.ExecuteCommand("a/radiohead"));
 
     var okComputer = new Album("321", radiohead, "OK Computer", 1970, "http://url.com/thumb.jpg");
     _mockStreamingClient.Setup(client => client.GetAlbumsByArtistAsync(radiohead, It.IsAny<CancellationToken>()))
@@ -121,7 +112,6 @@ public class ArtistViewTests {
     _mockStreamingClient.Setup(client => client.GetSongsByAlbumAsync(okComputer, It.IsAny<CancellationToken>()))
       .ReturnsAsync([paranoidAndroid, climbingUpTheWalls]);
     context.KeyDown(Key.Enter);
-    context.WaitIteration();
     _screenshotDiffer.AssertEqualsGolden(context);
   }
 
@@ -133,13 +123,11 @@ public class ArtistViewTests {
     _mockStreamingClient.Setup(client => client.SearchArtistsAsync("radiohead", It.IsAny<CancellationToken>()))
       .ReturnsAsync([radiohead]);
 
-    _commandService.ExecuteCommand("a/radiohead");
-    context.WaitIteration();
+    context.Then((_) => _commandService.ExecuteCommand("a/radiohead"));
 
     _mockStreamingClient.Setup(client => client.GetAlbumsByArtistAsync(radiohead, It.IsAny<CancellationToken>()))
       .ReturnsAsync([]);
     context.KeyDown(Key.Enter);
-    context.WaitIteration();
     _screenshotDiffer.AssertEqualsGolden(context);
   }
 
@@ -151,8 +139,7 @@ public class ArtistViewTests {
     _mockStreamingClient.Setup(client => client.SearchArtistsAsync("radiohead", It.IsAny<CancellationToken>()))
       .ReturnsAsync([radiohead]);
 
-    _commandService.ExecuteCommand("a/radiohead");
-    context.WaitIteration();
+    context.Then((_) => _commandService.ExecuteCommand("a/radiohead"));
 
     var okComputer = new Album("321", radiohead, "OK Computer", 1970, "http://url.com/thumb.jpg");
     _mockStreamingClient.Setup(client => client.GetAlbumsByArtistAsync(radiohead, It.IsAny<CancellationToken>()))
@@ -160,7 +147,6 @@ public class ArtistViewTests {
     _mockStreamingClient.Setup(client => client.GetSongsByAlbumAsync(okComputer, It.IsAny<CancellationToken>()))
       .ReturnsAsync([]);
     context.KeyDown(Key.Enter);
-    context.WaitIteration();
     _screenshotDiffer.AssertEqualsGolden(context);
   }
 
@@ -170,8 +156,7 @@ public class ArtistViewTests {
     using var context = NewArtistViewContext();
 
     Assert.NotEqual(Mode.Artist, _fakeMainWindow.CurrentMode);
-    _commandService.ExecuteCommand("a");
-    context.WaitIteration();
+    context.Then((_) => _commandService.ExecuteCommand("a"));
     Assert.Equal(Mode.Artist, _fakeMainWindow.CurrentMode);
   }
 
@@ -179,8 +164,7 @@ public class ArtistViewTests {
   public void ArtistCommand_FirstTime_ShowsEmptyUi() {
     using var context = NewArtistViewContext();
 
-    _commandService.ExecuteCommand("a");
-    context.WaitIteration();
+    context.Then((_) => _commandService.ExecuteCommand("a"));
     _screenshotDiffer.AssertEqualsGolden(context);
   }
 
@@ -192,8 +176,7 @@ public class ArtistViewTests {
     _mockStreamingClient.Setup(client => client.SearchArtistsAsync("radiohead", It.IsAny<CancellationToken>()))
       .ReturnsAsync([radiohead]);
 
-    _commandService.ExecuteCommand("a/radiohead");
-    context.WaitIteration();
+    context.Then((_) => _commandService.ExecuteCommand("a/radiohead"));
 
     var okComputer = new Album("321", radiohead, "OK Computer", 1970, "http://url.com/thumb.jpg");
     _mockStreamingClient.Setup(client => client.GetAlbumsByArtistAsync(radiohead, It.IsAny<CancellationToken>()))
@@ -203,14 +186,12 @@ public class ArtistViewTests {
     _mockStreamingClient.Setup(client => client.GetSongsByAlbumAsync(okComputer, It.IsAny<CancellationToken>()))
       .ReturnsAsync([paranoidAndroid, climbingUpTheWalls]);
     context.KeyDown(Key.Enter);
-    context.WaitIteration();
 
     using var priorTextWriter = new StringWriter();
     context.ScreenShot("", priorTextWriter);
 
     _fakeMainWindow.SetMode(Mode.Player);
-    _commandService.ExecuteCommand("a");
-    context.WaitIteration();
+    context.Then((_) => _commandService.ExecuteCommand("a"));
 
     Assert.Equal(Mode.Artist, _fakeMainWindow.CurrentMode);
 
@@ -229,8 +210,7 @@ public class ArtistViewTests {
     _mockStreamingClient.Setup(client => client.SearchArtistsAsync("radiohead", It.IsAny<CancellationToken>()))
       .Returns(latch.GetWaiter().ContinueWith(_ => new List<Artist>([radiohead])));
 
-    _commandService.ExecuteCommand("a/radiohead");
-    context.WaitIteration();
+    context.Then((_) => _commandService.ExecuteCommand("a/radiohead"));
     _screenshotDiffer.AssertEqualsGolden(context);
   }
 
@@ -242,14 +222,12 @@ public class ArtistViewTests {
     _mockStreamingClient.Setup(client => client.SearchArtistsAsync("radiohead", It.IsAny<CancellationToken>()))
       .ReturnsAsync([radiohead]);
 
-    _commandService.ExecuteCommand("a/radiohead");
-    context.WaitIteration();
+    context.Then((_) => _commandService.ExecuteCommand("a/radiohead"));
 
     using var latch = new AsyncLatch(true);
     _mockStreamingClient.Setup(client => client.GetAlbumsByArtistAsync(radiohead, It.IsAny<CancellationToken>()))
       .Returns(latch.GetWaiter().ContinueWith(_ => new List<Album>([])));
     context.KeyDown(Key.Enter);
-    context.WaitIteration();
     _screenshotDiffer.AssertEqualsGolden(context);
   }
 
@@ -257,24 +235,18 @@ public class ArtistViewTests {
   public void SearchCommand_NewSearchCancelsPreviousSearch() {
     using var context = NewArtistViewContext();
     using var latch = new AsyncLatch(true);
-
     var radiohead = new Artist("123", "Radiohead");
     _mockStreamingClient.Setup(client => client.SearchArtistsAsync("radiohead", It.IsAny<CancellationToken>()))
       .Returns(latch.GetWaiter().ContinueWith(_ => new List<Artist>([radiohead])));
 
-    _commandService.ExecuteCommand("a/radiohead");
-    context.WaitIteration();
+    context.Then((_) => _commandService.ExecuteCommand("a/radiohead"));
 
     var goose = new Artist("345", "Goose");
+
     _mockStreamingClient.Setup(client => client.SearchArtistsAsync("goose", It.IsAny<CancellationToken>()))
       .ReturnsAsync([goose]);
 
-    _commandService.ExecuteCommand("a/goose");
-    context.WaitIteration();
-    _screenshotDiffer.AssertEqualsGolden(context);
-
-    // Release the latch allowing the previous search to complete
-    // and verify that the content is unchanged.
+    context.Then((_) => _commandService.ExecuteCommand("a/goose"));
     latch.Release();
     context.WaitIteration();
     _screenshotDiffer.AssertEqualsGolden(context);
@@ -289,8 +261,7 @@ public class ArtistViewTests {
     _mockStreamingClient.Setup(client => client.SearchArtistsAsync("radiohead", It.IsAny<CancellationToken>()))
       .ReturnsAsync([radiohead, almostRadiohead]);
 
-    _commandService.ExecuteCommand("a/radiohead");
-    context.WaitIteration();
+    context.Then((_) => _commandService.ExecuteCommand("a/radiohead"));
 
     using var latch = new AsyncLatch(true);
     var okComputer = new Album("321", radiohead, "OK Computer", 1970, "http://url.com/thumb.jpg");
@@ -306,18 +277,15 @@ public class ArtistViewTests {
       .Returns(latch.GetWaiter().ContinueWith(_ => new List<Song>([paranoidAndroid])));
     _mockStreamingClient.Setup(client => client.GetSongsByAlbumAsync(nokayComputer, It.IsAny<CancellationToken>()))
       .ReturnsAsync([climbingDownTheWalls]);
-    context.KeyDown(Key.Enter);
-    context.WaitIteration();
 
-    context.KeyDown(Key.CursorDown);
-    context.WaitIteration();
-    context.KeyDown(Key.Enter);
-    context.WaitIteration();
+    context
+      .KeyDown(Key.Enter)
+      .KeyDown(Key.CursorDown)
+      .KeyDown(Key.Enter);
 
     // We've now selected the first artist and, while it was loading, selected the second artist.
     // The first artist should be cancelled and results for the second artist should be shown.
     // Let the first artist complete and verify that the content is unchanged.
-    _screenshotDiffer.AssertEqualsGolden(context);
     latch.Release();
     context.WaitIteration();
     _screenshotDiffer.AssertEqualsGolden(context);

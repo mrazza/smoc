@@ -1,6 +1,6 @@
-ArtistViewTests.ArtistSelected_ShowsLoading_0:
+ArtistViewTest.SearchCommand_NewSearchCancelsPreviousSearch_0:
 ┌────────────────────────────┐┌────────────────────────────────────────────────────────────────────┐
-│Radiohead                   ││                                                                    │
+│Goose                       ││                                                                    │
 │                            ││                                                                    │
 │                            ││                                                                    │
 │                            ││                                                                    │
@@ -8,7 +8,7 @@ ArtistViewTests.ArtistSelected_ShowsLoading_0:
 │                            ││                                                                    │
 │                            ││                                                                    │
 │                            ││                                                                    │
-│                            ││                            loading...                              │
+│                            ││                         select an artist                           │
 │                            ││                                                                    │
 │                            ││                                                                    │
 │                            ││                                                                    │

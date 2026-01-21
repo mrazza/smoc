@@ -199,7 +199,7 @@ public sealed class ArtistView : View {
         return;
       }
 
-      await _searchResults.SetSourceAsync(new ObservableCollection<SearchResultRow<Artist>>(artists.Select(artist => new SearchResultRow<Artist>(artist, artist.Name))));
+      _searchResults.SetSource(new ObservableCollection<SearchResultRow<Artist>>(artists.Select(artist => new SearchResultRow<Artist>(artist, artist.Name))));
       _searchResults.SelectedItem = 0;
       _searchResultsLabel.Visible = false;
     } catch (OperationCanceledException) {
