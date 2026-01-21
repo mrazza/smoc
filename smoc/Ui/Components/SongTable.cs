@@ -14,7 +14,7 @@ namespace Smoc.Ui.Components;
 /// <summary>
 /// A table view for displaying a list of songs with configurable columns.
 /// </summary>
-public sealed class SongTable : TableView {
+public class SongTable : TableView {
   /// <summary>
   /// Flags indicating which columns to display in the table.
   /// </summary>

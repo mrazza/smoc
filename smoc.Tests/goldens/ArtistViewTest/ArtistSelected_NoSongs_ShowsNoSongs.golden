@@ -1,7 +1,6 @@
-ArtistViewTests.ArtistSelected_NewSelectionCancelsPreviousSelection_0:
+ArtistViewTest.ArtistSelected_NoSongs_ShowsNoSongs_0:
 ┌────────────────────────────┐┌────────────────────────────────────────────────────────────────────┐
-│Radiohead                   ││#   Album                    Track                    Length Year   │
-│Almost Radiohead            ││2   NOKAY Computer           Climbing Down the Walls  3:00   1970   │
+│Radiohead                   ││                                                                    │
 │                            ││                                                                    │
 │                            ││                                                                    │
 │                            ││                                                                    │
@@ -9,6 +8,7 @@ ArtistViewTests.ArtistSelected_NewSelectionCancelsPreviousSelection_0:
 │                            ││                                                                    │
 │                            ││                                                                    │
 │                            ││                                                                    │
+│                            ││                          no tracks found                           │
 │                            ││                                                                    │
 │                            ││                                                                    │
 │                            ││                                                                    │

@@ -1,6 +1,5 @@
-ArtistViewTests.SearchCommand_ArtistsMatches_ShowsResults_0:
+ArtistViewTest.ArtistCommand_FirstTime_ShowsEmptyUi_0:
 ┌────────────────────────────┐┌────────────────────────────────────────────────────────────────────┐
-│Radiohead                   ││                                                                    │
 │                            ││                                                                    │
 │                            ││                                                                    │
 │                            ││                                                                    │
@@ -8,7 +7,8 @@ ArtistViewTests.SearchCommand_ArtistsMatches_ShowsResults_0:
 │                            ││                                                                    │
 │                            ││                                                                    │
 │                            ││                                                                    │
-│                            ││                         select an artist                           │
+│                            ││                                                                    │
+│      no artists found      ││                         select an artist                           │
 │                            ││                                                                    │
 │                            ││                                                                    │
 │                            ││                                                                    │

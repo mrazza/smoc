@@ -10,11 +10,11 @@ class AsyncLatch : IDisposable {
   public void Latch() {
     if (_semaphore.CurrentCount == 0) throw new InvalidOperationException("Latch is already latched");
 
-    _semaphore.Wait();
+    if (!_semaphore.Wait(1000)) throw new TimeoutException("Timeout waiting for latch");
   }
 
-  public Task GetWaiter() {
-    return _semaphore.WaitAsync();
+  public async Task GetWaiter(int timeoutMilliseconds = 1000) {
+    if (!await _semaphore.WaitAsync(timeoutMilliseconds)) throw new TimeoutException("Timeout waiting for latch");
   }
 
   public void Release() {
@@ -22,6 +22,12 @@ class AsyncLatch : IDisposable {
   }
 
   public void Dispose() {
+    try {
+      _semaphore.Release();
+    } catch {
+      // Ignore
+    }
+
     _semaphore.Dispose();
   }
 }

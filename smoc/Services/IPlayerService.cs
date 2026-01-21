@@ -74,16 +74,6 @@ public interface IPlayerService : IDisposable {
   IEnumerable<Song> GetCurrentPlaybackQueue();
 
   /// <summary>
-  /// Adds a song to the queue immediately after the current song (or at the end if no song is playing).
-  /// </summary>
-  void QueueSong(Song song);
-
-  /// <summary>
-  /// Adds multiple songs to the queue immediately after the current song (or at the end if no song is playing).
-  /// </summary>
-  void QueueSongs(IEnumerable<Song> songs);
-
-  /// <summary>
   /// Adds a song to the queue immediately after the current song.
   /// </summary>
   void QueueNext(Song song);
