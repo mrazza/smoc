@@ -254,7 +254,7 @@ public sealed class SoundFlowPlayerService : IPlayerService {
       Logging.Debug($"Starting playback for {currentSong.Title} ({currentSong.Id})...");
       var songStream = await _streamingClient.GetSongStreamAsync(currentSong.Id, token);
 
-      if (token.IsCancellationRequested) return;
+      token.ThrowIfCancellationRequested();
 
       Logging.Debug($"Received stream for {currentSong.Title} ({currentSong.Id}), decoding format...");
 
@@ -263,8 +263,7 @@ public sealed class SoundFlowPlayerService : IPlayerService {
         codec = "m4a";
       }
 
-      // Check again before expensive operations
-      if (token.IsCancellationRequested) return;
+      token.ThrowIfCancellationRequested();
 
       using var decoder = _audioEngine.CreateDecoder(songStream.Stream, codec, AudioFormat.DvdHq);
 
@@ -275,9 +274,7 @@ public sealed class SoundFlowPlayerService : IPlayerService {
         Layout = AudioFormat.GetLayoutFromChannels(decoder.Channels)
       };
       Logging.Debug($"Decoded format for {currentSong.Title} ({currentSong.Id}): {format.Format}, {format.Channels}, {format.SampleRate}, {format.Layout}");
-
-      // Final check before starting playback service
-      if (token.IsCancellationRequested) return;
+      token.ThrowIfCancellationRequested();
 
       _streamPlaybackService = new StreamPlaybackService(_audioEngine, _playbackDevice, songStream.Stream, format);
       _streamPlaybackService.StreamEnded += OnStreamEnded;
@@ -286,6 +283,8 @@ public sealed class SoundFlowPlayerService : IPlayerService {
       InvokeAppEvent(SongChanged, currentSong);
     } catch (OperationCanceledException) {
       Logging.Debug($"Playback setup for {currentSong.Title} cancelled.");
+    } catch (Exception e) {
+      Logging.Error($"Playback setup for {currentSong.Title} failed: {e.Message}");
     }
   }
 

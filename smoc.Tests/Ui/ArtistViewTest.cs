@@ -9,6 +9,7 @@ using smoc.Tests.Fakes;
 using Terminal.Gui.Input;
 using smoc.Tests.TestInfra;
 using System.Runtime.InteropServices;
+using Xunit.Sdk;
 
 namespace smoc.Tests.Ui;
 
@@ -125,6 +126,50 @@ public class ArtistViewTest {
       .ReturnsAsync([paranoidAndroid, climbingUpTheWalls]);
     context.KeyDown(Key.Enter);
     _screenshotDiffer.AssertEqualsGolden(context);
+  }
+
+  [Fact]
+  public void SongSelected_ShowsContextWindow() {
+    using var context = NewArtistViewContext();
+
+    var radiohead = new Artist("123", "Radiohead");
+    _mockStreamingClient.Setup(client => client.SearchArtistsAsync("radiohead", It.IsAny<CancellationToken>()))
+      .ReturnsAsync([radiohead]);
+
+    context.Then((_) => _commandService.ExecuteCommand("a/radiohead"));
+
+    var okComputer = new Album("321", radiohead, "OK Computer", 1970, "http://url.com/thumb.jpg");
+    _mockStreamingClient.Setup(client => client.GetAlbumsByArtistAsync(radiohead, It.IsAny<CancellationToken>()))
+      .ReturnsAsync([okComputer]);
+    var paranoidAndroid = new Song("456", okComputer, "Paranoid Android", TimeSpan.FromMinutes(5), 1);
+    var climbingUpTheWalls = new Song("456", okComputer, "Climbing Up the Walls", TimeSpan.FromMinutes(3), 2);
+    _mockStreamingClient.Setup(client => client.GetSongsByAlbumAsync(okComputer, It.IsAny<CancellationToken>()))
+      .ReturnsAsync([paranoidAndroid, climbingUpTheWalls]);
+    context.KeyDown(Key.Enter).KeyDown(Key.CursorRight).KeyDown(Key.Enter);
+    _screenshotDiffer.AssertEqualsGolden(context);
+  }
+
+  [Fact]
+  public void SongSelected_ExecutePlayback_PlaysCorrectSong() {
+    using var context = NewArtistViewContext();
+
+    var radiohead = new Artist("123", "Radiohead");
+    _mockStreamingClient.Setup(client => client.SearchArtistsAsync("radiohead", It.IsAny<CancellationToken>()))
+      .ReturnsAsync([radiohead]);
+
+    context.Then((_) => _commandService.ExecuteCommand("a/radiohead"));
+
+    var okComputer = new Album("321", radiohead, "OK Computer", 1970, "http://url.com/thumb.jpg");
+    _mockStreamingClient.Setup(client => client.GetAlbumsByArtistAsync(radiohead, It.IsAny<CancellationToken>()))
+      .ReturnsAsync([okComputer]);
+    var paranoidAndroid = new Song("456", okComputer, "Paranoid Android", TimeSpan.FromMinutes(5), 1);
+    var climbingUpTheWalls = new Song("456", okComputer, "Climbing Up the Walls", TimeSpan.FromMinutes(3), 2);
+    _mockStreamingClient.Setup(client => client.GetSongsByAlbumAsync(okComputer, It.IsAny<CancellationToken>()))
+      .ReturnsAsync([paranoidAndroid, climbingUpTheWalls]);
+    context.KeyDown(Key.Enter).KeyDown(Key.CursorRight).KeyDown(Key.Enter).KeyDown(Key.Enter);
+    _mockPlayerService.Verify((player) => player.ClearPlaybackQueue());
+    _mockPlayerService.Verify((player) => player.QueueLast(new List<Song> { paranoidAndroid, climbingUpTheWalls }));
+    _mockPlayerService.Verify((player) => player.ChangeTrack(0));
   }
 
   [Fact]

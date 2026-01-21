@@ -55,14 +55,26 @@ public static class Program {
       VimKeyBindings.AddNavigationKeyBindings(application.Keyboard.KeyBindings);
       IStreamingClient streamingClient = CreateStreamingClient();
       using var window = new MainWindow(streamingClient);
-      application.Run(window, (e) => {
+      try {
+        application.Run(window, (e) => {
+          Logging.Error(e.ToString());
+          window.DisplayError(e.Message);
+          return true;
+        });
+      } catch (Exception e) {
         Logging.Error(e.ToString());
-        window.DisplayError(e.Message);
-        return true;
-      });
+        throw;
+      }
     });
 
-    await rootCommand.Parse(args).InvokeAsync();
+    try {
+      await rootCommand.Parse(args).InvokeAsync();
+    } catch (Exception e) {
+      Logging.Error(e.ToString());
+      throw;
+    } finally {
+      Logging.Information("SMoC exiting...");
+    }
   }
 
   /// <summary>

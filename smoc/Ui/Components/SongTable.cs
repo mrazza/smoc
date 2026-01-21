@@ -1,6 +1,7 @@
 using System.CommandLine;
 using System.Data;
 using System.Drawing;
+using System.Text.Json.Serialization;
 using Smoc.Streaming;
 using Terminal.Gui.App;
 using Terminal.Gui.Configuration;
@@ -8,6 +9,8 @@ using Terminal.Gui.Drawing;
 using Terminal.Gui.Input;
 using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
+using Attribute = Terminal.Gui.Drawing.Attribute;
+using Color = Terminal.Gui.Drawing.Color;
 
 namespace Smoc.Ui.Components;
 
@@ -76,13 +79,17 @@ public class SongTable : TableView {
     Style.ShowHorizontalHeaderUnderline = false;
     BorderStyle = LineStyle.Single;
 
+    Scheme? highlightedScheme = null;
+    Scheme? normalScheme = null;
     try {
-      var highlightedScheme = SchemeManager.GetScheme("TableCurrentTrack");
-      var normalScheme = SchemeManager.GetScheme("TableNormalTracks");
-      Style.RowColorGetter = (args) => args.RowIndex == _highlightedRow ? highlightedScheme : normalScheme;
+      highlightedScheme = SchemeManager.GetScheme("TableCurrentTrack");
+      normalScheme = SchemeManager.GetScheme("TableNormalTracks");
     } catch (KeyNotFoundException) {
       Logging.Error("SchemeManager.GetScheme() failed to find required schemes");
     }
+    highlightedScheme ??= new Scheme(new Attribute(Color.White, Color.Black, TextStyle.Bold));
+    normalScheme ??= SchemeManager.GetScheme(Schemes.Runnable);
+    Style.RowColorGetter = (args) => args.RowIndex == _highlightedRow ? highlightedScheme : normalScheme;
 
     _columns = columns;
     _songTableData = CreateDataTable(columns);

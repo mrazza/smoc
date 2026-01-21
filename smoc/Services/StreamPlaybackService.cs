@@ -3,6 +3,7 @@ using SoundFlow.Backends.MiniAudio;
 using SoundFlow.Components;
 using SoundFlow.Providers;
 using SoundFlow.Structs;
+using Terminal.Gui.App;
 
 namespace Smoc.Services;
 
@@ -56,18 +57,22 @@ internal sealed class StreamPlaybackService : IDisposable {
   }
 
   public void Play() {
+    Logging.Debug("Playing stream...");
     _soundPlayer.Play();
   }
 
   public void Pause() {
+    Logging.Debug("Pausing stream...");
     _soundPlayer.Pause();
   }
 
   public void Stop() {
+    Logging.Debug("Stopping stream...");
     _soundPlayer.Stop();
   }
 
   public void Dispose() {
+    Logging.Debug("Disposing stream...");
     _playbackDevice.MasterMixer.RemoveComponent(_soundPlayer);
     _soundPlayer.Dispose();
     _streamDataProvider.Dispose();
