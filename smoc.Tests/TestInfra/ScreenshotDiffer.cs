@@ -1,3 +1,4 @@
+using System.CommandLine.Completions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 
@@ -31,13 +32,18 @@ public class ScreenshotDiffer {
   /// </summary>
   /// <param name="testContext">The test context.</param>
   /// <param name="goldenNum">The golden number.</param>
+  /// <param name="ansiShot">If true, takes a screenshot with ansi characters useful if formatting is critical, otherwise basic text only; default false</param>
   /// <param name="callerPath">The caller path.</param>
   /// <param name="callerMember">The caller member.</param>
-  public void AssertEqualsGolden(TerminalGuiFluentTesting.TestContext testContext, int goldenNum = 0, [CallerFilePath] string? callerPath = null, [CallerMemberName] string? callerMember = null) {
+  public void AssertEqualsGolden(TerminalGuiFluentTesting.TestContext testContext, int goldenNum = 0, bool ansiShot = false, [CallerFilePath] string? callerPath = null, [CallerMemberName] string? callerMember = null) {
     if (callerPath == null || callerMember == null) throw new ArgumentNullException("callerPath and callerMember were not filled by the compiler");
     var callerFile = Path.GetFileNameWithoutExtension(callerPath);
     using var textWriter = new StringWriter();
-    testContext.ScreenShot($"{callerFile}.{callerMember}_{goldenNum}", textWriter);
+    if (ansiShot) {
+      testContext.AnsiScreenShot($"{callerFile}.{callerMember}_{goldenNum}_ansi", textWriter);
+    } else {
+      testContext.ScreenShot($"{callerFile}.{callerMember}_{goldenNum}", textWriter);
+    }
     string actual = textWriter.ToString();
 
     var goldenPath = Path.Combine(_projectRoot, _goldenRoot, callerFile);
@@ -52,9 +58,10 @@ public class ScreenshotDiffer {
       Directory.CreateDirectory(goldenPath);
       File.WriteAllText(goldenFile, actual);
     } else {
-      string golden = File.ReadAllText(goldenFile);
+      string golden = "";
 
       try {
+        golden = File.ReadAllText(goldenFile);
         Assert.Equal(golden, actual);
       } catch {
         _output.WriteLine("Expected:");
