@@ -63,6 +63,18 @@ public class ArtistViewTest {
   }
 
   [Fact]
+  public void SearchCommand_NoArtists_ShowsNoResult() {
+    using var context = NewArtistViewContext();
+
+    _mockStreamingClient.Setup(client => client.SearchArtistsAsync("radiohead", It.IsAny<CancellationToken>()))
+      .ReturnsAsync([]);
+
+    context.Then((_) => _commandService.ExecuteCommand("a/radiohead"));
+    _screenshotDiffer.AssertEqualsGolden(context);
+  }
+
+
+  [Fact]
   public void ArtistSelected_AlbumLookupApiFailure_ShowsError() {
     using var context = NewArtistViewContext();
 

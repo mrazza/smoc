@@ -283,6 +283,12 @@ public class SongContextMenuTest : IDisposable {
   }
 
   [Fact]
+  public void RequiredHeight_ReturnsFour() {
+    var songContextMenu = NewSongContextMenu();
+    Assert.Equal(4, songContextMenu.RequiredHeight);
+  }
+
+  [Fact]
   public void Dispose_RemovesPopoverFromApp() {
     using var context = NewContext();
     var songContextMenu = NewSongContextMenu();
