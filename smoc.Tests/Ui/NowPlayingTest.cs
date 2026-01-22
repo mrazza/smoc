@@ -127,7 +127,7 @@ public class NowPlayingTest {
 
   [Fact]
   public void OnSongChanged_UpdatesSongDetails() {
-    var song = MakeSong();
+    var song = EntityTestFactory.GenerateSong();
     EventHandler<Song>? handler = null;
     _mockPlayerService.SetupAdd((ps) => ps.SongChanged += It.IsAny<EventHandler<Song>>())
         .Callback<EventHandler<Song>>(h => handler = h);
@@ -137,7 +137,7 @@ public class NowPlayingTest {
 
   [Fact]
   public void OnSongChanged_LoadsAlbumArt() {
-    var song = MakeSong();
+    var song = EntityTestFactory.GenerateSong();
     EventHandler<Song>? handler = null;
     _mockPlayerService.SetupAdd((ps) => ps.SongChanged += It.IsAny<EventHandler<Song>>())
         .Callback<EventHandler<Song>>(h => handler = h);
@@ -152,7 +152,7 @@ public class NowPlayingTest {
 
   [Fact]
   public void OnSongChanged_RepeatAlbum_CachesAlbumArt() {
-    var song = MakeSong();
+    var song = EntityTestFactory.GenerateSong();
     EventHandler<Song>? handler = null;
     _mockPlayerService.SetupAdd((ps) => ps.SongChanged += It.IsAny<EventHandler<Song>>())
         .Callback<EventHandler<Song>>(h => handler = h);
@@ -169,7 +169,7 @@ public class NowPlayingTest {
 
   [Fact]
   public void OnSongChanged_NoAlbumArt_ClearsAlbumArt() {
-    var song = MakeSong(noArt: true);
+    var song = EntityTestFactory.GenerateSong(noArt: true);
     EventHandler<Song>? handler = null;
     _mockPlayerService.SetupAdd((ps) => ps.SongChanged += It.IsAny<EventHandler<Song>>())
         .Callback<EventHandler<Song>>(h => handler = h);
@@ -199,12 +199,6 @@ public class NowPlayingTest {
         .Then((_) => handler?.Invoke(null, TimeSpan.Zero))
         .Then((_) => handler?.Invoke(null, TimeSpan.FromMinutes(2)));
     _screenshotDiffer.AssertEqualsGolden(context);
-  }
-
-  private static Song MakeSong(bool noArt = false) {
-    var radiohead = new Artist("123", "Radiohead");
-    var okComputer = new Album("321", radiohead, "OK Computer", 1970, noArt ? null : "http://url.com/thumb.png");
-    return new Song("456", okComputer, "Paranoid Android", TimeSpan.FromMinutes(5), 1);
   }
 
   private static byte[] GetImageBytes() {

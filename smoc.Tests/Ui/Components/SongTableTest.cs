@@ -51,7 +51,7 @@ public class SongTableTest {
     using var context = NewContext();
     var songTable = NewSongTable();
     context.Add(songTable)
-        .Then((_) => songTable.SetSongs([GenerateSong(postfix: "_1"), GenerateSong(postfix: "_2")]));
+        .Then((_) => songTable.SetSongs([EntityTestFactory.GenerateSong(postfix: "_1"), EntityTestFactory.GenerateSong(postfix: "_2")]));
     _screenshotDiffer.AssertEqualsGolden(context);
   }
 
@@ -67,7 +67,7 @@ public class SongTableTest {
     using var context = NewContext();
     var songTable = NewSongTable();
     context.Add(songTable).Then((_) => {
-      songTable.SetSongs([GenerateSong(postfix: "_1"), GenerateSong(postfix: "_2"), GenerateSong(postfix: "_3")]);
+      songTable.SetSongs([EntityTestFactory.GenerateSong(postfix: "_1"), EntityTestFactory.GenerateSong(postfix: "_2"), EntityTestFactory.GenerateSong(postfix: "_3")]);
       songTable.HighlightedRow = 1;
     });
     _screenshotDiffer.AssertEqualsGolden(context, ansiShot: true);
@@ -77,11 +77,11 @@ public class SongTableTest {
   public void SelectingSong_TriggersSelectedEvent() {
     using var context = NewContext();
     var songTable = NewSongTable();
-    Song expectedSong = GenerateSong(postfix: "_2");
+    Song expectedSong = EntityTestFactory.GenerateSong(postfix: "_2");
     List<Song> selectedSongs = [];
     songTable.SongSelected += (_, songs) => selectedSongs.AddRange(songs);
     context.Add(songTable)
-        .Then((_) => songTable.SetSongs([GenerateSong(postfix: "_1"), expectedSong, GenerateSong(postfix: "_3")]))
+        .Then((_) => songTable.SetSongs([EntityTestFactory.GenerateSong(postfix: "_1"), expectedSong, EntityTestFactory.GenerateSong(postfix: "_3")]))
         .KeyDown(Key.CursorDown)
         .KeyDown(Key.CursorDown)
         .KeyDown(Key.Enter);
@@ -92,11 +92,11 @@ public class SongTableTest {
   public void SelectingSongs_TriggersSelectedEvent() {
     using var context = NewContext();
     var songTable = NewSongTable();
-    List<Song> expectedSongs = [GenerateSong(postfix: "_1"), GenerateSong(postfix: "_2")];
+    List<Song> expectedSongs = [EntityTestFactory.GenerateSong(postfix: "_1"), EntityTestFactory.GenerateSong(postfix: "_2")];
     List<Song> selectedSongs = [];
     songTable.SongSelected += (_, songs) => selectedSongs.AddRange(songs);
     context.Add(songTable)
-        .Then((_) => songTable.SetSongs([.. expectedSongs, GenerateSong(postfix: "_3")]))
+        .Then((_) => songTable.SetSongs([.. expectedSongs, EntityTestFactory.GenerateSong(postfix: "_3")]))
         .KeyDown(Key.CursorDown)
         .KeyDown(Key.CursorDown.WithShift)
         .KeyDown(Key.Enter);
@@ -108,7 +108,7 @@ public class SongTableTest {
     using var context = NewContext();
     var songTable = NewSongTable();
     context.Add(songTable)
-        .Then((_) => songTable.SetSongs([GenerateSong(postfix: "_1"), GenerateSong(postfix: "_2"), GenerateSong(postfix: "_3")]))
+        .Then((_) => songTable.SetSongs([EntityTestFactory.GenerateSong(postfix: "_1"), EntityTestFactory.GenerateSong(postfix: "_2"), EntityTestFactory.GenerateSong(postfix: "_3")]))
         .KeyDown(Key.CursorDown)
         .KeyDown(Key.CursorDown);
     Assert.Equal(new Point(0, 2), songTable.GetSelectedRowFramePosition());
@@ -119,16 +119,9 @@ public class SongTableTest {
     using var context = NewContext();
     var songTable = NewSongTable();
     context.Add(songTable)
-        .Then((_) => songTable.SetSongs([GenerateSong(postfix: "_1"), GenerateSong(postfix: "_2"), GenerateSong(postfix: "_3")]))
+        .Then((_) => songTable.SetSongs([EntityTestFactory.GenerateSong(postfix: "_1"), EntityTestFactory.GenerateSong(postfix: "_2"), EntityTestFactory.GenerateSong(postfix: "_3")]))
         .KeyDown(Key.CursorDown)
         .KeyDown(Key.CursorDown);
     Assert.Equal(new Point(1, 4), songTable.GetSelectedRowScreenPosition());
   }
-
-  private Song GenerateSong([CallerMemberName] string? trackName = null, string postfix = "") {
-    var radiohead = new Artist("123", "Radiohead");
-    var okComputer = new Album("321", radiohead, "OK Computer", 1970, "http://url.com/thumb.jpg");
-    return new Song("456", okComputer, (trackName ?? "Paranoid Android") + postfix, TimeSpan.FromMinutes(5), 1);
-  }
-
 }
