@@ -29,6 +29,7 @@ public class SongTableTest {
       Height = Dim.Fill()
     };
   }
+
   private TerminalGuiFluentTesting.TestContext NewSongTableContext(SongTableColumns columns = SongTableColumns.All) {
     return NewContext().Add(NewSongTable(columns));
   }

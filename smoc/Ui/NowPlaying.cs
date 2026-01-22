@@ -21,7 +21,7 @@ public sealed class NowPlaying : View {
     public const string VOLUME = "volume: {0}%";
   }
 
-  private readonly MainWindow _mainWindow;
+  private readonly IMainWindow _mainWindow;
   private readonly IPlayerService _playerService;
   private string? _albumArtUrl;
   private readonly SixelImageView _albumArtView;
@@ -40,7 +40,7 @@ public sealed class NowPlaying : View {
   /// <param name="mainWindow">The main window reference.</param>
   /// <param name="playerService">The player service for playback information.</param>
   /// <param name="commandService">The command service for registering volume commands.</param>
-  public NowPlaying(MainWindow mainWindow, IPlayerService playerService, CommandService commandService) {
+  public NowPlaying(IMainWindow mainWindow, IPlayerService playerService, CommandService commandService) {
     _mainWindow = mainWindow;
     _playerService = playerService;
     _httpClient = new HttpClient();
