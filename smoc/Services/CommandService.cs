@@ -38,10 +38,10 @@ public sealed class CommandService {
     if (argCutoff > 0) {
       commandName = command[..argCutoff];
     }
-    var args = argCutoff > 0 ? command[argCutoff..] : string.Empty;
+    var args = argCutoff > 0 ? command[(argCutoff + 1)..] : string.Empty;
 
     if (commands.TryGetValue(commandName, out var handler)) {
-      handler(command, args);
+      handler(commandName, args);
       return true;
     }
     return false;
@@ -53,12 +53,6 @@ public sealed class CommandService {
   /// <param name="args">The raw arguments string.</param>
   /// <returns>An array of individual arguments.</returns>
   public static string[] GetArgs(string args) {
-    var results = args.Split('/');
-
-    if (results.Length > 0 && results[0].Trim() == string.Empty) {
-      return results[1..];
-    }
-
-    return results;
+    return args.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
   }
 }
