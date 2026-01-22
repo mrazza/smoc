@@ -2,8 +2,10 @@ using Moq;
 using smoc.Tests.Fakes;
 using smoc.Tests.TestInfra;
 using Smoc.Services;
+using Smoc.Streaming;
 using Smoc.Ui;
 using Smoc.Ui.Models;
+using Terminal.Gui.Input;
 using Terminal.Gui.Views;
 using TerminalGuiFluentTesting;
 
@@ -49,7 +51,7 @@ public class PlayerViewTest {
     _mockPlayerService.Setup((ps) => ps.GetCurrentPlaybackQueue()).Returns([EntityTestFactory.GenerateSong()]);
     using var context = NewContext();
     var playerView = NewPlayerView();
-    context.Add(playerView);
+    context.Add(playerView).Then((_) => handler?.Invoke(null, EventArgs.Empty));
     _screenshotDiffer.AssertEqualsGolden(context);
   }
 
@@ -74,5 +76,58 @@ public class PlayerViewTest {
     Assert.NotEqual(Mode.Player, _fakeMainWindow.CurrentMode);
     context.Then((_) => _commandService.ExecuteCommand("np"));
     Assert.Equal(Mode.Player, _fakeMainWindow.CurrentMode);
+  }
+
+  [Fact]
+  public void SongChanged_HighlightsSong() {
+    EventHandler<Song>? songChangedHandler = null;
+    _mockPlayerService.SetupAdd((ps) => ps.SongChanged += It.IsAny<EventHandler<Song>>())
+        .Callback<EventHandler<Song>>(h => songChangedHandler = h);
+    EventHandler? queueChangedHandler = null;
+    _mockPlayerService.SetupAdd((ps) => ps.QueueChanged += It.IsAny<EventHandler>())
+        .Callback<EventHandler>(h => queueChangedHandler = h);
+    _mockPlayerService.SetupGet((ps) => ps.CurrentPlaybackIndex).Returns(1);
+    Song[] songs = [EntityTestFactory.GenerateSong(postfix: "1"), EntityTestFactory.GenerateSong(postfix: "2")];
+    _mockPlayerService.Setup((ps) => ps.GetCurrentPlaybackQueue()).Returns(songs);
+    using var context = NewContext();
+    var playerView = NewPlayerView();
+    context.Add(playerView)
+        .Then((_) => queueChangedHandler?.Invoke(null, EventArgs.Empty))
+        .Then((_) => songChangedHandler?.Invoke(null, songs[1]));
+    _screenshotDiffer.AssertEqualsGolden(context, ansiShot: true);
+  }
+
+  [Fact]
+  public void SongSelected_SetsCurrentSong() {
+    EventHandler? queueChangedHandler = null;
+    _mockPlayerService.SetupAdd((ps) => ps.QueueChanged += It.IsAny<EventHandler>())
+        .Callback<EventHandler>(h => queueChangedHandler = h);
+    _mockPlayerService.Setup((ps) => ps.ChangeTrack(1)).Verifiable(Times.Once());
+    _mockPlayerService.Setup((ps) => ps.GetCurrentPlaybackQueue()).Returns([EntityTestFactory.GenerateSong(postfix: "1"), EntityTestFactory.GenerateSong(postfix: "2")]);
+    using var context = NewContext();
+    var playerView = NewPlayerView();
+    context.Add(playerView)
+        .Then((_) => queueChangedHandler?.Invoke(null, EventArgs.Empty))
+        .KeyDown(Key.CursorDown)
+        .KeyDown(Key.Enter);
+    _mockPlayerService.Verify();
+  }
+
+  [Fact]
+  public void BecomesVisible_SelectsCurrentSong() {
+    EventHandler? queueChangedHandler = null;
+    _mockPlayerService.SetupAdd((ps) => ps.QueueChanged += It.IsAny<EventHandler>())
+        .Callback<EventHandler>(h => queueChangedHandler = h);
+    _mockPlayerService.SetupGet((ps) => ps.CurrentPlaybackIndex).Returns(1);
+    Song[] songs = [EntityTestFactory.GenerateSong(postfix: "1"), EntityTestFactory.GenerateSong(postfix: "2")];
+    _mockPlayerService.SetupGet((ps) => ps.CurrentSong).Returns(songs[1]);
+    _mockPlayerService.Setup((ps) => ps.GetCurrentPlaybackQueue()).Returns(songs);
+    using var context = NewContext();
+    var playerView = NewPlayerView();
+    playerView.Visible = false;
+    context.Add(playerView)
+        .Then((_) => queueChangedHandler?.Invoke(null, EventArgs.Empty))
+        .Then((_) => playerView.Visible = true);
+    _screenshotDiffer.AssertEqualsGolden(context, ansiShot: true);
   }
 }
