@@ -19,6 +19,7 @@ public sealed class MainWindow : Runnable, IMainWindow {
   private readonly IPlayerService _playerService;
   private readonly CommandService _commandService;
   private readonly IStreamingClient _streamingClient;
+  private readonly HttpClient _httpClient;
 
   private Mode? _currentMode;
   private View? _preCommandFocusedView;
@@ -36,7 +37,8 @@ public sealed class MainWindow : Runnable, IMainWindow {
     this._streamingClient = streamingClient;
     _playerService = new SoundFlowPlayerService(this, streamingClient);
     _commandService = new CommandService();
-    _nowPlaying = new NowPlaying(this, _playerService, _commandService);
+    _httpClient = new HttpClient();
+    _nowPlaying = new NowPlaying(this, _playerService, _commandService, _httpClient);
     _commandLine = new CommandLine() {
       Y = Pos.AnchorEnd()
     };
@@ -100,6 +102,11 @@ public sealed class MainWindow : Runnable, IMainWindow {
   /// <inheritdoc/>
   public void DisplayError(string message) {
     _commandLine.DisplayError(message);
+  }
+
+  protected override void Dispose(bool disposing) {
+    base.Dispose(disposing);
+    _httpClient.Dispose();
   }
 
   private bool? OnCommandLineHotKey(ICommandContext? context) {
