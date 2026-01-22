@@ -127,7 +127,7 @@ public class StatusBarTest {
     EventHandler<TimeSpan>? handler = null;
     _mockPlayerService.SetupAdd((ps) => ps.PositionChanged += It.IsAny<EventHandler<TimeSpan>>()).Callback<EventHandler<TimeSpan>>((h) => handler = h);
     SetupMockPlayerService();
-    _mockPlayerService.Setup((ps) => ps.CurrentSong).Returns<Song?>(null);
+    _mockPlayerService.SetupGet((ps) => ps.CurrentSong); // Reset this to null.
     using var context = NewStatusBarContext().Then((_) => handler?.Invoke(null, TimeSpan.FromMinutes(1)));
     _screenshotDiffer.AssertEqualsGolden(context);
   }
@@ -160,12 +160,11 @@ public class StatusBarTest {
   }
 
   private Song SetupMockPlayerService(PlaybackState playbackState = PlaybackState.Playing, Song? currentSong = null, TimeSpan? currentTime = null) {
-    _mockPlayerService.Setup((ps) => ps.PlaybackState).Returns(playbackState);
+    _mockPlayerService.SetupGet((ps) => ps.PlaybackState).Returns(playbackState);
     Song song = currentSong ?? EntityTestFactory.GenerateSong();
-    _mockPlayerService.Setup((ps) => ps.CurrentSong).Returns(song);
-    _mockPlayerService.Setup((ps) => ps.Duration).Returns(song.Duration);
-    _mockPlayerService.Setup((ps) => ps.CurrentTime).Returns(currentTime ?? TimeSpan.FromMinutes(1));
-
+    _mockPlayerService.SetupGet((ps) => ps.CurrentSong).Returns(song);
+    _mockPlayerService.SetupGet((ps) => ps.Duration).Returns(song.Duration);
+    _mockPlayerService.SetupGet((ps) => ps.CurrentTime).Returns(currentTime ?? TimeSpan.FromMinutes(1));
     return song;
   }
 }
