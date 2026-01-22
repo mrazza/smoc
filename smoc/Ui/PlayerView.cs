@@ -17,7 +17,7 @@ public sealed class PlayerView : View {
   private readonly SongTable _songTable;
   private readonly Label _noSongsLabel;
   private readonly IPlayerService _playerService;
-  private readonly MainWindow _mainWindow;
+  private readonly IMainWindow _mainWindow;
 
   /// <summary>
   /// Initializes a new instance of the <see cref="PlayerView"/> class.
@@ -25,7 +25,7 @@ public sealed class PlayerView : View {
   /// <param name="mainWindow">The main window reference.</param>
   /// <param name="commandService">The command service.</param>
   /// <param name="playerService">The player service for managing the queue.</param>
-  public PlayerView(MainWindow mainWindow, CommandService commandService, IPlayerService playerService) {
+  public PlayerView(IMainWindow mainWindow, CommandService commandService, IPlayerService playerService) {
     _mainWindow = mainWindow;
     _playerService = playerService;
     Width = Dim.Fill();
