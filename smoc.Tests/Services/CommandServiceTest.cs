@@ -91,4 +91,11 @@ public class CommandServiceTest {
   public void GetArgs_EmptyArgs_NoEmpty() {
     Assert.Equal(["correct", "args"], CommandService.GetArgs("correct//args"));
   }
+
+  [Fact]
+  public void RegisterCommand_DuplicateCommand_ThrowsException() {
+    var commandService = new CommandService();
+    commandService.RegisterCommand("known", (cmd, __) => { });
+    Assert.Throws<ArgumentException>(() => commandService.RegisterCommand("known", (cmd, __) => { }));
+  }
 }

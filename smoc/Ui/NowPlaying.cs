@@ -40,10 +40,10 @@ public sealed class NowPlaying : View {
   /// <param name="mainWindow">The main window reference.</param>
   /// <param name="playerService">The player service for playback information.</param>
   /// <param name="commandService">The command service for registering volume commands.</param>
-  public NowPlaying(IMainWindow mainWindow, IPlayerService playerService, CommandService commandService) {
+  public NowPlaying(IMainWindow mainWindow, IPlayerService playerService, CommandService commandService, HttpClient httpClient) {
     _mainWindow = mainWindow;
     _playerService = playerService;
-    _httpClient = new HttpClient();
+    _httpClient = httpClient;
     _albumArtUrl = null;
     Width = Dim.Fill();
     Height = Dim.Absolute(3);
@@ -111,7 +111,6 @@ public sealed class NowPlaying : View {
     playerService.SongChanged += OnSongChanged;
     playerService.PositionChanged += OnPositionChanged;
     playerService.VolumeChanged += OnVolumeChanged;
-    playerService.PlaybackStateChanged += OnPlaybackStateChanged;
 
     commandService.RegisterCommand("v", OnSetVolumeCommand);
     AddCommand(Command.HotKey, OnHotKey);
@@ -122,8 +121,6 @@ public sealed class NowPlaying : View {
     _playerService.SongChanged -= OnSongChanged;
     _playerService.PositionChanged -= OnPositionChanged;
     _playerService.VolumeChanged -= OnVolumeChanged;
-    _playerService.PlaybackStateChanged -= OnPlaybackStateChanged;
-    _httpClient.Dispose();
     base.Dispose(disposing);
   }
 
@@ -161,16 +158,10 @@ public sealed class NowPlaying : View {
     }
   }
 
-  private void OnPlaybackStateChanged(object? sender, PlaybackState e) {
-    if (e == PlaybackState.Playing || e == PlaybackState.Paused) {
-      OnSongChanged(sender, _playerService.CurrentSong!);
-    }
-  }
-
   private async void OnSongChanged(object? sender, Song e) {
     Logging.Information($"Song changed: {e.Title}");
-    _songLabel.Text = e.Title ?? Messages.NO_SONG;
-    _artistLabel.Text = e.Artist.Name ?? Messages.NO_ARTIST;
+    _songLabel.Text = e.Title;
+    _artistLabel.Text = e.Artist.Name;
 
     // Only bother downloading the album art if it has changed.
     if (e.Album.ThumbnailUrl is null || e.Album.ThumbnailUrl.Length == 0) {
@@ -180,11 +171,17 @@ public sealed class NowPlaying : View {
       _albumArtCancellationTokenSource?.Cancel();
       _albumArtCancellationTokenSource = new CancellationTokenSource();
       var token = _albumArtCancellationTokenSource.Token;
-      var albumResponse = await _httpClient.GetAsync(e.Album.ThumbnailUrl, token);
-      var image = Image.Load<Rgba32>(albumResponse.Content.ReadAsStream());
-      Logging.Debug($"Album art loaded: {e.Title}");
-      token.ThrowIfCancellationRequested();
-      _albumArtView.SetImage(image);
+      try {
+        var albumResponse = await _httpClient.GetAsync(e.Album.ThumbnailUrl, token);
+        var image = Image.Load<Rgba32>(albumResponse.Content.ReadAsStream());
+        Logging.Debug($"Album art loaded: {e.Title}");
+        token.ThrowIfCancellationRequested();
+        _albumArtView.SetImage(image);
+      } catch (OperationCanceledException) {
+        Logging.Debug($"Album art load cancelled: {e.Title}");
+      } catch (Exception ex) {
+        Logging.Error($"Failed to load album art for {e.Title}: {ex.Message}");
+      }
     }
   }
 
