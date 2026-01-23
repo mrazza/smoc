@@ -18,11 +18,9 @@ public class StatusBarTest {
     _screenshotDiffer = new ScreenshotDiffer(output);
   }
 
-  private StatusBar NewStatusBar() {
-    return new StatusBar(_mockPlayerService.Object);
-  }
+  private StatusBar NewStatusBar() => new StatusBar(_mockPlayerService.Object);
 
-  private TerminalGuiFluentTesting.TestContext NewContext() {
+  private static TerminalGuiFluentTesting.TestContext NewContext() {
     ConfigurationManager.RuntimeConfig = """
       {
         "Themes": [
@@ -56,9 +54,7 @@ public class StatusBarTest {
     return With.A<Runnable>(100, 20, TestDriver.ANSI.ToString());
   }
 
-  private TerminalGuiFluentTesting.TestContext NewStatusBarContext() {
-    return NewContext().Add(NewStatusBar());
-  }
+  private TerminalGuiFluentTesting.TestContext NewStatusBarContext() => NewContext().Add(NewStatusBar());
 
   [Fact]
   public void InitialState_ShowsEmpty() {

@@ -25,17 +25,11 @@ public class PlayerViewTest {
     _screenshotDiffer = new ScreenshotDiffer(output);
   }
 
-  private TerminalGuiFluentTesting.TestContext NewContext() {
-    return With.A<Runnable>(100, 20, TestDriver.ANSI.ToString());
-  }
+  private static TerminalGuiFluentTesting.TestContext NewContext() => With.A<Runnable>(100, 20, TestDriver.ANSI.ToString());
 
-  private PlayerView NewPlayerView() {
-    return new PlayerView(_fakeMainWindow, _commandService, _mockPlayerService.Object);
-  }
+  private PlayerView NewPlayerView() => new PlayerView(_fakeMainWindow, _commandService, _mockPlayerService.Object);
 
-  private TerminalGuiFluentTesting.TestContext NewPlayerViewContext() {
-    return NewContext().Add(NewPlayerView());
-  }
+  private TerminalGuiFluentTesting.TestContext NewPlayerViewContext() => NewContext().Add(NewPlayerView());
 
   [Fact]
   public void InitialState_ShowsEmpty() {

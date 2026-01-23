@@ -25,13 +25,9 @@ public class SongContextMenuTest : IDisposable {
     _screenshotDiffer = new ScreenshotDiffer(output);
   }
 
-  private TerminalGuiFluentTesting.TestContext NewContext() {
-    return With.A<Runnable>(100, 20, TestDriver.ANSI.ToString());
-  }
+  private static TerminalGuiFluentTesting.TestContext NewContext() => With.A<Runnable>(100, 20, TestDriver.ANSI.ToString());
 
-  private SongContextMenu NewSongContextMenu() {
-    return new SongContextMenu(_mockPlayerService.Object, _songTable);
-  }
+  private SongContextMenu NewSongContextMenu() => new(_mockPlayerService.Object, _songTable);
 
   [Fact]
   public void MakeVisible_ShouldDisplayCorrectly() {

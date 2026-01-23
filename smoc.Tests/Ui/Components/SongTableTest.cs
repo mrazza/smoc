@@ -19,20 +19,15 @@ public class SongTableTest {
     _screenshotDiffer = new ScreenshotDiffer(output);
   }
 
-  private TerminalGuiFluentTesting.TestContext NewContext() {
-    return With.A<Runnable>(100, 20, TestDriver.ANSI.ToString());
-  }
+  private static TerminalGuiFluentTesting.TestContext NewContext() => With.A<Runnable>(100, 20, TestDriver.ANSI.ToString());
 
-  private SongTable NewSongTable(SongTableColumns columns = SongTableColumns.All) {
-    return new SongTable(columns) {
-      Width = Dim.Fill(),
-      Height = Dim.Fill()
-    };
-  }
+  private static SongTable NewSongTable(SongTableColumns columns = SongTableColumns.All) => new SongTable(columns) {
+    Width = Dim.Fill(),
+    Height = Dim.Fill()
+  };
 
-  private TerminalGuiFluentTesting.TestContext NewSongTableContext(SongTableColumns columns = SongTableColumns.All) {
-    return NewContext().Add(NewSongTable(columns));
-  }
+  private static TerminalGuiFluentTesting.TestContext NewSongTableContext(SongTableColumns columns = SongTableColumns.All) =>
+    NewContext().Add(NewSongTable(columns));
 
   [Fact]
   public void EmptyTable_AllColumns_ShowsHeaders() {
