@@ -21,7 +21,7 @@ public sealed class SongView : View {
     public const string SEARCH_ERROR = "error searching tracks";
   }
 
-  private readonly MainWindow _mainWindow;
+  private readonly IMainWindow _mainWindow;
   private readonly SongTable _songTable;
   private readonly SongContextMenu _songContextMenu;
   private readonly Label _songsLabel;
@@ -37,7 +37,7 @@ public sealed class SongView : View {
   /// <param name="commandService">The command service for registering search commands.</param>
   /// <param name="streamingClient">The client for searching songs.</param>
   /// <param name="playerService">The player service for playback options.</param>
-  public SongView(MainWindow mainWindow, CommandService commandService, IStreamingClient streamingClient, IPlayerService playerService) {
+  public SongView(IMainWindow mainWindow, CommandService commandService, IStreamingClient streamingClient, IPlayerService playerService) {
     _mainWindow = mainWindow;
     _streamingClient = streamingClient;
     _playerService = playerService;

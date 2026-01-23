@@ -12,7 +12,7 @@ public sealed class MainContent : View {
   private readonly ArtistView _artistView;
   private readonly PlayerView _playerView;
   private readonly SongView _songView;
-  private readonly MainWindow _mainWindow;
+  private readonly IMainWindow _mainWindow;
 
   private View? _currentView;
 
@@ -23,7 +23,7 @@ public sealed class MainContent : View {
   /// <param name="commandService">The command service.</param>
   /// <param name="playerService">The player service.</param>
   /// <param name="streamingClient">The streaming client.</param>
-  public MainContent(MainWindow mainWindow, CommandService commandService, IPlayerService playerService, IStreamingClient streamingClient) {
+  public MainContent(IMainWindow mainWindow, CommandService commandService, IPlayerService playerService, IStreamingClient streamingClient) {
     _mainWindow = mainWindow;
     Width = Dim.Fill();
     Height = Dim.Fill();

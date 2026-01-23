@@ -20,39 +20,7 @@ public class StatusBarTest {
 
   private StatusBar NewStatusBar() => new StatusBar(_mockPlayerService.Object);
 
-  private static TerminalGuiFluentTesting.TestContext NewContext() {
-    ConfigurationManager.RuntimeConfig = """
-      {
-        "Themes": [
-            {
-                "default": {
-                    "Schemes": [
-                        {
-                            "StatusBar": {
-                                "Normal": {
-                                    "Foreground": "#949494",
-                                    "Background": "#3a3a3a"
-                                }
-                            }
-                        },
-                        {
-                            "StatusBar_Mode": {
-                                "Normal": {
-                                    "Foreground": "#262626",
-                                    "Background": "#949494",
-                                    "Style": "Bold"
-                                }
-                            }
-                        }
-                    ]
-                }
-            }
-        ]
-    }
-    """;
-    ConfigurationManager.Enable(ConfigLocations.Runtime);
-    return With.A<Runnable>(100, 20, TestDriver.ANSI.ToString());
-  }
+  private static TerminalGuiFluentTesting.TestContext NewContext() => With.A<Runnable>(100, 20, TestDriver.ANSI.ToString()).ConfigureDefaultTheme();
 
   private TerminalGuiFluentTesting.TestContext NewStatusBarContext() => NewContext().Add(NewStatusBar());
 
