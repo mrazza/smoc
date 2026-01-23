@@ -93,10 +93,6 @@ public sealed class SongView : View {
       return;
     }
 
-    if (args[0] == '/') {
-      args = args[1..];
-    }
-
     CancelPendingSearches();
     _searchCts = new CancellationTokenSource();
     var token = _searchCts.Token;
