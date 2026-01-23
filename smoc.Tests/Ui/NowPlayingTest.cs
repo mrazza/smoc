@@ -32,17 +32,11 @@ public class NowPlayingTest {
     _httpClient = new HttpClient(_mockHttpClientHandler.Object);
   }
 
-  private TerminalGuiFluentTesting.TestContext NewContext() {
-    return With.A<Runnable>(100, 20, TestDriver.ANSI.ToString());
-  }
+  private static TerminalGuiFluentTesting.TestContext NewContext() => With.A<Runnable>(100, 20, TestDriver.ANSI.ToString());
 
-  private NowPlaying NewNowPlaying() {
-    return new NowPlaying(_fakeMainWindow, _mockPlayerService.Object, _commandService, _httpClient);
-  }
+  private NowPlaying NewNowPlaying() => new NowPlaying(_fakeMainWindow, _mockPlayerService.Object, _commandService, _httpClient);
 
-  private TerminalGuiFluentTesting.TestContext NewNowPlayingContext() {
-    return NewContext().Add(NewNowPlaying());
-  }
+  private TerminalGuiFluentTesting.TestContext NewNowPlayingContext() => NewContext().Add(NewNowPlaying());
 
   [Fact]
   public void PlayPauseHotKey_PlaysMusic() {
