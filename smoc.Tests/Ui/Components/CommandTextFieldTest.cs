@@ -19,8 +19,6 @@ public class CommandTextFieldTest {
 
   private static TerminalGuiFluentTesting.TestContext NewContext() => With.A<Runnable>(100, 20, TestDriver.ANSI.ToString());
 
-  private static TerminalGuiFluentTesting.TestContext NewCommandTextFieldContext() => NewContext().Add(NewCommandTextField());
-
   [Fact]
   public void TabStop_WontFocus() {
     using var context = NewContext();

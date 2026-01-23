@@ -1,4 +1,7 @@
+using System.ComponentModel.Design;
 using Terminal.Gui.App;
+using Terminal.Gui.Configuration;
+using Terminal.Gui.Time;
 using Terminal.Gui.ViewBase;
 
 namespace smoc.Tests.TestInfra;
@@ -7,6 +10,9 @@ namespace smoc.Tests.TestInfra;
 /// Extension methods for <see cref="TerminalGuiFluentTesting.TestContext"/>.
 /// </summary>
 public static class ContextExtensions {
+  private static volatile bool _isConfigSet = false;
+  private static readonly object _configLock = new();
+
   /// <summary>
   /// Adds a view to the test context and waits for it to be laid out.
   /// </summary>
@@ -18,5 +24,80 @@ public static class ContextExtensions {
   /// <returns>The test context.</returns>
   public static TerminalGuiFluentTesting.TestContext AddAndLayout(this TerminalGuiFluentTesting.TestContext context, View view) {
     return context.Add(view).Then((_) => view.SetNeedsLayout());
+  }
+
+  /// <summary>
+  /// Advances the time in the test context.
+  /// </summary>
+  /// <param name="context">The test context.</param>
+  /// <param name="timeSpan">The time to advance.</param>
+  /// <returns>The test context.</returns>
+  public static TerminalGuiFluentTesting.TestContext AdvanceTime(this TerminalGuiFluentTesting.TestContext context, TimeSpan timeSpan) {
+    (context.TimeProvider as VirtualTimeProvider)?.Advance(timeSpan);
+    return context.WaitIteration();
+  }
+
+  /// <summary>
+  /// Configures the default theme for the test context.
+  /// </summary>
+  /// <remarks>
+  /// This is required by some views to load themes and to display colors correctly.
+  /// </remarks>
+  /// <param name="context">The test context.</param>
+  /// <returns>The test context.</returns>
+  public static TerminalGuiFluentTesting.TestContext ConfigureDefaultTheme(this TerminalGuiFluentTesting.TestContext context) {
+    if (_isConfigSet) return context;
+    lock (_configLock) {
+      if (_isConfigSet) return context;
+      ConfigurationManager.RuntimeConfig = """
+      {
+        "Themes": [
+            {
+                "default": {
+                    "Schemes": [
+                        {
+                            "CommandLine": {
+                                "Normal": {
+                                    "Foreground": "#ebdbb2",
+                                    "Background": "#00000000"
+                                }
+                            }
+                        },
+                        {
+                            "CommandLineError": {
+                                "Normal": {
+                                    "Foreground": "#262626",
+                                    "Background": "#d75f5f",
+                                    "Style": "Bold"
+                                }
+                            }
+                        },
+                        {
+                            "StatusBar": {
+                                "Normal": {
+                                    "Foreground": "#949494",
+                                    "Background": "#3a3a3a"
+                                }
+                            }
+                        },
+                        {
+                            "StatusBar_Mode": {
+                                "Normal": {
+                                    "Foreground": "#262626",
+                                    "Background": "#949494",
+                                    "Style": "Bold"
+                                }
+                            }
+                        }
+                    ]
+                }
+            }
+        ]
+    }
+    """;
+      ConfigurationManager.Enable(ConfigLocations.Runtime);
+      _isConfigSet = true;
+    }
+    return context;
   }
 }
