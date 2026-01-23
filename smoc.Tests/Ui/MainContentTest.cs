@@ -61,4 +61,12 @@ public class MainContentTest {
     _screenshotDiffer.AssertEqualsGolden(context);
   }
 
+  [Fact]
+  public void SetMode_ChangeMode_ShowsCorrectMode() {
+    using var context = NewContext();
+    var mainContent = NewMainContent();
+    context.Add(mainContent).Then((_) => mainContent.SetMode(Mode.Player)).Then((_) => mainContent.SetMode(Mode.Artist));
+    _screenshotDiffer.AssertEqualsGolden(context);
+  }
+
 }
