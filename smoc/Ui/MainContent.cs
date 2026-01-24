@@ -21,22 +21,22 @@ public sealed class MainContent : View {
   /// </summary>
   /// <param name="mainWindow">The main window reference.</param>
   /// <param name="commandService">The command service.</param>
-  /// <param name="playerService">The player service.</param>
+  /// <param name="playbackQueueService">The playback queue service.</param>
   /// <param name="streamingClient">The streaming client.</param>
-  public MainContent(IMainWindow mainWindow, CommandService commandService, IPlayerService playerService, IStreamingClient streamingClient) {
+  public MainContent(IMainWindow mainWindow, CommandService commandService, IPlaybackQueueService playbackQueueService, IStreamingClient streamingClient) {
     _mainWindow = mainWindow;
     Width = Dim.Fill();
     Height = Dim.Fill();
     CanFocus = true;
     _currentView = null;
 
-    _artistView = new ArtistView(mainWindow, commandService, streamingClient, playerService) {
+    _artistView = new ArtistView(mainWindow, commandService, streamingClient, playbackQueueService) {
       Visible = false
     };
-    _playerView = new PlayerView(mainWindow, commandService, playerService) {
+    _playerView = new PlayerView(mainWindow, commandService, playbackQueueService) {
       Visible = false
     };
-    _songView = new SongView(mainWindow, commandService, streamingClient, playerService) {
+    _songView = new SongView(mainWindow, commandService, streamingClient, playbackQueueService) {
       Visible = false
     };
     Add(_artistView, _playerView, _songView);

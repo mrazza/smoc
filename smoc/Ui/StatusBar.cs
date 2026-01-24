@@ -24,14 +24,14 @@ public sealed class StatusBar : View {
   private readonly Label _modeLabel;
   private readonly Label _versionLabel;
   private readonly Label _stateLabel;
-  private readonly IPlayerService _playerService;
+  private readonly IPlaybackQueueService _playbackQueueService;
 
   /// <summary>
   /// Initializes a new instance of the <see cref="StatusBar"/> class.
   /// </summary>
-  /// <param name="playerService">The player service to monitor.</param>
-  public StatusBar(IPlayerService playerService) {
-    _playerService = playerService;
+  /// <param name="playbackQueueService">The player service to monitor.</param>
+  public StatusBar(IPlaybackQueueService playbackQueueService) {
+    _playbackQueueService = playbackQueueService;
     Width = Dim.Fill();
     Height = Dim.Absolute(1);
 
@@ -59,15 +59,15 @@ public sealed class StatusBar : View {
     _stateLabel.Padding!.Thickness = defaultMargin;
     Add(_modeLabel, _versionLabel, _stateLabel);
 
-    playerService.SongChanged += OnSongChanged;
-    playerService.PositionChanged += OnPositionChanged;
-    playerService.PlaybackStateChanged += OnPlaybackStateChanged;
+    _playbackQueueService.SongChanged += OnSongChanged;
+    _playbackQueueService.PositionChanged += OnPositionChanged;
+    _playbackQueueService.PlaybackStateChanged += OnPlaybackStateChanged;
   }
 
   protected override void Dispose(bool disposing) {
-    _playerService.SongChanged -= OnSongChanged;
-    _playerService.PositionChanged -= OnPositionChanged;
-    _playerService.PlaybackStateChanged -= OnPlaybackStateChanged;
+    _playbackQueueService.SongChanged -= OnSongChanged;
+    _playbackQueueService.PositionChanged -= OnPositionChanged;
+    _playbackQueueService.PlaybackStateChanged -= OnPlaybackStateChanged;
     base.Dispose(disposing);
   }
 
@@ -84,17 +84,17 @@ public sealed class StatusBar : View {
   }
 
   private void UpdateState() {
-    string playbackStatePrefix = _playerService.PlaybackState switch {
+    string playbackStatePrefix = _playbackQueueService.PlaybackState switch {
       PlaybackState.Playing => Messages.PLAY,
       PlaybackState.Paused => Messages.PAUSE,
       PlaybackState.Stopped => Messages.STOP,
       _ => Messages.UNKNOWN
     };
 
-    string songName = _playerService.CurrentSong?.Title ?? Messages.NO_SONG;
-    string artistName = _playerService.CurrentSong?.Artist.Name ?? Messages.NO_ARTIST;
-    string songDuration = _playerService.Duration.ToString("mm\\:ss");
-    string songPosition = _playerService.CurrentTime.ToString("mm\\:ss");
+    string songName = _playbackQueueService.CurrentSong?.Title ?? Messages.NO_SONG;
+    string artistName = _playbackQueueService.CurrentSong?.Artist.Name ?? Messages.NO_ARTIST;
+    string songDuration = _playbackQueueService.Duration.ToString("mm\\:ss");
+    string songPosition = _playbackQueueService.CurrentTime.ToString("mm\\:ss");
     _stateLabel.Text = $"{playbackStatePrefix} {artistName} - {songName} [{songPosition}/{songDuration}]";
   }
 

@@ -16,7 +16,7 @@ using static Smoc.Ui.Components.SongTable;
 public sealed class PlayerView : View {
   private readonly SongTable _songTable;
   private readonly Label _noSongsLabel;
-  private readonly IPlayerService _playerService;
+  private readonly IPlaybackQueueService _playbackQueueService;
   private readonly IMainWindow _mainWindow;
 
   /// <summary>
@@ -25,9 +25,9 @@ public sealed class PlayerView : View {
   /// <param name="mainWindow">The main window reference.</param>
   /// <param name="commandService">The command service.</param>
   /// <param name="playerService">The player service for managing the queue.</param>
-  public PlayerView(IMainWindow mainWindow, CommandService commandService, IPlayerService playerService) {
+  public PlayerView(IMainWindow mainWindow, CommandService commandService, IPlaybackQueueService playbackQueueService) {
     _mainWindow = mainWindow;
-    _playerService = playerService;
+    _playbackQueueService = playbackQueueService;
     Width = Dim.Fill();
     Height = Dim.Fill();
     CanFocus = true;
@@ -48,15 +48,15 @@ public sealed class PlayerView : View {
 
     commandService.RegisterCommand("np", OnNowPlayingCommand);
 
-    playerService.QueueChanged += OnQueueChanged;
-    playerService.SongChanged += OnSongChanged;
+    _playbackQueueService.QueueChanged += OnQueueChanged;
+    _playbackQueueService.SongChanged += OnSongChanged;
 
     _songTable.SongSelected += OnSongSelected;
   }
 
   protected override void Dispose(bool disposing) {
-    _playerService.QueueChanged -= OnQueueChanged;
-    _playerService.SongChanged -= OnSongChanged;
+    _playbackQueueService.QueueChanged -= OnQueueChanged;
+    _playbackQueueService.SongChanged -= OnSongChanged;
     _songTable.SongSelected -= OnSongSelected;
     base.Dispose(disposing);
   }
@@ -64,8 +64,8 @@ public sealed class PlayerView : View {
   protected override void OnVisibleChanged() {
     base.OnVisibleChanged();
 
-    if (Visible && _playerService.CurrentSong is Song currentSong) {
-      _songTable.SelectedRow = _playerService.CurrentPlaybackIndex;
+    if (Visible && _playbackQueueService.CurrentSong is Song currentSong) {
+      _songTable.SelectedRow = _playbackQueueService.CurrentPlaybackIndex;
       _songTable.EnsureSelectedCellIsVisible();
     }
   }
@@ -75,15 +75,15 @@ public sealed class PlayerView : View {
       throw new InvalidOperationException("Multiple songs cannot be selected when changing active track");
     }
 
-    await _playerService.ChangeTrack(_songTable.SelectedRow);
+    await _playbackQueueService.ChangeTrack(_songTable.SelectedRow);
   }
 
   private void OnSongChanged(object? sender, Song e) {
-    _songTable.HighlightedRow = _playerService.CurrentPlaybackIndex;
+    _songTable.HighlightedRow = _playbackQueueService.CurrentPlaybackIndex;
   }
 
   private void OnQueueChanged(object? sender, EventArgs e) {
-    var queue = _playerService.GetCurrentPlaybackQueue();
+    var queue = _playbackQueueService.GetCurrentPlaybackQueue();
     if (!queue.Any()) {
       _noSongsLabel.Visible = true;
       _songTable.Style.ShowHeaders = false;
@@ -92,7 +92,7 @@ public sealed class PlayerView : View {
       _noSongsLabel.Visible = false;
       _songTable.Style.ShowHeaders = true;
       _songTable.SetSongs(queue);
-      _songTable.SelectedRow = _playerService.CurrentPlaybackIndex;
+      _songTable.SelectedRow = _playbackQueueService.CurrentPlaybackIndex;
     }
   }
 

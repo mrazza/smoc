@@ -15,14 +15,14 @@ namespace smoc.Tests.Ui;
 
 public class ArtistViewTest {
   private readonly Mock<IStreamingClient> _mockStreamingClient;
-  private readonly Mock<IPlayerService> _mockPlayerService;
+  private readonly Mock<IPlaybackQueueService> _mockPlaybackQueue;
   private readonly CommandService _commandService;
   private readonly FakeMainWindow _fakeMainWindow;
   private readonly ScreenshotDiffer _screenshotDiffer;
 
   public ArtistViewTest(ITestOutputHelper output) {
     _mockStreamingClient = new Mock<IStreamingClient>();
-    _mockPlayerService = new Mock<IPlayerService>();
+    _mockPlaybackQueue = new Mock<IPlaybackQueueService>();
     _fakeMainWindow = new FakeMainWindow();
     _commandService = new CommandService();
     _screenshotDiffer = new ScreenshotDiffer(output);
@@ -30,7 +30,7 @@ public class ArtistViewTest {
 
   private TerminalGuiFluentTesting.TestContext NewArtistViewContext() {
     return With.A<Runnable>(100, 20, TestDriver.ANSI.ToString())
-          .AddAndLayout(new ArtistView(_fakeMainWindow, _commandService, _mockStreamingClient.Object, _mockPlayerService.Object));
+          .AddAndLayout(new ArtistView(_fakeMainWindow, _commandService, _mockStreamingClient.Object, _mockPlaybackQueue.Object));
   }
 
   [Fact]
@@ -167,9 +167,9 @@ public class ArtistViewTest {
     _mockStreamingClient.Setup(client => client.GetSongsByAlbumAsync(okComputer, It.IsAny<CancellationToken>()))
       .ReturnsAsync([paranoidAndroid, climbingUpTheWalls]);
     context.KeyDown(Key.Enter).KeyDown(Key.CursorRight).KeyDown(Key.Enter).KeyDown(Key.Enter);
-    _mockPlayerService.Verify((player) => player.ClearPlaybackQueue());
-    _mockPlayerService.Verify((player) => player.QueueLast(new List<Song> { paranoidAndroid, climbingUpTheWalls }));
-    _mockPlayerService.Verify((player) => player.ChangeTrack(0));
+    _mockPlaybackQueue.Verify((player) => player.ClearPlaybackQueue());
+    _mockPlaybackQueue.Verify((player) => player.QueueLast(new List<Song> { paranoidAndroid, climbingUpTheWalls }));
+    _mockPlaybackQueue.Verify((player) => player.ChangeTrack(0));
   }
 
   [Fact]

@@ -39,7 +39,6 @@ public sealed class ArtistView : View {
 
   private readonly IMainWindow _mainWindow;
   private readonly IStreamingClient _streamingClient;
-  private readonly IPlayerService _playerService;
 
   private CancellationTokenSource? _searchCts;
   private CancellationTokenSource? _selectArtistCts;
@@ -50,11 +49,10 @@ public sealed class ArtistView : View {
   /// <param name="mainWindow">The main window reference.</param>
   /// <param name="commandService">The command service for registering search commands.</param>
   /// <param name="streamingClient">The client for fetching artist data.</param>
-  /// <param name="playerService">The player service for playback options.</param>
-  public ArtistView(IMainWindow mainWindow, CommandService commandService, IStreamingClient streamingClient, IPlayerService playerService) {
+  /// <param name="playbackQueueService">The playback queue service for playback options.</param>
+  public ArtistView(IMainWindow mainWindow, CommandService commandService, IStreamingClient streamingClient, IPlaybackQueueService playbackQueueService) {
     _mainWindow = mainWindow;
     _streamingClient = streamingClient;
-    _playerService = playerService;
     Width = Dim.Fill();
     Height = Dim.Fill();
     CanFocus = true;
@@ -76,7 +74,7 @@ public sealed class ArtistView : View {
     };
     _songTable.Style.ShowHeaders = false;
     _songTable.SongSelected += OnSongSelected;
-    _songContextMenu = new SongContextMenu(playerService, _songTable);
+    _songContextMenu = new SongContextMenu(playbackQueueService, _songTable);
 
     _searchResultsLabel = new Label() {
       X = Pos.Absolute(1),

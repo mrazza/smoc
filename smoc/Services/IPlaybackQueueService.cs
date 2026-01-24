@@ -1,13 +1,11 @@
 using Smoc.Streaming;
-using Smoc.Ui;
-using Smoc.Ui.Components;
 
 namespace Smoc.Services;
 
 /// <summary>
-/// Orchestrates audio playback, queue management, and interaction with the audio playback engine.
+/// Service for managing the playback queue.
 /// </summary>
-public interface IPlayerService : IDisposable {
+public interface IPlaybackQueueService : IDisposable {
   /// <summary>
   /// Occurs when the playback queue changes (songs added, removed, or reordered).
   /// </summary>
@@ -94,14 +92,14 @@ public interface IPlayerService : IDisposable {
   void QueueLast(IEnumerable<Song> songs);
 
   /// <summary>
-  /// Skips to a specific track in the queue by index.
-  /// </summary>
-  Task ChangeTrack(int index);
-
-  /// <summary>
   /// Clears the entire playback queue.
   /// </summary>
   void ClearPlaybackQueue();
+
+  /// <summary>
+  /// Skips to a specific track in the queue by index.
+  /// </summary>
+  Task ChangeTrack(int index);
 
   /// <summary>
   /// Toggles between playing and paused states.

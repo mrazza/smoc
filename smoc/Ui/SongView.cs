@@ -26,7 +26,6 @@ public sealed class SongView : View {
   private readonly SongContextMenu _songContextMenu;
   private readonly Label _songsLabel;
   private readonly IStreamingClient _streamingClient;
-  private readonly IPlayerService _playerService;
 
   private CancellationTokenSource? _searchCts;
 
@@ -36,11 +35,10 @@ public sealed class SongView : View {
   /// <param name="mainWindow">The main window reference.</param>
   /// <param name="commandService">The command service for registering search commands.</param>
   /// <param name="streamingClient">The client for searching songs.</param>
-  /// <param name="playerService">The player service for playback options.</param>
-  public SongView(IMainWindow mainWindow, CommandService commandService, IStreamingClient streamingClient, IPlayerService playerService) {
+  /// <param name="playbackQueueService">The player service for playback options.</param>
+  public SongView(IMainWindow mainWindow, CommandService commandService, IStreamingClient streamingClient, IPlaybackQueueService playbackQueueService) {
     _mainWindow = mainWindow;
     _streamingClient = streamingClient;
-    _playerService = playerService;
 
     Width = Dim.Fill();
     Height = Dim.Fill();
@@ -58,7 +56,7 @@ public sealed class SongView : View {
     _songTable.Style.ShowHeaders = false;
     _songTable.BorderStyle = LineStyle.Single;
     _songTable.SongSelected += OnSongSelected;
-    _songContextMenu = new SongContextMenu(playerService, _songTable);
+    _songContextMenu = new SongContextMenu(playbackQueueService, _songTable);
 
     Add(_songTable, _songsLabel, _songContextMenu);
 

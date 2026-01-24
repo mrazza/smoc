@@ -17,7 +17,7 @@ namespace smoc.Tests.Ui;
 
 public class NowPlayingTest {
   private readonly FakeMainWindow _fakeMainWindow;
-  private readonly Mock<IPlayerService> _mockPlayerService;
+  private readonly Mock<IPlaybackQueueService> _mockPlaybackQueue;
   private readonly Mock<HttpClientHandler> _mockHttpClientHandler;
   private readonly HttpClient _httpClient;
   private readonly CommandService _commandService;
@@ -25,7 +25,7 @@ public class NowPlayingTest {
 
   public NowPlayingTest(ITestOutputHelper output) {
     _fakeMainWindow = new FakeMainWindow();
-    _mockPlayerService = new Mock<IPlayerService>();
+    _mockPlaybackQueue = new Mock<IPlaybackQueueService>();
     _commandService = new CommandService();
     _screenshotDiffer = new ScreenshotDiffer(output);
     _mockHttpClientHandler = new Mock<HttpClientHandler>();
@@ -34,7 +34,7 @@ public class NowPlayingTest {
 
   private static TerminalGuiFluentTesting.TestContext NewContext() => With.A<Runnable>(100, 20, TestDriver.ANSI.ToString());
 
-  private NowPlaying NewNowPlaying() => new NowPlaying(_fakeMainWindow, _mockPlayerService.Object, _commandService, _httpClient);
+  private NowPlaying NewNowPlaying() => new NowPlaying(_fakeMainWindow, _mockPlaybackQueue.Object, _commandService, _httpClient);
 
   private TerminalGuiFluentTesting.TestContext NewNowPlayingContext() => NewContext().Add(NewNowPlaying());
 
@@ -42,10 +42,10 @@ public class NowPlayingTest {
   public void PlayPauseHotKey_PlaysMusic() {
     using var context = NewContext();
     var nowPlaying = NewNowPlaying();
-    _mockPlayerService.Setup((ps) => ps.PlayPause()).Verifiable(Times.Once());
+    _mockPlaybackQueue.Setup((ps) => ps.PlayPause()).Verifiable(Times.Once());
     context.Add(nowPlaying)
         .KeyDown(Key.Space);
-    _mockPlayerService.Verify();
+    _mockPlaybackQueue.Verify();
   }
 
   [Fact]
@@ -56,7 +56,7 @@ public class NowPlayingTest {
 
   [Fact]
   public void Volume_ShowsVolume() {
-    _mockPlayerService.SetupGet((ps) => ps.Volume).Returns(0.5f);
+    _mockPlaybackQueue.SetupGet((ps) => ps.Volume).Returns(0.5f);
     using var context = NewNowPlayingContext();
     _screenshotDiffer.AssertEqualsGolden(context);
   }
@@ -64,7 +64,7 @@ public class NowPlayingTest {
   [Fact]
   public void Volume_VolumeChanged_UpdatesUi() {
     EventHandler<float>? handler = null;
-    _mockPlayerService.SetupAdd((ps) => ps.VolumeChanged += It.IsAny<EventHandler<float>>())
+    _mockPlaybackQueue.SetupAdd((ps) => ps.VolumeChanged += It.IsAny<EventHandler<float>>())
         .Callback<EventHandler<float>>(h => handler = h);
     using var context = NewNowPlayingContext()
         .Then((_) => handler?.Invoke(null, 0.2f));
@@ -73,57 +73,57 @@ public class NowPlayingTest {
 
   [Fact]
   public void Volume_VolumeCommand_SetsVolume() {
-    _mockPlayerService.SetupSet((ps) => ps.Volume = 0.2f).Verifiable(Times.Once());
+    _mockPlaybackQueue.SetupSet((ps) => ps.Volume = 0.2f).Verifiable(Times.Once());
     using var context = NewNowPlayingContext()
         .Then((_) => _commandService.ExecuteCommand("v/20"));
-    _mockPlayerService.Verify();
+    _mockPlaybackQueue.Verify();
   }
 
   [Fact]
   public void Volume_VolumeCommand_NoArguments_DoesNothing() {
-    _mockPlayerService.SetupSet((ps) => ps.Volume = It.IsAny<float>()).Verifiable(Times.Never());
+    _mockPlaybackQueue.SetupSet((ps) => ps.Volume = It.IsAny<float>()).Verifiable(Times.Never());
     using var context = NewNowPlayingContext()
         .Then((_) => _commandService.ExecuteCommand("v"));
-    _mockPlayerService.Verify();
+    _mockPlaybackQueue.Verify();
   }
 
   [Fact]
   public void Volume_VolumeCommand_TooLarge_DoesNothing() {
-    _mockPlayerService.SetupSet((ps) => ps.Volume = It.IsAny<float>()).Verifiable(Times.Never());
+    _mockPlaybackQueue.SetupSet((ps) => ps.Volume = It.IsAny<float>()).Verifiable(Times.Never());
     using var context = NewNowPlayingContext()
         .Then((_) => _commandService.ExecuteCommand("v/200"));
-    _mockPlayerService.Verify();
+    _mockPlaybackQueue.Verify();
   }
 
   [Fact]
   public void Volume_VolumeCommand_TooSmall_DoesNothing() {
-    _mockPlayerService.SetupSet((ps) => ps.Volume = It.IsAny<float>()).Verifiable(Times.Never());
+    _mockPlaybackQueue.SetupSet((ps) => ps.Volume = It.IsAny<float>()).Verifiable(Times.Never());
     using var context = NewNowPlayingContext()
         .Then((_) => _commandService.ExecuteCommand("v/-10"));
-    _mockPlayerService.Verify();
+    _mockPlaybackQueue.Verify();
   }
 
   [Fact]
   public void Volume_VolumeCommand_MultipleArgs_UsesFirst() {
-    _mockPlayerService.SetupSet((ps) => ps.Volume = 0.1f).Verifiable(Times.Once());
+    _mockPlaybackQueue.SetupSet((ps) => ps.Volume = 0.1f).Verifiable(Times.Once());
     using var context = NewNowPlayingContext()
         .Then((_) => _commandService.ExecuteCommand("v/10/20/30"));
-    _mockPlayerService.Verify();
+    _mockPlaybackQueue.Verify();
   }
 
   [Fact]
   public void Volume_VolumeCommand_InvalidFormat_DoesNothing() {
-    _mockPlayerService.SetupSet((ps) => ps.Volume = It.IsAny<float>()).Verifiable(Times.Never());
+    _mockPlaybackQueue.SetupSet((ps) => ps.Volume = It.IsAny<float>()).Verifiable(Times.Never());
     using var context = NewNowPlayingContext()
         .Then((_) => _commandService.ExecuteCommand("v/invalid"));
-    _mockPlayerService.Verify();
+    _mockPlaybackQueue.Verify();
   }
 
   [Fact]
   public void OnSongChanged_UpdatesSongDetails() {
     var song = EntityTestFactory.GenerateSong();
     EventHandler<Song>? handler = null;
-    _mockPlayerService.SetupAdd((ps) => ps.SongChanged += It.IsAny<EventHandler<Song>>())
+    _mockPlaybackQueue.SetupAdd((ps) => ps.SongChanged += It.IsAny<EventHandler<Song>>())
         .Callback<EventHandler<Song>>(h => handler = h);
     using var context = NewNowPlayingContext().Then((_) => handler?.Invoke(null, song));
     _screenshotDiffer.AssertEqualsGolden(context);
@@ -133,7 +133,7 @@ public class NowPlayingTest {
   public void OnSongChanged_LoadsAlbumArt() {
     var song = EntityTestFactory.GenerateSong();
     EventHandler<Song>? handler = null;
-    _mockPlayerService.SetupAdd((ps) => ps.SongChanged += It.IsAny<EventHandler<Song>>())
+    _mockPlaybackQueue.SetupAdd((ps) => ps.SongChanged += It.IsAny<EventHandler<Song>>())
         .Callback<EventHandler<Song>>(h => handler = h);
     _mockHttpClientHandler.Protected().Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
                 .ReturnsAsync(new HttpResponseMessage {
@@ -148,7 +148,7 @@ public class NowPlayingTest {
   public void OnSongChanged_RepeatAlbum_CachesAlbumArt() {
     var song = EntityTestFactory.GenerateSong();
     EventHandler<Song>? handler = null;
-    _mockPlayerService.SetupAdd((ps) => ps.SongChanged += It.IsAny<EventHandler<Song>>())
+    _mockPlaybackQueue.SetupAdd((ps) => ps.SongChanged += It.IsAny<EventHandler<Song>>())
         .Callback<EventHandler<Song>>(h => handler = h);
     _mockHttpClientHandler.Protected().Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
                 .ReturnsAsync(new HttpResponseMessage {
@@ -165,7 +165,7 @@ public class NowPlayingTest {
   public void OnSongChanged_NoAlbumArt_ClearsAlbumArt() {
     var song = EntityTestFactory.GenerateSong(noArt: true);
     EventHandler<Song>? handler = null;
-    _mockPlayerService.SetupAdd((ps) => ps.SongChanged += It.IsAny<EventHandler<Song>>())
+    _mockPlaybackQueue.SetupAdd((ps) => ps.SongChanged += It.IsAny<EventHandler<Song>>())
         .Callback<EventHandler<Song>>(h => handler = h);
     _mockHttpClientHandler.Protected().Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
                 .Verifiable(Times.Never());
@@ -176,9 +176,9 @@ public class NowPlayingTest {
   [Fact]
   public void OnPositionChanged_UpdatesPosition() {
     EventHandler<TimeSpan>? handler = null;
-    _mockPlayerService.SetupAdd((ps) => ps.PositionChanged += It.IsAny<EventHandler<TimeSpan>>())
+    _mockPlaybackQueue.SetupAdd((ps) => ps.PositionChanged += It.IsAny<EventHandler<TimeSpan>>())
         .Callback<EventHandler<TimeSpan>>(h => handler = h);
-    _mockPlayerService.SetupGet((ps) => ps.Duration).Returns(TimeSpan.FromMinutes(5));
+    _mockPlaybackQueue.SetupGet((ps) => ps.Duration).Returns(TimeSpan.FromMinutes(5));
     using var context = NewNowPlayingContext().Then((_) => handler?.Invoke(null, TimeSpan.Zero));
     _screenshotDiffer.AssertEqualsGolden(context);
   }
@@ -186,9 +186,9 @@ public class NowPlayingTest {
   [Fact]
   public void OnPositionChanged_UpdatesPosition_MultipleTimes() {
     EventHandler<TimeSpan>? handler = null;
-    _mockPlayerService.SetupAdd((ps) => ps.PositionChanged += It.IsAny<EventHandler<TimeSpan>>())
+    _mockPlaybackQueue.SetupAdd((ps) => ps.PositionChanged += It.IsAny<EventHandler<TimeSpan>>())
         .Callback<EventHandler<TimeSpan>>(h => handler = h);
-    _mockPlayerService.SetupGet((ps) => ps.Duration).Returns(TimeSpan.FromMinutes(5));
+    _mockPlaybackQueue.SetupGet((ps) => ps.Duration).Returns(TimeSpan.FromMinutes(5));
     using var context = NewNowPlayingContext()
         .Then((_) => handler?.Invoke(null, TimeSpan.Zero))
         .Then((_) => handler?.Invoke(null, TimeSpan.FromMinutes(2)));
