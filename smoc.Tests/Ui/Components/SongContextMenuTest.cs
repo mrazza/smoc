@@ -108,6 +108,7 @@ public class SongContextMenuTest : IDisposable {
     _mockPlaybackQueue.Setup((p) => p.ClearPlaybackQueue()).Verifiable(Times.Once());
     _mockPlaybackQueue.Setup((p) => p.QueueLast(songs)).Verifiable(Times.Once());
     _mockPlaybackQueue.Setup((p) => p.ChangeTrack(1)).Returns(Task.CompletedTask).Verifiable(Times.Once());
+    _mockPlaybackQueue.Setup((p) => p.Play()).Returns(Task.CompletedTask).Verifiable(Times.Once());
     context
       .Then((_) => songContextMenu.MakeVisible())
       .KeyDown(Key.Enter);
@@ -131,6 +132,7 @@ public class SongContextMenuTest : IDisposable {
     _mockPlaybackQueue.Setup((p) => p.ClearPlaybackQueue()).Verifiable(Times.Once());
     _mockPlaybackQueue.Setup((p) => p.QueueLast(new List<Song> { climbingUpTheWalls, climbingDownTheWalls })).Verifiable(Times.Once());
     _mockPlaybackQueue.Setup((p) => p.ChangeTrack(0)).Returns(Task.CompletedTask).Verifiable(Times.Once());
+    _mockPlaybackQueue.Setup((p) => p.Play()).Returns(Task.CompletedTask).Verifiable(Times.Once());
     context
       .Then((_) => songContextMenu.MakeVisible())
       .KeyDown(Key.CursorDown)
@@ -154,6 +156,7 @@ public class SongContextMenuTest : IDisposable {
     _mockPlaybackQueue.Setup((p) => p.ClearPlaybackQueue()).Verifiable(Times.Once());
     _mockPlaybackQueue.Setup((p) => p.QueueLast(new List<Song> { climbingUpTheWalls })).Verifiable(Times.Once());
     _mockPlaybackQueue.Setup((p) => p.ChangeTrack(0)).Returns(Task.CompletedTask).Verifiable(Times.Once());
+    _mockPlaybackQueue.Setup((p) => p.Play()).Returns(Task.CompletedTask).Verifiable(Times.Once());
     context
       .Then((_) => songContextMenu.MakeVisible())
       .KeyDown(Key.CursorDown)
