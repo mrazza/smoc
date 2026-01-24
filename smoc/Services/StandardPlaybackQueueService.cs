@@ -8,7 +8,7 @@ namespace Smoc.Services;
 
 public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
   private readonly IAudioService _audioService;
-  private readonly MainWindow _mainWindow;
+  private readonly IMainWindow _mainWindow;
   private readonly IStreamingClient _streamingClient;
 
   private UniqueResource<IPlaybackService> _playbackService;
@@ -67,7 +67,7 @@ public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
   /// <param name="mainWindow">The main window to use.</param>
   /// <param name="streamingClient">The streaming client to use.</param>
   /// <param name="audioService">The audio service to use.</param>
-  public StandardPlaybackQueueService(MainWindow mainWindow, IStreamingClient streamingClient, IAudioService audioService) {
+  public StandardPlaybackQueueService(IMainWindow mainWindow, IStreamingClient streamingClient, IAudioService audioService) {
     _mainWindow = mainWindow;
     _streamingClient = streamingClient;
     _audioService = audioService;
