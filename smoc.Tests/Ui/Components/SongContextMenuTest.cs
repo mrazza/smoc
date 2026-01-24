@@ -15,19 +15,19 @@ using static Smoc.Ui.Components.SongTable;
 namespace smoc.Tests.Ui.Components;
 
 public class SongContextMenuTest : IDisposable {
-  private readonly Mock<IPlayerService> _mockPlayerService;
+  private readonly Mock<IPlaybackQueueService> _mockPlaybackQueue;
   private readonly SongTable _songTable;
   private readonly ScreenshotDiffer _screenshotDiffer;
 
   public SongContextMenuTest(ITestOutputHelper output) {
-    _mockPlayerService = new Mock<IPlayerService>(MockBehavior.Strict);
+    _mockPlaybackQueue = new Mock<IPlaybackQueueService>(MockBehavior.Strict);
     _songTable = new SongTable(SongTableColumns.All);
     _screenshotDiffer = new ScreenshotDiffer(output);
   }
 
   private static TerminalGuiFluentTesting.TestContext NewContext() => With.A<Runnable>(100, 20, TestDriver.ANSI.ToString());
 
-  private SongContextMenu NewSongContextMenu() => new(_mockPlayerService.Object, _songTable);
+  private SongContextMenu NewSongContextMenu() => new(_mockPlaybackQueue.Object, _songTable);
 
   [Fact]
   public void MakeVisible_ShouldDisplayCorrectly() {
@@ -105,13 +105,13 @@ public class SongContextMenuTest : IDisposable {
     List<Song> songs = [paranoidAndroid, climbingUpTheWalls];
     _songTable.SetSongs(songs);
     _songTable.SelectedRow = 1;
-    _mockPlayerService.Setup((p) => p.ClearPlaybackQueue()).Verifiable(Times.Once());
-    _mockPlayerService.Setup((p) => p.QueueLast(songs)).Verifiable(Times.Once());
-    _mockPlayerService.Setup((p) => p.ChangeTrack(1)).Returns(Task.CompletedTask).Verifiable(Times.Once());
+    _mockPlaybackQueue.Setup((p) => p.ClearPlaybackQueue()).Verifiable(Times.Once());
+    _mockPlaybackQueue.Setup((p) => p.QueueLast(songs)).Verifiable(Times.Once());
+    _mockPlaybackQueue.Setup((p) => p.ChangeTrack(1)).Returns(Task.CompletedTask).Verifiable(Times.Once());
     context
       .Then((_) => songContextMenu.MakeVisible())
       .KeyDown(Key.Enter);
-    _mockPlayerService.Verify();
+    _mockPlaybackQueue.Verify();
   }
 
   [Fact]
@@ -128,14 +128,14 @@ public class SongContextMenuTest : IDisposable {
     _songTable.SetSongs([paranoidAndroid, climbingUpTheWalls, climbingDownTheWalls]);
     _songTable.SelectedRow = 1;
     _songTable.MultiSelectedRegions.Push(new TableSelection(new Point(0, 1), new Rectangle(0, 1, 0, 2)));
-    _mockPlayerService.Setup((p) => p.ClearPlaybackQueue()).Verifiable(Times.Once());
-    _mockPlayerService.Setup((p) => p.QueueLast(new List<Song> { climbingUpTheWalls, climbingDownTheWalls })).Verifiable(Times.Once());
-    _mockPlayerService.Setup((p) => p.ChangeTrack(0)).Returns(Task.CompletedTask).Verifiable(Times.Once());
+    _mockPlaybackQueue.Setup((p) => p.ClearPlaybackQueue()).Verifiable(Times.Once());
+    _mockPlaybackQueue.Setup((p) => p.QueueLast(new List<Song> { climbingUpTheWalls, climbingDownTheWalls })).Verifiable(Times.Once());
+    _mockPlaybackQueue.Setup((p) => p.ChangeTrack(0)).Returns(Task.CompletedTask).Verifiable(Times.Once());
     context
       .Then((_) => songContextMenu.MakeVisible())
       .KeyDown(Key.CursorDown)
       .KeyDown(Key.Enter);
-    _mockPlayerService.Verify();
+    _mockPlaybackQueue.Verify();
   }
 
   [Fact]
@@ -151,14 +151,14 @@ public class SongContextMenuTest : IDisposable {
 
     _songTable.SetSongs([paranoidAndroid, climbingUpTheWalls, climbingDownTheWalls]);
     _songTable.SelectedRow = 1;
-    _mockPlayerService.Setup((p) => p.ClearPlaybackQueue()).Verifiable(Times.Once());
-    _mockPlayerService.Setup((p) => p.QueueLast(new List<Song> { climbingUpTheWalls })).Verifiable(Times.Once());
-    _mockPlayerService.Setup((p) => p.ChangeTrack(0)).Returns(Task.CompletedTask).Verifiable(Times.Once());
+    _mockPlaybackQueue.Setup((p) => p.ClearPlaybackQueue()).Verifiable(Times.Once());
+    _mockPlaybackQueue.Setup((p) => p.QueueLast(new List<Song> { climbingUpTheWalls })).Verifiable(Times.Once());
+    _mockPlaybackQueue.Setup((p) => p.ChangeTrack(0)).Returns(Task.CompletedTask).Verifiable(Times.Once());
     context
       .Then((_) => songContextMenu.MakeVisible())
       .KeyDown(Key.CursorDown)
       .KeyDown(Key.Enter);
-    _mockPlayerService.Verify();
+    _mockPlaybackQueue.Verify();
   }
 
   [Fact]
@@ -175,13 +175,13 @@ public class SongContextMenuTest : IDisposable {
     _songTable.SetSongs([paranoidAndroid, climbingUpTheWalls, climbingDownTheWalls]);
     _songTable.SelectedRow = 1;
     _songTable.MultiSelectedRegions.Push(new TableSelection(new Point(0, 1), new Rectangle(0, 1, 0, 2)));
-    _mockPlayerService.Setup((p) => p.QueueNext(new List<Song> { climbingUpTheWalls, climbingDownTheWalls })).Verifiable(Times.Once());
+    _mockPlaybackQueue.Setup((p) => p.QueueNext(new List<Song> { climbingUpTheWalls, climbingDownTheWalls })).Verifiable(Times.Once());
     context
       .Then((_) => songContextMenu.MakeVisible())
       .KeyDown(Key.CursorDown)
       .KeyDown(Key.CursorDown)
       .KeyDown(Key.Enter);
-    _mockPlayerService.Verify();
+    _mockPlaybackQueue.Verify();
   }
 
   [Fact]
@@ -197,13 +197,13 @@ public class SongContextMenuTest : IDisposable {
 
     _songTable.SetSongs([paranoidAndroid, climbingUpTheWalls, climbingDownTheWalls]);
     _songTable.SelectedRow = 1;
-    _mockPlayerService.Setup((p) => p.QueueNext(new List<Song> { climbingUpTheWalls })).Verifiable(Times.Once());
+    _mockPlaybackQueue.Setup((p) => p.QueueNext(new List<Song> { climbingUpTheWalls })).Verifiable(Times.Once());
     context
       .Then((_) => songContextMenu.MakeVisible())
       .KeyDown(Key.CursorDown)
       .KeyDown(Key.CursorDown)
       .KeyDown(Key.Enter);
-    _mockPlayerService.Verify();
+    _mockPlaybackQueue.Verify();
   }
 
   [Fact]
@@ -220,14 +220,14 @@ public class SongContextMenuTest : IDisposable {
     _songTable.SetSongs([paranoidAndroid, climbingUpTheWalls, climbingDownTheWalls]);
     _songTable.SelectedRow = 1;
     _songTable.MultiSelectedRegions.Push(new TableSelection(new Point(0, 1), new Rectangle(0, 1, 0, 2)));
-    _mockPlayerService.Setup((p) => p.QueueLast(new List<Song> { climbingUpTheWalls, climbingDownTheWalls })).Verifiable(Times.Once());
+    _mockPlaybackQueue.Setup((p) => p.QueueLast(new List<Song> { climbingUpTheWalls, climbingDownTheWalls })).Verifiable(Times.Once());
     context
       .Then((_) => songContextMenu.MakeVisible())
       .KeyDown(Key.CursorDown)
       .KeyDown(Key.CursorDown)
       .KeyDown(Key.CursorDown)
       .KeyDown(Key.Enter);
-    _mockPlayerService.Verify();
+    _mockPlaybackQueue.Verify();
   }
 
   [Fact]
@@ -243,14 +243,14 @@ public class SongContextMenuTest : IDisposable {
 
     _songTable.SetSongs([paranoidAndroid, climbingUpTheWalls, climbingDownTheWalls]);
     _songTable.SelectedRow = 1;
-    _mockPlayerService.Setup((p) => p.QueueLast(new List<Song> { climbingUpTheWalls })).Verifiable(Times.Once());
+    _mockPlaybackQueue.Setup((p) => p.QueueLast(new List<Song> { climbingUpTheWalls })).Verifiable(Times.Once());
     context
       .Then((_) => songContextMenu.MakeVisible())
       .KeyDown(Key.CursorDown)
       .KeyDown(Key.CursorDown)
       .KeyDown(Key.CursorDown)
       .KeyDown(Key.Enter);
-    _mockPlayerService.Verify();
+    _mockPlaybackQueue.Verify();
   }
 
   [Fact]

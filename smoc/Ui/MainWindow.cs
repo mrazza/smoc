@@ -1,5 +1,6 @@
 using System.Reflection;
 using Smoc.Services;
+using Smoc.Services.Audio.SoundFlow;
 using Smoc.Streaming;
 using Smoc.Ui.Models;
 using Terminal.Gui.Input;
@@ -16,7 +17,7 @@ public sealed class MainWindow : Runnable, IMainWindow {
   private readonly StatusBar _statusBar;
   private readonly MainContent _mainContent;
   private readonly NowPlaying _nowPlaying;
-  private readonly IPlayerService _playerService;
+  private readonly IPlaybackQueueService _playbackQueueService;
   private readonly CommandService _commandService;
   private readonly IStreamingClient _streamingClient;
   private readonly HttpClient _httpClient;
@@ -35,17 +36,17 @@ public sealed class MainWindow : Runnable, IMainWindow {
     CanFocus = true;
 
     this._streamingClient = streamingClient;
-    _playerService = new SoundFlowPlayerService(this, streamingClient);
+    _playbackQueueService = StandardPlaybackQueueService.UsingAudioService<SoundFlowAudioService>(this, streamingClient);
     _commandService = new CommandService();
     _httpClient = new HttpClient();
-    _nowPlaying = new NowPlaying(this, _playerService, _commandService, _httpClient);
+    _nowPlaying = new NowPlaying(this, _playbackQueueService, _commandService, _httpClient);
     _commandLine = new CommandLine() {
       Y = Pos.AnchorEnd()
     };
-    _statusBar = new StatusBar(_playerService) {
+    _statusBar = new StatusBar(_playbackQueueService) {
       Y = Pos.Top(_commandLine) - 1
     };
-    _mainContent = new MainContent(this, _commandService, _playerService, streamingClient) {
+    _mainContent = new MainContent(this, _commandService, _playbackQueueService, streamingClient) {
       Y = Pos.Bottom(_nowPlaying),
       Height = Dim.Fill() - _statusBar.Height - _commandLine.Height
     };

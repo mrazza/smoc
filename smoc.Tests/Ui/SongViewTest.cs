@@ -13,20 +13,20 @@ namespace smoc.Tests.Ui;
 
 public class SongViewTest {
   private readonly Mock<IStreamingClient> _mockStreamingClient;
-  private readonly Mock<IPlayerService> _mockPlayerService;
+  private readonly Mock<IPlaybackQueueService> _mockPlaybackQueue;
   private readonly CommandService _commandService;
   private readonly FakeMainWindow _fakeMainWindow;
   private readonly ScreenshotDiffer _screenshotDiffer;
 
   public SongViewTest(ITestOutputHelper output) {
     _mockStreamingClient = new Mock<IStreamingClient>();
-    _mockPlayerService = new Mock<IPlayerService>();
+    _mockPlaybackQueue = new Mock<IPlaybackQueueService>();
     _fakeMainWindow = new FakeMainWindow();
     _commandService = new CommandService();
     _screenshotDiffer = new ScreenshotDiffer(output);
   }
 
-  private SongView NewSongView() => new(_fakeMainWindow, _commandService, _mockStreamingClient.Object, _mockPlayerService.Object);
+  private SongView NewSongView() => new(_fakeMainWindow, _commandService, _mockStreamingClient.Object, _mockPlaybackQueue.Object);
 
   private static TerminalGuiFluentTesting.TestContext NewContext() => With.A<Runnable>(100, 20, TestDriver.ANSI.ToString());
 

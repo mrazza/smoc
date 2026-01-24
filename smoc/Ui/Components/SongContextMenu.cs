@@ -24,8 +24,8 @@ public sealed class SongContextMenu : PopoverMenu {
   /// </summary>
   /// <param name="playerService">The player service to control playback.</param>
   /// <param name="songTable">The song table to get selection from.</param>
-  public SongContextMenu(IPlayerService playerService, SongTable songTable)
-      : base(CreateMenuItems(playerService, songTable)) {
+  public SongContextMenu(IPlaybackQueueService playbackQueueService, SongTable songTable)
+      : base(CreateMenuItems(playbackQueueService, songTable)) {
     // Default PopoverMenu binds Left/Right for navigation (Bar behavior).
     // specific to Menu behavior we want Up/Down for vertical list.
     // Map Up to Previous (Backward)
@@ -51,23 +51,25 @@ public sealed class SongContextMenu : PopoverMenu {
   /// </summary>
   public int RequiredHeight => Root?.SubViews.Count ?? 0;
 
-  private static IEnumerable<MenuItem> CreateMenuItems(IPlayerService playerService, SongTable songTable) {
+  private static IEnumerable<MenuItem> CreateMenuItems(IPlaybackQueueService playbackQueueService, SongTable songTable) {
     var menuItems = new List<MenuItem> {
       new(Messages.PLAY_ALL, action: async () => {
-        playerService.ClearPlaybackQueue();
-        playerService.QueueLast(songTable.GetSongs());
-        await playerService.ChangeTrack(songTable.SelectedRow);
+        playbackQueueService.ClearPlaybackQueue();
+        playbackQueueService.QueueLast(songTable.GetSongs());
+        await playbackQueueService.ChangeTrack(songTable.SelectedRow);
+        await playbackQueueService.Play();
       }),
       new(Messages.PLAY_SELECTION, action: async () => {
-        playerService.ClearPlaybackQueue();
-        playerService.QueueLast(songTable.GetSelectedSongs());
-        await playerService.ChangeTrack(0);
+        playbackQueueService.ClearPlaybackQueue();
+        playbackQueueService.QueueLast(songTable.GetSelectedSongs());
+        await playbackQueueService.ChangeTrack(0);
+        await playbackQueueService.Play();
       }),
       new(Messages.PLAY_NEXT, action: () => {
-        playerService.QueueNext(songTable.GetSelectedSongs());
+        playbackQueueService.QueueNext(songTable.GetSelectedSongs());
       }),
       new(Messages.ADD_TO_QUEUE, action: () => {
-        playerService.QueueLast(songTable.GetSelectedSongs());
+        playbackQueueService.QueueLast(songTable.GetSelectedSongs());
       })
     };
 

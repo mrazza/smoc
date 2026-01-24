@@ -1,0 +1,290 @@
+using Smoc.Services.Audio;
+using Smoc.Services.Util;
+using Smoc.Streaming;
+using Smoc.Ui;
+using Terminal.Gui.App;
+
+namespace Smoc.Services;
+
+public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
+  private readonly IAudioService _audioService;
+  private readonly MainWindow _mainWindow;
+  private readonly IStreamingClient _streamingClient;
+
+  private UniqueResource<IPlaybackService> _playbackService;
+  private readonly List<Song> _playbackQueue;
+  private int _currentPlaybackIndex;
+  private UniqueResource<CancellationTokenSource> _playbackCts;
+
+  /// <inheritdoc/>
+  public event EventHandler<float>? VolumeChanged;
+
+  /// <inheritdoc/>
+  public event EventHandler<Song>? SongChanged;
+
+  /// <inheritdoc/>
+  public event EventHandler<PlaybackState>? PlaybackStateChanged;
+
+  /// <inheritdoc/>
+  public event EventHandler<TimeSpan>? PositionChanged;
+
+  /// <inheritdoc/>
+  public event EventHandler? QueueChanged;
+
+  /// <inheritdoc/>
+  public PlaybackState PlaybackState => _playbackService.Resource?.PlaybackState ?? PlaybackState.Stopped;
+
+  /// <inheritdoc/>
+  public Song? CurrentSong => GetCurrentSong();
+
+  /// <inheritdoc/>
+  public TimeSpan CurrentTime => _playbackService.Resource?.CurrentTime ?? TimeSpan.Zero;
+
+  /// <inheritdoc/>
+  public TimeSpan Duration => _playbackService.Resource?.Duration ?? TimeSpan.Zero;
+
+  /// <inheritdoc/>
+  public float Progress => _playbackService.Resource?.Progress ?? 0;
+
+  /// <inheritdoc/>
+  public IEnumerable<Song> GetCurrentPlaybackQueue() => _playbackQueue.ToList();
+
+  /// <inheritdoc/>
+  public int CurrentPlaybackIndex => _currentPlaybackIndex;
+
+  /// <inheritdoc/>
+  public float Volume {
+    get => _audioService.Volume;
+    set {
+      _audioService.Volume = value;
+      InvokeAppEvent(VolumeChanged, value);
+    }
+  }
+
+  /// <summary>
+  /// Creates a new instance of <see cref="StandardPlaybackQueueService"/>.
+  /// </summary>
+  /// <param name="mainWindow">The main window to use.</param>
+  /// <param name="streamingClient">The streaming client to use.</param>
+  /// <param name="audioService">The audio service to use.</param>
+  public StandardPlaybackQueueService(MainWindow mainWindow, IStreamingClient streamingClient, IAudioService audioService) {
+    _mainWindow = mainWindow;
+    _streamingClient = streamingClient;
+    _audioService = audioService;
+
+    _playbackQueue = [];
+    _currentPlaybackIndex = 0;
+    _playbackCts = new UniqueResource<CancellationTokenSource>((token) => token.Cancel());
+    _playbackService = new UniqueResource<IPlaybackService>(((service) => {
+      service.PlaybackStateChanged -= OnPlaybackStateChanged;
+      service.PositionChanged -= OnPositionChanged;
+      service.SongEnded -= OnSongEnded;
+    }));
+  }
+
+  private async void OnSongEnded(object? sender, EventArgs e) {
+    Logging.Debug($"Playback ended for {CurrentSong?.Title} ({CurrentSong?.Id}).");
+
+    if (_currentPlaybackIndex + 1 < _playbackQueue.Count) {
+      Logging.Debug($"Playing next song...");
+      await ChangeTrack(_currentPlaybackIndex + 1);
+      await Play();
+    } else {
+      Logging.Debug($"Reached the end of the queue, stopping playback.");
+    }
+  }
+
+  private void OnPositionChanged(object? sender, TimeSpan e) {
+    InvokeAppEvent(PositionChanged, e);
+  }
+
+  private void OnPlaybackStateChanged(object? sender, PlaybackState e) {
+    InvokeAppEvent(PlaybackStateChanged, e);
+  }
+
+  /// <inheritdoc/>
+  public void QueueNext(Song song) {
+    if (_playbackQueue.Count == 0) {
+      QueueLast(song);
+      return;
+    }
+
+    var insertIndex = _currentPlaybackIndex + 1;
+    if (insertIndex > _playbackQueue.Count) {
+      _playbackQueue.Add(song);
+    } else {
+      _playbackQueue.Insert(insertIndex, song);
+    }
+    InvokeAppEvent(QueueChanged);
+  }
+
+  /// <inheritdoc/>
+  public void QueueNext(IEnumerable<Song> songs) {
+    if (_playbackQueue.Count == 0) {
+      QueueLast(songs);
+      return;
+    }
+
+    var insertIndex = _currentPlaybackIndex + 1;
+    if (insertIndex > _playbackQueue.Count) {
+      _playbackQueue.AddRange(songs);
+    } else {
+      _playbackQueue.InsertRange(insertIndex, songs);
+    }
+    InvokeAppEvent(QueueChanged);
+  }
+
+  /// <inheritdoc/>
+  public void QueueLast(Song song) => QueueLast(song);
+
+  /// <inheritdoc/>
+  public void QueueLast(IEnumerable<Song> songs) {
+    _playbackQueue.AddRange(songs);
+    InvokeAppEvent(QueueChanged);
+  }
+
+  /// <inheritdoc/>
+  public void ClearPlaybackQueue() {
+    _playbackQueue.Clear();
+    InvokeAppEvent(QueueChanged);
+  }
+
+  /// <inheritdoc/>
+  public async Task ChangeTrack(int index) {
+    if (index < 0 || index >= _playbackQueue.Count) {
+      throw new ArgumentOutOfRangeException(nameof(index));
+    }
+
+    var wasPlaying = PlaybackState == PlaybackState.Playing;
+
+    Stop();
+    _currentPlaybackIndex = index;
+    InvokeAppEvent(SongChanged, GetCurrentSong()!);
+
+    if (wasPlaying) await Play();
+  }
+
+  /// <inheritdoc/>
+  public async Task PlayPause() {
+    switch (PlaybackState) {
+      case PlaybackState.Playing:
+        Pause();
+        break;
+      case PlaybackState.Paused:
+      case PlaybackState.Stopped:
+        await Play();
+        break;
+    }
+  }
+
+  /// <inheritdoc/>
+  public async Task Play() {
+    if (PlaybackState == PlaybackState.Playing) return;
+
+    if (_playbackService.Resource is { } && _playbackService.Resource.Song == GetCurrentSong()) {
+      _playbackService.Resource.Play();
+      return;
+    }
+
+    if (GetCurrentSong() is not { } currentSong) {
+      throw new InvalidOperationException("No song in queue");
+    }
+
+    // Cancel any previous playback setup
+    _playbackCts.Replace(new CancellationTokenSource());
+    var token = _playbackCts.Resource!.Token;
+
+    try {
+      Logging.Debug($"Starting playback for {currentSong.Title} ({currentSong.Id})...");
+      var songStream = await _streamingClient.GetSongStreamAsync(currentSong.Id, token);
+
+      token.ThrowIfCancellationRequested();
+
+      Logging.Debug($"Received stream for {currentSong.Title} ({currentSong.Id}), decoding format...");
+
+      var codec = songStream.Codec;
+      if (codec.StartsWith("mp4a")) {
+        codec = "m4a";
+      }
+
+      token.ThrowIfCancellationRequested();
+
+      Logging.Debug($"Creating playing service for {currentSong.Title} ({currentSong.Id})...");
+      var playback = _audioService.MakePlaybackService(currentSong, songStream.Stream, codec, token);
+      token.ThrowIfCancellationRequested();
+
+      playback.SongEnded += OnSongEnded;
+      playback.PositionChanged += OnPositionChanged;
+      playback.PlaybackStateChanged += OnPlaybackStateChanged;
+      _playbackService.Replace(playback);
+      playback.Play();
+    } catch (OperationCanceledException) {
+      Logging.Debug($"Playback setup for {currentSong.Title} cancelled.");
+    } catch (Exception e) {
+      Logging.Error($"Playback setup for {currentSong.Title} failed: {e.Message}");
+    }
+  }
+
+  /// <inheritdoc/>
+  public void Pause() {
+    _playbackService.Resource?.Pause();
+  }
+
+  /// <inheritdoc/>
+  public void Stop() {
+    _playbackService.Resource?.Stop();
+  }
+
+  /// <inheritdoc/>
+  public void Dispose() {
+    _playbackCts.Dispose();
+    _playbackService.Dispose();
+    _audioService.Dispose();
+  }
+
+  private Song? GetCurrentSong() {
+    if (_currentPlaybackIndex >= _playbackQueue.Count) {
+      return null;
+    }
+
+    return _playbackQueue[_currentPlaybackIndex];
+  }
+
+  /// <summary>
+  /// Invokes an event handler on the UI thread.
+  /// </summary>
+  /// <remarks>
+  /// This is required because many events from the underlying SoundFlow playback system
+  /// can be triggered for audio-specific threads and subscribers will expect all event
+  /// handlers to marshal back to the UI thread.
+  /// </remarks>
+  /// <param name="eventHandler">The event handler to invoke.</param>
+  private void InvokeAppEvent(EventHandler? eventHandler) {
+    _mainWindow.App?.Invoke(() => eventHandler?.Invoke(this, EventArgs.Empty));
+  }
+
+  /// <summary>
+  /// Invokes an event handler on the UI thread.
+  /// </summary>
+  /// <remarks>
+  /// This is required because many events from the underlying SoundFlow playback system
+  /// can be triggered for audio-specific threads and subscribers will expect all event
+  /// handlers to marshal back to the UI thread.
+  /// </remarks>
+  /// <param name="eventHandler">The event handler to invoke.</param>
+  /// <param name="args">The arguments to pass to the event handler.</param>
+  private void InvokeAppEvent<T>(EventHandler<T>? eventHandler, T args) {
+    _mainWindow.App?.Invoke(() => eventHandler?.Invoke(this, args));
+  }
+
+  /// <summary>
+  /// Creates a new instance of <see cref="StandardPlaybackQueueService"/> using a newly created instance of <see cref="IAudioService"/>.
+  /// </summary>
+  /// <param name="mainWindow">The main window to use.</param>
+  /// <param name="streamingClient">The streaming client to use.</param>
+  /// <typeparam name="T">The type of <see cref="IAudioService"/> to use.</typeparam>
+  public static IPlaybackQueueService UsingAudioService<T>(MainWindow mainWindow, IStreamingClient streamingClient)
+    where T : IAudioService, new() {
+    return new StandardPlaybackQueueService(mainWindow, streamingClient, new T());
+  }
+}

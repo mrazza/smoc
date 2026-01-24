@@ -22,7 +22,7 @@ public sealed class NowPlaying : View {
   }
 
   private readonly IMainWindow _mainWindow;
-  private readonly IPlayerService _playerService;
+  private readonly IPlaybackQueueService _playbackQueueService;
   private string? _albumArtUrl;
   private readonly SixelImageView _albumArtView;
   private readonly Label _songLabel;
@@ -38,11 +38,11 @@ public sealed class NowPlaying : View {
   /// Initializes a new instance of the <see cref="NowPlaying"/> class.
   /// </summary>
   /// <param name="mainWindow">The main window reference.</param>
-  /// <param name="playerService">The player service for playback information.</param>
+  /// <param name="playbackQueueService">The player service for playback information.</param>
   /// <param name="commandService">The command service for registering volume commands.</param>
-  public NowPlaying(IMainWindow mainWindow, IPlayerService playerService, CommandService commandService, HttpClient httpClient) {
+  public NowPlaying(IMainWindow mainWindow, IPlaybackQueueService playbackQueueService, CommandService commandService, HttpClient httpClient) {
     _mainWindow = mainWindow;
-    _playerService = playerService;
+    _playbackQueueService = playbackQueueService;
     _httpClient = httpClient;
     _albumArtUrl = null;
     Width = Dim.Fill();
@@ -108,9 +108,9 @@ public sealed class NowPlaying : View {
         _durationLabel
     );
 
-    playerService.SongChanged += OnSongChanged;
-    playerService.PositionChanged += OnPositionChanged;
-    playerService.VolumeChanged += OnVolumeChanged;
+    _playbackQueueService.SongChanged += OnSongChanged;
+    _playbackQueueService.PositionChanged += OnPositionChanged;
+    _playbackQueueService.VolumeChanged += OnVolumeChanged;
 
     commandService.RegisterCommand("v", OnSetVolumeCommand);
     AddCommand(Command.HotKey, OnHotKey);
@@ -118,14 +118,14 @@ public sealed class NowPlaying : View {
   }
 
   protected override void Dispose(bool disposing) {
-    _playerService.SongChanged -= OnSongChanged;
-    _playerService.PositionChanged -= OnPositionChanged;
-    _playerService.VolumeChanged -= OnVolumeChanged;
+    _playbackQueueService.SongChanged -= OnSongChanged;
+    _playbackQueueService.PositionChanged -= OnPositionChanged;
+    _playbackQueueService.VolumeChanged -= OnVolumeChanged;
     base.Dispose(disposing);
   }
 
   private bool? OnHotKey(ICommandContext? ctx) {
-    _ = _playerService.PlayPause();
+    _ = _playbackQueueService.PlayPause();
     return true;
   }
 
@@ -141,7 +141,7 @@ public sealed class NowPlaying : View {
       return;
     }
 
-    _playerService.Volume = volume / 100f;
+    _playbackQueueService.Volume = volume / 100f;
   }
 
   private void OnVolumeChanged(object? sender, float e) {
@@ -150,9 +150,9 @@ public sealed class NowPlaying : View {
 
   private void OnPositionChanged(object? sender, TimeSpan e) {
     _positionLabel.Text = e.ToString("mm\\:ss");
-    _durationLabel.Text = _playerService.Duration.ToString("mm\\:ss");
+    _durationLabel.Text = _playbackQueueService.Duration.ToString("mm\\:ss");
 
-    var progress = (float)Math.Round(e / _playerService.Duration, 2);
+    var progress = (float)Math.Round(e / _playbackQueueService.Duration, 2);
     if (_progressBar.Fraction != progress) {
       _progressBar.Fraction = progress;
     }
@@ -190,7 +190,7 @@ public sealed class NowPlaying : View {
     _artistLabel.Text = Messages.NO_ARTIST;
     _positionLabel.Text = "--:--";
     _durationLabel.Text = "--:--";
-    _volumeLabel.Text = string.Format(Messages.VOLUME, (int)Math.Round(_playerService.Volume * 100));
+    _volumeLabel.Text = string.Format(Messages.VOLUME, (int)Math.Round(_playbackQueueService.Volume * 100));
     _progressBar.Fraction = 0.0f;
   }
 }
