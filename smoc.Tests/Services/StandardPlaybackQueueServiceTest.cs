@@ -1,3 +1,4 @@
+using System.Diagnostics.Contracts;
 using System.Threading.Tasks;
 using Moq;
 using smoc.Tests.Fakes;
@@ -26,7 +27,7 @@ public class StandardPlaybackQueueServiceTest {
 
   [Fact]
   public void New_EmptyDefaults() {
-    var sut = NewStandardPlaybackQueue();
+    using var sut = NewStandardPlaybackQueue();
     Assert.Empty(sut.GetCurrentPlaybackQueue());
     Assert.Equal(0, sut.CurrentPlaybackIndex);
     Assert.Null(sut.CurrentSong);
@@ -39,7 +40,7 @@ public class StandardPlaybackQueueServiceTest {
   [Fact]
   public void Volume_ReturnsAudioServiceVolume() {
     _mockAudioService.SetupGet((s) => s.Volume).Returns(0.5f).Verifiable(Times.AtLeastOnce());
-    var sut = NewStandardPlaybackQueue();
+    using var sut = NewStandardPlaybackQueue();
     Assert.Equal(0.5f, sut.Volume);
     _mockAudioService.Verify();
   }
@@ -47,7 +48,7 @@ public class StandardPlaybackQueueServiceTest {
   [Fact]
   public void Volume_SetsAudioServiceVolume() {
     _mockAudioService.SetupSet((s) => s.Volume = It.IsAny<float>()).Verifiable(Times.Once());
-    var sut = NewStandardPlaybackQueue();
+    using var sut = NewStandardPlaybackQueue();
     sut.Volume = 0.5f;
     _mockAudioService.Verify();
   }
@@ -56,7 +57,7 @@ public class StandardPlaybackQueueServiceTest {
   public void Volume_GetSet_ReturnsNewValue() {
     _mockAudioService.SetupProperty((s) => s.Volume);
     _mockAudioService.Object.Volume = 0.1f;
-    var sut = NewStandardPlaybackQueue();
+    using var sut = NewStandardPlaybackQueue();
     Assert.Equal(0.1f, sut.Volume);
     sut.Volume = 0.5f;
     Assert.Equal(0.5f, sut.Volume);
@@ -65,7 +66,7 @@ public class StandardPlaybackQueueServiceTest {
   [Fact]
   public void Volume_Set_InvokesEvent() {
     _mockAudioService.SetupSet((s) => s.Volume = It.IsAny<float>());
-    var sut = NewStandardPlaybackQueue();
+    using var sut = NewStandardPlaybackQueue();
     float? receivedVolume = null;
     sut.VolumeChanged += (sender, volume) => receivedVolume = volume;
     sut.Volume = 0.5f;
@@ -74,7 +75,7 @@ public class StandardPlaybackQueueServiceTest {
 
   [Fact]
   public void QueueNext_EmptyQueue_AddsSong() {
-    var sut = NewStandardPlaybackQueue();
+    using var sut = NewStandardPlaybackQueue();
     Song song = EntityTestFactory.GenerateSong();
     sut.QueueNext(song);
     Assert.Equal([song], sut.GetCurrentPlaybackQueue());
@@ -82,7 +83,7 @@ public class StandardPlaybackQueueServiceTest {
 
   [Fact]
   public void QueueNext_EmptyQueue_AddsSongs() {
-    var sut = NewStandardPlaybackQueue();
+    using var sut = NewStandardPlaybackQueue();
     Song[] songs = [EntityTestFactory.GenerateSong(postfix: "_0"), EntityTestFactory.GenerateSong(postfix: "_1")];
     sut.QueueNext(songs);
     Assert.Equal(songs, sut.GetCurrentPlaybackQueue());
@@ -90,7 +91,7 @@ public class StandardPlaybackQueueServiceTest {
 
   [Fact]
   public void QueueNext_NonEmptyQueue_AddsSong() {
-    var sut = NewStandardPlaybackQueue();
+    using var sut = NewStandardPlaybackQueue();
     Song[] songs = [EntityTestFactory.GenerateSong(postfix: "_0"), EntityTestFactory.GenerateSong(postfix: "_1")];
     sut.QueueNext(songs);
     Song song = EntityTestFactory.GenerateSong(postfix: "_2");
@@ -100,7 +101,7 @@ public class StandardPlaybackQueueServiceTest {
 
   [Fact]
   public void QueueNext_NonEmptyQueue_InsertsSongs() {
-    var sut = NewStandardPlaybackQueue();
+    using var sut = NewStandardPlaybackQueue();
     Song[] songs = [EntityTestFactory.GenerateSong(postfix: "_0"), EntityTestFactory.GenerateSong(postfix: "_1")];
     sut.QueueNext(songs);
     Song[] songs2 = [EntityTestFactory.GenerateSong(postfix: "_2"), EntityTestFactory.GenerateSong(postfix: "_3")];
@@ -110,7 +111,7 @@ public class StandardPlaybackQueueServiceTest {
 
   [Fact]
   public async Task QueueNext_NonEmptyQueueAtEnd_InsertsSongs() {
-    var sut = NewStandardPlaybackQueue();
+    using var sut = NewStandardPlaybackQueue();
     Song[] songs = [EntityTestFactory.GenerateSong(postfix: "_0"), EntityTestFactory.GenerateSong(postfix: "_1")];
     sut.QueueNext(songs);
     await sut.ChangeTrack(1);
@@ -122,7 +123,7 @@ public class StandardPlaybackQueueServiceTest {
   [Fact]
   public void QueueNext_InvokesEvent() {
     bool eventReceived = false;
-    var sut = NewStandardPlaybackQueue();
+    using var sut = NewStandardPlaybackQueue();
     sut.QueueChanged += (_, __) => eventReceived = true;
     sut.QueueNext([EntityTestFactory.GenerateSong(), EntityTestFactory.GenerateSong()]);
     Assert.True(eventReceived);
@@ -131,7 +132,7 @@ public class StandardPlaybackQueueServiceTest {
   [Fact]
   public void QueueNext_WithEmptySongs_DoesNothing() {
     bool eventReceived = false;
-    var sut = NewStandardPlaybackQueue();
+    using var sut = NewStandardPlaybackQueue();
     sut.QueueChanged += (_, __) => eventReceived = true;
     sut.QueueNext([]);
     Assert.Empty(sut.GetCurrentPlaybackQueue());
@@ -140,7 +141,7 @@ public class StandardPlaybackQueueServiceTest {
 
   [Fact]
   public void QueueLast_EmptyQueue_AddsSong() {
-    var sut = NewStandardPlaybackQueue();
+    using var sut = NewStandardPlaybackQueue();
     Song song = EntityTestFactory.GenerateSong();
     sut.QueueLast(song);
     Assert.Equal([song], sut.GetCurrentPlaybackQueue());
@@ -148,7 +149,7 @@ public class StandardPlaybackQueueServiceTest {
 
   [Fact]
   public void QueueLast_EmptyQueue_AddsSongs() {
-    var sut = NewStandardPlaybackQueue();
+    using var sut = NewStandardPlaybackQueue();
     Song[] songs = [EntityTestFactory.GenerateSong(postfix: "_0"), EntityTestFactory.GenerateSong(postfix: "_1")];
     sut.QueueLast(songs);
     Assert.Equal(songs, sut.GetCurrentPlaybackQueue());
@@ -156,7 +157,7 @@ public class StandardPlaybackQueueServiceTest {
 
   [Fact]
   public void QueueLast_NonEmptyQueue_AddsSong() {
-    var sut = NewStandardPlaybackQueue();
+    using var sut = NewStandardPlaybackQueue();
     Song song0 = EntityTestFactory.GenerateSong(postfix: "_0");
     Song song1 = EntityTestFactory.GenerateSong(postfix: "_1");
     sut.QueueLast(song0);
@@ -166,7 +167,7 @@ public class StandardPlaybackQueueServiceTest {
 
   [Fact]
   public void QueueLast_NonEmptyQueue_AppendsSongs() {
-    var sut = NewStandardPlaybackQueue();
+    using var sut = NewStandardPlaybackQueue();
     Song[] songs = [EntityTestFactory.GenerateSong(postfix: "_0"), EntityTestFactory.GenerateSong(postfix: "_1")];
     sut.QueueNext(songs);
     Song[] songs2 = [EntityTestFactory.GenerateSong(postfix: "_2"), EntityTestFactory.GenerateSong(postfix: "_3")];
@@ -177,7 +178,7 @@ public class StandardPlaybackQueueServiceTest {
   [Fact]
   public void QueueLast_InvokesEvent() {
     bool eventReceived = false;
-    var sut = NewStandardPlaybackQueue();
+    using var sut = NewStandardPlaybackQueue();
     sut.QueueChanged += (_, __) => eventReceived = true;
     sut.QueueLast([EntityTestFactory.GenerateSong(), EntityTestFactory.GenerateSong()]);
     Assert.True(eventReceived);
@@ -186,7 +187,7 @@ public class StandardPlaybackQueueServiceTest {
   [Fact]
   public void QueueLast_WithEmptySongs_DoesNothing() {
     bool eventReceived = false;
-    var sut = NewStandardPlaybackQueue();
+    using var sut = NewStandardPlaybackQueue();
     sut.QueueChanged += (_, __) => eventReceived = true;
     sut.QueueLast([]);
     Assert.Empty(sut.GetCurrentPlaybackQueue());
@@ -195,7 +196,7 @@ public class StandardPlaybackQueueServiceTest {
 
   [Fact]
   public void ClearPlaybackQueue_ClearsQueue() {
-    var sut = NewStandardPlaybackQueue();
+    using var sut = NewStandardPlaybackQueue();
     Song[] songs = [EntityTestFactory.GenerateSong(), EntityTestFactory.GenerateSong()];
     sut.QueueNext(songs);
     sut.ClearPlaybackQueue();
@@ -205,7 +206,7 @@ public class StandardPlaybackQueueServiceTest {
   [Fact]
   public void ClearPlaybackQueue_InvokesEvent() {
     bool eventReceived = false;
-    var sut = NewStandardPlaybackQueue();
+    using var sut = NewStandardPlaybackQueue();
     sut.QueueNext([EntityTestFactory.GenerateSong(), EntityTestFactory.GenerateSong()]);
     sut.QueueChanged += (_, __) => eventReceived = true;
     sut.ClearPlaybackQueue();
@@ -214,21 +215,21 @@ public class StandardPlaybackQueueServiceTest {
 
   [Fact]
   public async Task ChangeTrack_InvalidTrackIndex_TooLarge_ThrowsArgumentOutOfRangeException() {
-    var sut = NewStandardPlaybackQueue();
+    using var sut = NewStandardPlaybackQueue();
     sut.QueueNext([EntityTestFactory.GenerateSong(), EntityTestFactory.GenerateSong()]);
     await Assert.ThrowsAsync<ArgumentOutOfRangeException>(async () => await sut.ChangeTrack(2));
   }
 
   [Fact]
   public async Task ChangeTrack_InvalidTrackIndex_TooSmall_ThrowsArgumentOutOfRangeException() {
-    var sut = NewStandardPlaybackQueue();
+    using var sut = NewStandardPlaybackQueue();
     sut.QueueNext([EntityTestFactory.GenerateSong(), EntityTestFactory.GenerateSong()]);
     await Assert.ThrowsAsync<ArgumentOutOfRangeException>(async () => await sut.ChangeTrack(-1));
   }
 
   [Fact]
   public async Task ChangeTrack_ChangesTrackIndex() {
-    var sut = NewStandardPlaybackQueue();
+    using var sut = NewStandardPlaybackQueue();
     sut.QueueNext([EntityTestFactory.GenerateSong(), EntityTestFactory.GenerateSong()]);
     Assert.Equal(0, sut.CurrentPlaybackIndex);
     await sut.ChangeTrack(1);
@@ -238,7 +239,7 @@ public class StandardPlaybackQueueServiceTest {
   [Fact]
   public async Task ChangeTrack_InvokesEvent() {
     bool eventReceived = false;
-    var sut = NewStandardPlaybackQueue();
+    using var sut = NewStandardPlaybackQueue();
     sut.QueueNext([EntityTestFactory.GenerateSong(), EntityTestFactory.GenerateSong()]);
     sut.SongChanged += (_, __) => eventReceived = true;
     await sut.ChangeTrack(1);
@@ -248,7 +249,7 @@ public class StandardPlaybackQueueServiceTest {
   [Fact]
   public async Task ChangeTrack_ToCurrentTrack_DoesNothing() {
     bool eventReceived = false;
-    var sut = NewStandardPlaybackQueue();
+    using var sut = NewStandardPlaybackQueue();
     sut.QueueNext([EntityTestFactory.GenerateSong(), EntityTestFactory.GenerateSong()]);
     var originalIndex = sut.CurrentPlaybackIndex;
     sut.SongChanged += (_, __) => eventReceived = true;
@@ -271,7 +272,7 @@ public class StandardPlaybackQueueServiceTest {
       .ReturnsAsync(new SongStream(song1.Id, "m4a", new MemoryStream())).Verifiable(Times.Once());
     _mockStreamingClient.Setup(c => c.GetSongStreamAsync(song2.Id, It.IsAny<CancellationToken>()))
       .ReturnsAsync(new SongStream(song2.Id, "m4a", new MemoryStream())).Verifiable(Times.Once());
-    var sut = NewStandardPlaybackQueue();
+    using var sut = NewStandardPlaybackQueue();
     sut.QueueNext([song1, song2]);
     await sut.Play();
     Assert.Equal(PlaybackState.Playing, fakePlayerService1.PlaybackState);
@@ -289,7 +290,7 @@ public class StandardPlaybackQueueServiceTest {
     var song2 = EntityTestFactory.GenerateSong(id: "789", postfix: "_2");
     var fakePlayerService1 = new FakePlaybackService(song1);
     var fakePlayerService2 = new FakePlaybackService(song2);
-    var sut = NewStandardPlaybackQueue();
+    using var sut = NewStandardPlaybackQueue();
     sut.QueueNext([song1, song2]);
     Assert.Equal(PlaybackState.Stopped, fakePlayerService1.PlaybackState);
     Assert.Equal(PlaybackState.Stopped, fakePlayerService2.PlaybackState);
@@ -300,7 +301,7 @@ public class StandardPlaybackQueueServiceTest {
 
   [Fact]
   public void PlaybackState_NoSong_ReturnsStopped() {
-    var sut = NewStandardPlaybackQueue();
+    using var sut = NewStandardPlaybackQueue();
     Assert.Equal(PlaybackState.Stopped, sut.PlaybackState);
   }
 
@@ -312,7 +313,7 @@ public class StandardPlaybackQueueServiceTest {
       .Returns(fakePlayerService);
     _mockStreamingClient.Setup(c => c.GetSongStreamAsync(song.Id, It.IsAny<CancellationToken>()))
       .ReturnsAsync(new SongStream(song.Id, "m4a", new MemoryStream()));
-    var sut = NewStandardPlaybackQueue();
+    using var sut = NewStandardPlaybackQueue();
     sut.QueueNext([song]);
     await sut.Play();
     sut.Stop();
@@ -327,7 +328,7 @@ public class StandardPlaybackQueueServiceTest {
       .Returns(fakePlayerService);
     _mockStreamingClient.Setup(c => c.GetSongStreamAsync(song.Id, It.IsAny<CancellationToken>()))
       .ReturnsAsync(new SongStream(song.Id, "m4a", new MemoryStream()));
-    var sut = NewStandardPlaybackQueue();
+    using var sut = NewStandardPlaybackQueue();
     sut.QueueNext([song]);
     await sut.Play();
     Assert.Equal(PlaybackState.Playing, sut.PlaybackState);
@@ -341,7 +342,7 @@ public class StandardPlaybackQueueServiceTest {
       .Returns(fakePlayerService);
     _mockStreamingClient.Setup(c => c.GetSongStreamAsync(song.Id, It.IsAny<CancellationToken>()))
       .ReturnsAsync(new SongStream(song.Id, "m4a", new MemoryStream()));
-    var sut = NewStandardPlaybackQueue();
+    using var sut = NewStandardPlaybackQueue();
     sut.QueueNext([song]);
     await sut.Play();
     sut.Pause();
@@ -356,7 +357,7 @@ public class StandardPlaybackQueueServiceTest {
       .Returns(fakePlayerService);
     _mockStreamingClient.Setup(c => c.GetSongStreamAsync(song.Id, It.IsAny<CancellationToken>()))
       .ReturnsAsync(new SongStream(song.Id, "m4a", new MemoryStream()));
-    var sut = NewStandardPlaybackQueue();
+    using var sut = NewStandardPlaybackQueue();
     sut.QueueNext([song]);
     PlaybackState? stateRecevied = null;
     sut.PlaybackStateChanged += (_, state) => stateRecevied = state;
@@ -366,14 +367,14 @@ public class StandardPlaybackQueueServiceTest {
 
   [Fact]
   public void CurrentSong_NoSongs_ReturnsNull() {
-    var sut = NewStandardPlaybackQueue();
+    using var sut = NewStandardPlaybackQueue();
     Assert.Null(sut.CurrentSong);
   }
 
   [Fact]
   public void CurrentSong_OneSong_ReturnsSong() {
     var song = EntityTestFactory.GenerateSong();
-    var sut = NewStandardPlaybackQueue();
+    using var sut = NewStandardPlaybackQueue();
     sut.QueueNext([song]);
     Assert.Equal(song, sut.CurrentSong);
   }
@@ -382,7 +383,7 @@ public class StandardPlaybackQueueServiceTest {
   public async Task CurrentSong_MultipleSongs_ReturnsCurrentSong() {
     var song1 = EntityTestFactory.GenerateSong(postfix: "_1");
     var song2 = EntityTestFactory.GenerateSong(postfix: "_2");
-    var sut = NewStandardPlaybackQueue();
+    using var sut = NewStandardPlaybackQueue();
     sut.QueueNext([song1, song2]);
     Assert.Equal(song1, sut.CurrentSong);
     await sut.ChangeTrack(1);
@@ -391,14 +392,14 @@ public class StandardPlaybackQueueServiceTest {
 
   [Fact]
   public void Duration_NoSong_ReturnsZero() {
-    var sut = NewStandardPlaybackQueue();
+    using var sut = NewStandardPlaybackQueue();
     Assert.Equal(TimeSpan.Zero, sut.Duration);
   }
 
   [Fact]
   public async Task Duration_SongPlaying_ReturnsCurrentSongDuration() {
     var song = EntityTestFactory.GenerateSong();
-    var sut = NewStandardPlaybackQueue();
+    using var sut = NewStandardPlaybackQueue();
     var fakePlayerService = new FakePlaybackService(song);
     _mockAudioService.Setup(a => a.MakePlaybackService(song, It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
       .Returns(fakePlayerService);
@@ -411,14 +412,14 @@ public class StandardPlaybackQueueServiceTest {
 
   [Fact]
   public void CurrentTime_NoSong_ReturnsZero() {
-    var sut = NewStandardPlaybackQueue();
+    using var sut = NewStandardPlaybackQueue();
     Assert.Equal(TimeSpan.Zero, sut.CurrentTime);
   }
 
   [Fact]
   public async Task CurrentTime_SongPlaying_ReturnsCurrentSongTime() {
     var song = EntityTestFactory.GenerateSong();
-    var sut = NewStandardPlaybackQueue();
+    using var sut = NewStandardPlaybackQueue();
     var fakePlayerService = new FakePlaybackService(song);
     _mockAudioService.Setup(a => a.MakePlaybackService(song, It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
       .Returns(fakePlayerService);
@@ -432,14 +433,14 @@ public class StandardPlaybackQueueServiceTest {
 
   [Fact]
   public void Progress_NoSong_ReturnsZero() {
-    var sut = NewStandardPlaybackQueue();
+    using var sut = NewStandardPlaybackQueue();
     Assert.Equal(0, sut.Progress);
   }
 
   [Fact]
   public async Task Progress_SongPlaying_ReturnsCurrentSongProgress() {
     var song = EntityTestFactory.GenerateSong();
-    var sut = NewStandardPlaybackQueue();
+    using var sut = NewStandardPlaybackQueue();
     var fakePlayerService = new FakePlaybackService(song);
     _mockAudioService.Setup(a => a.MakePlaybackService(song, It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
       .Returns(fakePlayerService);
@@ -454,7 +455,7 @@ public class StandardPlaybackQueueServiceTest {
   [Fact]
   public async Task Progress_SongPlaying_InvokesEvent() {
     var song = EntityTestFactory.GenerateSong();
-    var sut = NewStandardPlaybackQueue();
+    using var sut = NewStandardPlaybackQueue();
     var fakePlayerService = new FakePlaybackService(song);
     _mockAudioService.Setup(a => a.MakePlaybackService(song, It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
       .Returns(fakePlayerService);
@@ -470,14 +471,14 @@ public class StandardPlaybackQueueServiceTest {
 
   [Fact]
   public async Task Play_NoSong_ThrowsInvalidOperationException() {
-    var sut = NewStandardPlaybackQueue();
+    using var sut = NewStandardPlaybackQueue();
     await Assert.ThrowsAsync<InvalidOperationException>(async () => await sut.Play());
   }
 
   [Fact]
   public async Task Play_ValidSongStopped_PlaysSong() {
     var song = EntityTestFactory.GenerateSong();
-    var sut = NewStandardPlaybackQueue();
+    using var sut = NewStandardPlaybackQueue();
     var fakePlayerService = new FakePlaybackService(song);
     _mockAudioService.Setup(a => a.MakePlaybackService(song, It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
       .Returns(fakePlayerService);
@@ -491,7 +492,7 @@ public class StandardPlaybackQueueServiceTest {
   [Fact]
   public async Task Play_ValidSongPaused_PlaysSong() {
     var song = EntityTestFactory.GenerateSong();
-    var sut = NewStandardPlaybackQueue();
+    using var sut = NewStandardPlaybackQueue();
     var fakePlayerService = new FakePlaybackService(song);
     _mockAudioService.Setup(a => a.MakePlaybackService(song, It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
       .Returns(fakePlayerService);
@@ -508,7 +509,7 @@ public class StandardPlaybackQueueServiceTest {
   [Fact]
   public async Task Play_ValidSongPlaying_DoesNothing() {
     var song = EntityTestFactory.GenerateSong();
-    var sut = NewStandardPlaybackQueue();
+    using var sut = NewStandardPlaybackQueue();
     var fakePlayerService = new FakePlaybackService(song);
     _mockAudioService.Setup(a => a.MakePlaybackService(song, It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
       .Returns(fakePlayerService);
@@ -524,7 +525,7 @@ public class StandardPlaybackQueueServiceTest {
   [Fact]
   public async Task Play_ValidSong_MapsMp4aToM4a() {
     var song = EntityTestFactory.GenerateSong();
-    var sut = NewStandardPlaybackQueue();
+    using var sut = NewStandardPlaybackQueue();
     var fakePlayerService = new FakePlaybackService(song);
     _mockAudioService.Setup(a => a.MakePlaybackService(song, It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
       .Returns(fakePlayerService);
@@ -539,7 +540,7 @@ public class StandardPlaybackQueueServiceTest {
   [Fact]
   public async Task Pause_ValidSongPlaying_PausesSong() {
     var song = EntityTestFactory.GenerateSong();
-    var sut = NewStandardPlaybackQueue();
+    using var sut = NewStandardPlaybackQueue();
     var fakePlayerService = new FakePlaybackService(song);
     _mockAudioService.Setup(a => a.MakePlaybackService(song, It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
       .Returns(fakePlayerService);
@@ -554,7 +555,7 @@ public class StandardPlaybackQueueServiceTest {
 
   [Fact]
   public void Pause_NoSong_DoesNothing() {
-    var sut = NewStandardPlaybackQueue();
+    using var sut = NewStandardPlaybackQueue();
     sut.Pause();
     Assert.Equal(PlaybackState.Stopped, sut.PlaybackState);
   }
@@ -562,7 +563,7 @@ public class StandardPlaybackQueueServiceTest {
   [Fact]
   public async Task Pause_ValidSongPaused_DoesNothing() {
     var song = EntityTestFactory.GenerateSong();
-    var sut = NewStandardPlaybackQueue();
+    using var sut = NewStandardPlaybackQueue();
     var fakePlayerService = new FakePlaybackService(song);
     _mockAudioService.Setup(a => a.MakePlaybackService(song, It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
       .Returns(fakePlayerService);
@@ -579,7 +580,7 @@ public class StandardPlaybackQueueServiceTest {
   [Fact]
   public async Task Stop_ValidSongPlaying_StopsSong() {
     var song = EntityTestFactory.GenerateSong();
-    var sut = NewStandardPlaybackQueue();
+    using var sut = NewStandardPlaybackQueue();
     var fakePlayerService = new FakePlaybackService(song);
     _mockAudioService.Setup(a => a.MakePlaybackService(song, It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
       .Returns(fakePlayerService);
@@ -595,7 +596,7 @@ public class StandardPlaybackQueueServiceTest {
   [Fact]
   public async Task Stop_ValidSongPaused_StopsSong() {
     var song = EntityTestFactory.GenerateSong();
-    var sut = NewStandardPlaybackQueue();
+    using var sut = NewStandardPlaybackQueue();
     var fakePlayerService = new FakePlaybackService(song);
     _mockAudioService.Setup(a => a.MakePlaybackService(song, It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
       .Returns(fakePlayerService);
@@ -611,7 +612,7 @@ public class StandardPlaybackQueueServiceTest {
 
   [Fact]
   public void Stop_NoSong_DoesNothing() {
-    var sut = NewStandardPlaybackQueue();
+    using var sut = NewStandardPlaybackQueue();
     sut.Stop();
     Assert.Equal(PlaybackState.Stopped, sut.PlaybackState);
   }
@@ -619,7 +620,7 @@ public class StandardPlaybackQueueServiceTest {
   [Fact]
   public async Task PlayPause_FromPlaying_Pauses() {
     var song = EntityTestFactory.GenerateSong();
-    var sut = NewStandardPlaybackQueue();
+    using var sut = NewStandardPlaybackQueue();
     var fakePlayerService = new FakePlaybackService(song);
     _mockAudioService.Setup(a => a.MakePlaybackService(song, It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
       .Returns(fakePlayerService);
@@ -635,7 +636,7 @@ public class StandardPlaybackQueueServiceTest {
   [Fact]
   public async Task PlayPause_FromPaused_Plays() {
     var song = EntityTestFactory.GenerateSong();
-    var sut = NewStandardPlaybackQueue();
+    using var sut = NewStandardPlaybackQueue();
     var fakePlayerService = new FakePlaybackService(song);
     _mockAudioService.Setup(a => a.MakePlaybackService(song, It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
       .Returns(fakePlayerService);
@@ -652,7 +653,7 @@ public class StandardPlaybackQueueServiceTest {
   [Fact]
   public async Task PlayPause_FromStopped_Plays() {
     var song = EntityTestFactory.GenerateSong();
-    var sut = NewStandardPlaybackQueue();
+    using var sut = NewStandardPlaybackQueue();
     var fakePlayerService = new FakePlaybackService(song);
     _mockAudioService.Setup(a => a.MakePlaybackService(song, It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
       .Returns(fakePlayerService);
@@ -666,14 +667,14 @@ public class StandardPlaybackQueueServiceTest {
 
   [Fact]
   public async Task PlayPause_NoSong_ThrowsInvalidOperationException() {
-    var sut = NewStandardPlaybackQueue();
+    using var sut = NewStandardPlaybackQueue();
     await Assert.ThrowsAsync<InvalidOperationException>(async () => await sut.PlayPause());
   }
 
   [Fact]
   public async Task OnSongEnded_EndOfQueue_Stops() {
     var song = EntityTestFactory.GenerateSong();
-    var sut = NewStandardPlaybackQueue();
+    using var sut = NewStandardPlaybackQueue();
     var fakePlayerService = new FakePlaybackService(song);
     _mockAudioService.Setup(a => a.MakePlaybackService(song, It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
       .Returns(fakePlayerService);
@@ -691,7 +692,7 @@ public class StandardPlaybackQueueServiceTest {
   public async Task OnSongEnded_AdditionalSongsInQueue_PlaysNextSong() {
     var song1 = EntityTestFactory.GenerateSong(id: "1", postfix: "1");
     var song2 = EntityTestFactory.GenerateSong(id: "2", postfix: "2");
-    var sut = NewStandardPlaybackQueue();
+    using var sut = NewStandardPlaybackQueue();
     var fakePlayerService1 = new FakePlaybackService(song1);
     var fakePlayerService2 = new FakePlaybackService(song2);
     _mockAudioService.Setup(a => a.MakePlaybackService(song1, It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -709,5 +710,29 @@ public class StandardPlaybackQueueServiceTest {
     fakePlayerService1.EndSong();
     Assert.Equal(PlaybackState.Playing, sut.PlaybackState);
     Assert.Equal(song2, sut.CurrentSong);
+  }
+
+  [Fact]
+  public async Task Dispose_DisposesPlayerService() {
+    var song = EntityTestFactory.GenerateSong();
+    var sut = NewStandardPlaybackQueue();
+    var fakePlayerService = new FakePlaybackService(song);
+    _mockAudioService.Setup(a => a.MakePlaybackService(song, It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+      .Returns(fakePlayerService);
+    _mockStreamingClient.Setup(c => c.GetSongStreamAsync(song.Id, It.IsAny<CancellationToken>()))
+      .ReturnsAsync(new SongStream(song.Id, "m4a", new MemoryStream()));
+    sut.QueueNext([song]);
+    await sut.Play();
+    sut.Dispose();
+    Assert.True(fakePlayerService.IsDisposed);
+  }
+
+  [Fact]
+  public void Dispose_DisposesAudioService() {
+    var song = EntityTestFactory.GenerateSong();
+    var sut = NewStandardPlaybackQueue();
+    var fakePlayerService = new FakePlaybackService(song);
+    sut.Dispose();
+    _mockAudioService.Verify(a => a.Dispose(), Times.Once);
   }
 }
