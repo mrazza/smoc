@@ -82,51 +82,20 @@ public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
     }));
   }
 
-  private async void OnSongEnded(object? sender, EventArgs e) {
-    Logging.Debug($"Playback ended for {CurrentSong?.Title} ({CurrentSong?.Id}).");
-
-    if (_currentPlaybackIndex + 1 < _playbackQueue.Count) {
-      Logging.Debug($"Playing next song...");
-      await ChangeTrack(_currentPlaybackIndex + 1);
-      await Play();
-    } else {
-      Logging.Debug($"Reached the end of the queue, stopping playback.");
-    }
-  }
-
-  private void OnPositionChanged(object? sender, TimeSpan e) {
-    InvokeAppEvent(PositionChanged, e);
-  }
-
-  private void OnPlaybackStateChanged(object? sender, PlaybackState e) {
-    InvokeAppEvent(PlaybackStateChanged, e);
-  }
-
   /// <inheritdoc/>
-  public void QueueNext(Song song) {
-    if (_playbackQueue.Count == 0) {
-      QueueLast(song);
-      return;
-    }
-
-    var insertIndex = _currentPlaybackIndex + 1;
-    if (insertIndex > _playbackQueue.Count) {
-      _playbackQueue.Add(song);
-    } else {
-      _playbackQueue.Insert(insertIndex, song);
-    }
-    InvokeAppEvent(QueueChanged);
-  }
+  public void QueueNext(Song song) => QueueNext([song]);
 
   /// <inheritdoc/>
   public void QueueNext(IEnumerable<Song> songs) {
+    if (!songs.Any()) return;
+
     if (_playbackQueue.Count == 0) {
       QueueLast(songs);
       return;
     }
 
     var insertIndex = _currentPlaybackIndex + 1;
-    if (insertIndex > _playbackQueue.Count) {
+    if (insertIndex >= _playbackQueue.Count) {
       _playbackQueue.AddRange(songs);
     } else {
       _playbackQueue.InsertRange(insertIndex, songs);
@@ -135,10 +104,11 @@ public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
   }
 
   /// <inheritdoc/>
-  public void QueueLast(Song song) => QueueLast(song);
+  public void QueueLast(Song song) => QueueLast([song]);
 
   /// <inheritdoc/>
   public void QueueLast(IEnumerable<Song> songs) {
+    if (!songs.Any()) return;
     _playbackQueue.AddRange(songs);
     InvokeAppEvent(QueueChanged);
   }
@@ -154,6 +124,8 @@ public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
     if (index < 0 || index >= _playbackQueue.Count) {
       throw new ArgumentOutOfRangeException(nameof(index));
     }
+
+    if (_currentPlaybackIndex == index) return;
 
     var wasPlaying = PlaybackState == PlaybackState.Playing;
 
@@ -240,6 +212,26 @@ public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
     _playbackCts.Dispose();
     _playbackService.Dispose();
     _audioService.Dispose();
+  }
+
+  private async void OnSongEnded(object? sender, EventArgs e) {
+    Logging.Debug($"Playback ended for {CurrentSong?.Title} ({CurrentSong?.Id}).");
+
+    if (_currentPlaybackIndex + 1 < _playbackQueue.Count) {
+      Logging.Debug($"Playing next song...");
+      await ChangeTrack(_currentPlaybackIndex + 1);
+      await Play();
+    } else {
+      Logging.Debug($"Reached the end of the queue, stopping playback.");
+    }
+  }
+
+  private void OnPositionChanged(object? sender, TimeSpan e) {
+    InvokeAppEvent(PositionChanged, e);
+  }
+
+  private void OnPlaybackStateChanged(object? sender, PlaybackState e) {
+    InvokeAppEvent(PlaybackStateChanged, e);
   }
 
   private Song? GetCurrentSong() {
