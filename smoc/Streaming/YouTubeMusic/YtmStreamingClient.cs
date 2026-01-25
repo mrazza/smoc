@@ -1,5 +1,6 @@
 using System.Net;
 using YouTubeMusicAPI.Client;
+using YouTubeMusicAPI.Models.Info;
 using YouTubeMusicAPI.Models.Search;
 using YouTubeMusicAPI.Models.Streaming;
 using YouTubeSessionGenerator;
@@ -92,6 +93,24 @@ public sealed class YtmStreamingClient : IStreamingClient {
         .First();
     var stream = await highestAudioStreamInfo.GetStreamAsync(cancellationToken: cancellationToken);
     return new SongStream(songId, highestAudioStreamInfo.Container.Codecs, stream);
+  }
+
+  public async Task<List<Song>> GetLikedSongsAsync(CancellationToken cancellationToken = default) {
+    if (_authedYtmClient is null)
+      throw new InvalidOperationException("No authed YTM client provided.");
+
+    var result = _authedYtmClient.GetCommunityPlaylistSongsAsync(_authedYtmClient.GetCommunityPlaylistBrowseId("LM"));
+    var results = await result.FetchItemsAsync(limit: 1000, cancellationToken: cancellationToken);
+    return results.OfType<CommunityPlaylistSong>().Select(s =>
+        new Song(
+          s.Id,
+          new Album(
+            s.Album!.Id!,
+            new Artist(s.Artists.First().Id!, s.Artists.First().Name),
+            s.Album.Name,
+            ThumbnailUrl: s.Thumbnails.OrderBy(t => t.Height).Select(t => t.Url).FirstOrDefault()),
+          s.Name,
+          s.Duration)).ToList();
   }
 
   /// <summary>

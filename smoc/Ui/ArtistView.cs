@@ -104,6 +104,7 @@ public sealed class ArtistView : View {
   }
 
   private void OnSongSelected(object? sender, List<Song> songs) {
+    // TODO(razza): Extract this for reuse in SongView and PlaylistView
     var tableAdornments = _songTable.GetAdornmentsThickness();
     var yPos = _songTable.GetSelectedRowFramePosition().Y + tableAdornments.Top + 1;
     int menuHeight = _songContextMenu.RequiredHeight;

@@ -171,8 +171,7 @@ public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
     }
 
     // Cancel any previous playback setup
-    _playbackCts.Replace(new CancellationTokenSource());
-    var token = _playbackCts.Resource!.Token;
+    var token = _playbackCts.Replace(new CancellationTokenSource()).Token;
 
     try {
       Logging.Debug($"Starting playback for {currentSong.Title} ({currentSong.Id})...");

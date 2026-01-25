@@ -7,24 +7,30 @@ public enum Mode {
   /// <summary>
   /// The Now Playing / Player view.
   /// </summary>
-  [DisplayNameAttribute("PLAYER")]
+  [DisplayName("PLAYER")]
   Player,
 
   /// <summary>
   /// The Artist detail view.
   /// </summary>
-  [DisplayNameAttribute("ARTIST")]
+  [DisplayName("ARTIST")]
   Artist,
 
   /// <summary>
   /// The Command input mode.
   /// </summary>
-  [DisplayNameAttribute("COMMAND")]
+  [DisplayName("COMMAND")]
   Command,
 
   /// <summary>
   /// The Song / Track list view.
   /// </summary>
-  [DisplayNameAttribute("TRACK")]
-  Song
+  [DisplayName("TRACK")]
+  Song,
+
+  /// <summary>
+  /// The Playlist view.
+  /// </summary>
+  [DisplayName("PLAYLIST")]
+  Playlist
 }
