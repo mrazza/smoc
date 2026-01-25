@@ -57,7 +57,7 @@ public class UniqueResourceTest {
   }
 
   [Fact]
-  public void ReplaceResource_ReturnsNewResource() {
+  public void ReplaceResource_StoresNewResource() {
     var newMockDisposable = new Mock<IDisposable>();
     var sut = new UniqueResource<IDisposable>(_mockDisposable.Object, (_) => { });
     sut.Replace(newMockDisposable.Object);
@@ -81,6 +81,13 @@ public class UniqueResourceTest {
     var sut = new UniqueResource<IDisposable>(_mockDisposable.Object, (_) => { });
     sut.Replace(newMockDisposable.Object);
     _mockDisposable.Verify(d => d.Dispose(), Times.Once());
+  }
+
+  [Fact]
+  public void ReplaceResource_ReturnsNewResource() {
+    var newMockDisposable = new Mock<IDisposable>();
+    var sut = new UniqueResource<IDisposable>();
+    Assert.Equal(newMockDisposable.Object, sut.Replace(newMockDisposable.Object));
   }
 
 }

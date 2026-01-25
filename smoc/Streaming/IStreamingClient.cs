@@ -59,4 +59,11 @@ public interface IStreamingClient {
   /// <param name="cancellationToken">Optional cancellation token.</param>
   /// <returns>The song stream.</returns>
   Task<SongStream> GetSongStreamAsync(string songId, CancellationToken cancellationToken = default);
+
+  /// <summary>
+  /// Retrieves the user's liked songs.
+  /// </summary>
+  /// <param name="cancellationToken">Optional cancellation token.</param>
+  /// <returns>A list of liked songs.</returns>
+  Task<List<Song>> GetLikedSongsAsync(CancellationToken cancellationToken = default);
 }

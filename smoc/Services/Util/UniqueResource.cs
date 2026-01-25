@@ -41,13 +41,15 @@ public sealed class UniqueResource<T> : IDisposable where T : class, IDisposable
   /// Disposes of the current resource and replaces it with the new resource.
   /// </summary>
   /// <param name="resource">The new resource to manage.</param>
-  public void Replace(T resource) {
+  /// <returns>The new resource (for fluent syntax).</returns>
+  public T Replace(T resource) {
     if (_disposed) {
       throw new ObjectDisposedException(nameof(UniqueResource<T>));
     }
 
     DisposeResourceIfExists();
     _resource = resource;
+    return resource;
   }
 
   /// <summary>
