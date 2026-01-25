@@ -158,29 +158,34 @@ public sealed class NowPlaying : View {
     }
   }
 
-  private async void OnSongChanged(object? sender, Song e) {
-    Logging.Information($"Song changed: {e.Title}");
-    _songLabel.Text = e.Title;
-    _artistLabel.Text = e.Artist.Name;
+  private async void OnSongChanged(object? sender, Song? song) {
+    Logging.Information($"Song changed: {song?.Title ?? "(null)"}");
+    if (song is not { }) {
+      Reset();
+      return;
+    }
+
+    _songLabel.Text = song.Title;
+    _artistLabel.Text = song.Artist.Name;
 
     // Only bother downloading the album art if it has changed.
-    if (e.Album.ThumbnailUrl is null || e.Album.ThumbnailUrl.Length == 0) {
+    if (song.Album.ThumbnailUrl is null || song.Album.ThumbnailUrl.Length == 0) {
       _albumArtView.ClearImage();
-    } else if (_albumArtUrl != e.Album.ThumbnailUrl) {
-      _albumArtUrl = e.Album.ThumbnailUrl;
+    } else if (_albumArtUrl != song.Album.ThumbnailUrl) {
+      _albumArtUrl = song.Album.ThumbnailUrl;
       _albumArtCancellationTokenSource?.Cancel();
       _albumArtCancellationTokenSource = new CancellationTokenSource();
       var token = _albumArtCancellationTokenSource.Token;
       try {
-        var albumResponse = await _httpClient.GetAsync(e.Album.ThumbnailUrl, token);
+        var albumResponse = await _httpClient.GetAsync(song.Album.ThumbnailUrl, token);
         var image = Image.Load<Rgba32>(albumResponse.Content.ReadAsStream());
-        Logging.Debug($"Album art loaded: {e.Title}");
+        Logging.Debug($"Album art loaded: {song.Title}");
         token.ThrowIfCancellationRequested();
         _albumArtView.SetImage(image);
       } catch (OperationCanceledException) {
-        Logging.Debug($"Album art load cancelled: {e.Title}");
+        Logging.Debug($"Album art load cancelled: {song.Title}");
       } catch (Exception ex) {
-        Logging.Error($"Failed to load album art for {e.Title}: {ex.Message}");
+        Logging.Error($"Failed to load album art for {song.Title}: {ex.Message}");
       }
     }
   }

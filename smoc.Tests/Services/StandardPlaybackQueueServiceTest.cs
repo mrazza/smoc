@@ -140,6 +140,16 @@ public class StandardPlaybackQueueServiceTest {
   }
 
   [Fact]
+  public void QueueNext_EmptyQueue_InvokesSongChangedEvent() {
+    Song? songReceived = null;
+    var song = EntityTestFactory.GenerateSong();
+    using var sut = NewStandardPlaybackQueue();
+    sut.SongChanged += (_, song) => songReceived = song;
+    sut.QueueNext([song]);
+    Assert.Equal(song, songReceived);
+  }
+
+  [Fact]
   public void QueueLast_EmptyQueue_AddsSong() {
     using var sut = NewStandardPlaybackQueue();
     Song song = EntityTestFactory.GenerateSong();
@@ -195,6 +205,16 @@ public class StandardPlaybackQueueServiceTest {
   }
 
   [Fact]
+  public void QueueLast_EmptyQueue_InvokesSongChangedEvent() {
+    Song? songReceived = null;
+    var song = EntityTestFactory.GenerateSong();
+    using var sut = NewStandardPlaybackQueue();
+    sut.SongChanged += (_, song) => songReceived = song;
+    sut.QueueLast([song]);
+    Assert.Equal(song, songReceived);
+  }
+
+  [Fact]
   public void ClearPlaybackQueue_ClearsQueue() {
     using var sut = NewStandardPlaybackQueue();
     Song[] songs = [EntityTestFactory.GenerateSong(), EntityTestFactory.GenerateSong()];
@@ -205,10 +225,20 @@ public class StandardPlaybackQueueServiceTest {
 
   [Fact]
   public void ClearPlaybackQueue_InvokesEvent() {
-    bool eventReceived = false;
+    var eventReceived = false;
     using var sut = NewStandardPlaybackQueue();
     sut.QueueNext([EntityTestFactory.GenerateSong(), EntityTestFactory.GenerateSong()]);
     sut.QueueChanged += (_, __) => eventReceived = true;
+    sut.ClearPlaybackQueue();
+    Assert.True(eventReceived);
+  }
+
+  [Fact]
+  public void ClearPlaybackQueue_InvokesSongChangedEvent() {
+    var eventReceived = false;
+    using var sut = NewStandardPlaybackQueue();
+    sut.QueueNext([EntityTestFactory.GenerateSong(), EntityTestFactory.GenerateSong()]);
+    sut.SongChanged += (_, __) => eventReceived = true;
     sut.ClearPlaybackQueue();
     Assert.True(eventReceived);
   }

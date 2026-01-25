@@ -64,7 +64,7 @@ public sealed class PlayerView : View {
   protected override void OnVisibleChanged() {
     base.OnVisibleChanged();
 
-    if (Visible && _playbackQueueService.CurrentSong is Song currentSong) {
+    if (Visible && _playbackQueueService.CurrentSong is { }) {
       _songTable.SelectedRow = _playbackQueueService.CurrentPlaybackIndex;
       _songTable.EnsureSelectedCellIsVisible();
     }
@@ -78,7 +78,7 @@ public sealed class PlayerView : View {
     await _playbackQueueService.ChangeTrack(_songTable.SelectedRow);
   }
 
-  private void OnSongChanged(object? sender, Song e) {
+  private void OnSongChanged(object? sender, Song? song) {
     _songTable.HighlightedRow = _playbackQueueService.CurrentPlaybackIndex;
   }
 

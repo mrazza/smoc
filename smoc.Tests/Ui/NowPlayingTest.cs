@@ -122,19 +122,31 @@ public class NowPlayingTest {
   [Fact]
   public void OnSongChanged_UpdatesSongDetails() {
     var song = EntityTestFactory.GenerateSong();
-    EventHandler<Song>? handler = null;
-    _mockPlaybackQueue.SetupAdd((ps) => ps.SongChanged += It.IsAny<EventHandler<Song>>())
-        .Callback<EventHandler<Song>>(h => handler = h);
+    EventHandler<Song?>? handler = null;
+    _mockPlaybackQueue.SetupAdd((ps) => ps.SongChanged += It.IsAny<EventHandler<Song?>>())
+        .Callback<EventHandler<Song?>>(h => handler = h);
     using var context = NewNowPlayingContext().Then((_) => handler?.Invoke(null, song));
+    _screenshotDiffer.AssertEqualsGolden(context);
+  }
+
+  [Fact]
+  public void OnSongChanged_SongIsNull_UpdatesSongDetails() {
+    var song = EntityTestFactory.GenerateSong();
+    EventHandler<Song?>? handler = null;
+    _mockPlaybackQueue.SetupAdd((ps) => ps.SongChanged += It.IsAny<EventHandler<Song?>>())
+        .Callback<EventHandler<Song?>>(h => handler = h);
+    using var context = NewNowPlayingContext()
+        .Then((_) => handler?.Invoke(null, song))
+        .Then((_) => handler?.Invoke(null, null));
     _screenshotDiffer.AssertEqualsGolden(context);
   }
 
   [Fact]
   public void OnSongChanged_LoadsAlbumArt() {
     var song = EntityTestFactory.GenerateSong();
-    EventHandler<Song>? handler = null;
-    _mockPlaybackQueue.SetupAdd((ps) => ps.SongChanged += It.IsAny<EventHandler<Song>>())
-        .Callback<EventHandler<Song>>(h => handler = h);
+    EventHandler<Song?>? handler = null;
+    _mockPlaybackQueue.SetupAdd((ps) => ps.SongChanged += It.IsAny<EventHandler<Song?>>())
+        .Callback<EventHandler<Song?>>(h => handler = h);
     _mockHttpClientHandler.Protected().Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
                 .ReturnsAsync(new HttpResponseMessage {
                   StatusCode = HttpStatusCode.OK,
@@ -147,9 +159,9 @@ public class NowPlayingTest {
   [Fact]
   public void OnSongChanged_RepeatAlbum_CachesAlbumArt() {
     var song = EntityTestFactory.GenerateSong();
-    EventHandler<Song>? handler = null;
-    _mockPlaybackQueue.SetupAdd((ps) => ps.SongChanged += It.IsAny<EventHandler<Song>>())
-        .Callback<EventHandler<Song>>(h => handler = h);
+    EventHandler<Song?>? handler = null;
+    _mockPlaybackQueue.SetupAdd((ps) => ps.SongChanged += It.IsAny<EventHandler<Song?>>())
+        .Callback<EventHandler<Song?>>(h => handler = h);
     _mockHttpClientHandler.Protected().Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
                 .ReturnsAsync(new HttpResponseMessage {
                   StatusCode = HttpStatusCode.OK,
@@ -164,9 +176,9 @@ public class NowPlayingTest {
   [Fact]
   public void OnSongChanged_NoAlbumArt_ClearsAlbumArt() {
     var song = EntityTestFactory.GenerateSong(noArt: true);
-    EventHandler<Song>? handler = null;
-    _mockPlaybackQueue.SetupAdd((ps) => ps.SongChanged += It.IsAny<EventHandler<Song>>())
-        .Callback<EventHandler<Song>>(h => handler = h);
+    EventHandler<Song?>? handler = null;
+    _mockPlaybackQueue.SetupAdd((ps) => ps.SongChanged += It.IsAny<EventHandler<Song?>>())
+        .Callback<EventHandler<Song?>>(h => handler = h);
     _mockHttpClientHandler.Protected().Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
                 .Verifiable(Times.Never());
     using var context = NewNowPlayingContext().Then((_) => handler?.Invoke(null, song));

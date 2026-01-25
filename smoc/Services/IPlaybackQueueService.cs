@@ -14,7 +14,7 @@ public interface IPlaybackQueueService : IDisposable {
   /// <summary>
   /// Occurs when the currently playing song changes.
   /// </summary>
-  event EventHandler<Song>? SongChanged;
+  event EventHandler<Song?>? SongChanged;
 
   /// <summary>
   /// Occurs when the playback state (Playing, Paused, Stopped) changes.

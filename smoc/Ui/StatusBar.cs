@@ -75,7 +75,7 @@ public sealed class StatusBar : View {
     UpdateState();
   }
 
-  private void OnSongChanged(object? sender, Song e) {
+  private void OnSongChanged(object? sender, Song? song) {
     UpdateState();
   }
 

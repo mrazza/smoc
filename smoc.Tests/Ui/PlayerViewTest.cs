@@ -92,6 +92,20 @@ public class PlayerViewTest {
   }
 
   [Fact]
+  public void SongChanged_NoSong_Ok() {
+    EventHandler<Song?>? songChangedHandler = null;
+    _mockPlaybackQueue.SetupAdd((ps) => ps.SongChanged += It.IsAny<EventHandler<Song?>>())
+        .Callback<EventHandler<Song?>>(h => songChangedHandler = h);
+    _mockPlaybackQueue.SetupGet((ps) => ps.CurrentPlaybackIndex).Returns(0);
+    _mockPlaybackQueue.Setup((ps) => ps.GetCurrentPlaybackQueue()).Returns([]);
+    using var context = NewContext();
+    var playerView = NewPlayerView();
+    context.Add(playerView)
+        .Then((_) => songChangedHandler?.Invoke(null, null));
+    _screenshotDiffer.AssertEqualsGolden(context);
+  }
+
+  [Fact]
   public void SongSelected_SetsCurrentSong() {
     EventHandler? queueChangedHandler = null;
     _mockPlaybackQueue.SetupAdd((ps) => ps.QueueChanged += It.IsAny<EventHandler>())

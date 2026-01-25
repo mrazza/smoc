@@ -78,6 +78,18 @@ public class StatusBarTest {
   }
 
   [Fact]
+  public void SongChanged_NoSong_UpdatesState() {
+    EventHandler<Song?>? handler = null;
+    _mockPlaybackQueue.SetupAdd((ps) => ps.SongChanged += It.IsAny<EventHandler<Song?>>()).Callback<EventHandler<Song?>>((h) => handler = h);
+    Song song = SetupMockPlayerService();
+    using var context = NewStatusBarContext()
+        .Then((_) => handler?.Invoke(null, song));
+    _mockPlaybackQueue.SetupGet((ps) => ps.CurrentSong).Returns((Song?)null);
+    context.Then((_) => handler?.Invoke(null, null));
+    _screenshotDiffer.AssertEqualsGolden(context);
+  }
+
+  [Fact]
   public void PositionChanged_ShowsState() {
     EventHandler<TimeSpan>? handler = null;
     _mockPlaybackQueue.SetupAdd((ps) => ps.PositionChanged += It.IsAny<EventHandler<TimeSpan>>()).Callback<EventHandler<TimeSpan>>((h) => handler = h);

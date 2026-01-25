@@ -20,7 +20,7 @@ public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
   public event EventHandler<float>? VolumeChanged;
 
   /// <inheritdoc/>
-  public event EventHandler<Song>? SongChanged;
+  public event EventHandler<Song?>? SongChanged;
 
   /// <inheritdoc/>
   public event EventHandler<PlaybackState>? PlaybackStateChanged;
@@ -94,12 +94,14 @@ public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
       return;
     }
 
+    var wasEmpty = _playbackQueue.Count == 0;
     var insertIndex = _currentPlaybackIndex + 1;
     if (insertIndex >= _playbackQueue.Count) {
       _playbackQueue.AddRange(songs);
     } else {
       _playbackQueue.InsertRange(insertIndex, songs);
     }
+    if (wasEmpty) InvokeAppEvent(SongChanged, GetCurrentSong()!);
     InvokeAppEvent(QueueChanged);
   }
 
@@ -109,14 +111,20 @@ public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
   /// <inheritdoc/>
   public void QueueLast(IEnumerable<Song> songs) {
     if (!songs.Any()) return;
+    var wasEmpty = _playbackQueue.Count == 0;
     _playbackQueue.AddRange(songs);
+    if (wasEmpty) InvokeAppEvent(SongChanged, GetCurrentSong()!);
     InvokeAppEvent(QueueChanged);
   }
 
   /// <inheritdoc/>
   public void ClearPlaybackQueue() {
+    if (_playbackQueue.Count == 0) return;
+
     _playbackQueue.Clear();
+    _currentPlaybackIndex = 0;
     InvokeAppEvent(QueueChanged);
+    InvokeAppEvent(SongChanged, null);
   }
 
   /// <inheritdoc/>
