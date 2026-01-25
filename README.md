@@ -51,3 +51,37 @@ SMoC is currently in active development. Please report any issues you may encoun
 This project is written in C# using the .NET 10 SDK. We're following the [Google C# Style Guide](https://google.github.io/styleguide/csharp-style.html).
 
 Commits follow the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) specification with branches and PRs following [Conventional Branch](https://conventional-branch.github.io/).
+
+### Planned Features
+- [ ] Playback
+  - [x] Play
+  - [x] Pause
+  - [ ] Stop
+  - [ ] Skip
+  - [ ] Previous
+  - [ ] Start Over
+  - [ ] Repeat Track
+  - [x] Volume
+  - [ ] Playback Device Selection
+  - [ ] Gapless Playback
+- [ ] Queue
+  - [x] Add to End of Queue
+  - [x] Queue Next (after current song)
+  - [ ] Remove
+  - [x] Advance to Next at End of Song
+  - [ ] Repeat Queue
+  - [ ] Shuffle
+- [ ] Search
+  - [x] Artist
+  - [x] Track
+  - [ ] Playlist
+- [ ] YouTube Music
+  - [x] Authentication
+  - [x] POToken
+  - [x] VisitorData
+  - [x] Play Audio Stream
+  - [x] Album Art
+  - [ ] Caching
+  - [ ] Progress Pings
+  - [ ] Like
+  - [ ] Dislike
