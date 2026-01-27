@@ -1,3 +1,4 @@
+using System.Drawing;
 using Smoc.Services;
 using Terminal.Gui.Input;
 using Terminal.Gui.ViewBase;
@@ -50,6 +51,29 @@ public sealed class SongContextMenu : PopoverMenu {
   /// The height required to display all menu items.
   /// </summary>
   public int RequiredHeight => Root?.SubViews.Count ?? 0;
+
+  /// <summary>
+  /// Makes the context menu visible for the given song table constrained within the bounds of the provided view.
+  /// </summary>
+  /// <remarks>
+  /// The context menu will be displayed at the bottom of the selected row if there is enough space below it
+  /// in the provided view, otherwise it will be displayed above the selected row.
+  /// </remarks>
+  /// <param name="songTable">The song table to get selection from.</param>
+  /// <param name="view">The view to display the context menu in.</param>
+  public void MakeVisibleForTableInView(SongTable songTable, View view) {
+    var tableAdornments = songTable.GetAdornmentsThickness();
+    var yPos = songTable.GetSelectedRowFramePosition().Y + tableAdornments.Top + 1;
+    int menuHeight = RequiredHeight;
+
+    if (yPos + menuHeight > view.Frame.Height) {
+      // Not enough space below the row, so put it above
+      // Let's position it so the bottom of the menu ends at p.Y
+      yPos = yPos - menuHeight - 1;
+    }
+
+    MakeVisible(new Point(songTable.Frame.X + tableAdornments.Left, yPos));
+  }
 
   private static IEnumerable<MenuItem> CreateMenuItems(IPlaybackQueueService playbackQueueService, SongTable songTable) {
     var menuItems = new List<MenuItem> {

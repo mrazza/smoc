@@ -70,18 +70,7 @@ public sealed class SongView : View {
   }
 
   private void OnSongSelected(object? sender, List<Song> songs) {
-    // TODO(razza): Extract this for reuse in PlaylistView and ArtistView
-    var tableAdornments = _songTable.GetAdornmentsThickness();
-    var yPos = _songTable.SelectedRow + tableAdornments.Top + 2;
-    int menuHeight = _songContextMenu.RequiredHeight;
-
-    if (yPos + menuHeight > Frame.Height) {
-      // Not enough space below the row, so put it above
-      // Let's position it so the bottom of the menu ends at p.Y
-      yPos = yPos - menuHeight - 1;
-    }
-
-    _songContextMenu.MakeVisible(new Point(_songTable.Frame.X + tableAdornments.Left, yPos));
+    _songContextMenu.MakeVisibleForTableInView(_songTable, this);
     _songContextMenu.SetFocus();
   }
 
