@@ -74,7 +74,7 @@ Commits follow the [Conventional Commits](https://www.conventionalcommits.org/en
   - [x] Advance to Next at End of Song
   - [ ] Repeat Queue
   - [ ] Shuffle
-- [ ] Search
+- [x] Search
   - [x] Artist
   - [x] Track
   - [x] Playlist
