@@ -110,7 +110,7 @@ public class PlaylistView : View {
     HideSearchResults();
     ResetSongsTable(Messages.LOADING_SONGS);
 
-    _loadPlaylistCtsResource.Resource?.Cancel();
+    _searchCtsResource.Resource?.Cancel();
     var token = _loadPlaylistCtsResource.Replace(new CancellationTokenSource()).Token;
 
     try {
