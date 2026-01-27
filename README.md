@@ -74,7 +74,7 @@ Commits follow the [Conventional Commits](https://www.conventionalcommits.org/en
 - [ ] Search
   - [x] Artist
   - [x] Track
-  - [ ] Playlist
+  - [x] Playlist
 - [ ] YouTube Music
   - [x] Authentication
   - [x] POToken
@@ -82,6 +82,6 @@ Commits follow the [Conventional Commits](https://www.conventionalcommits.org/en
   - [x] Play Audio Stream
   - [x] Album Art
   - [ ] Caching
-  - [ ] Progress Pings
+  - [ ] History Tracking
   - [ ] Like
   - [ ] Dislike
