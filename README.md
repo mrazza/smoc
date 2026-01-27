@@ -18,6 +18,9 @@ SMoC operates via a vim-style command bar. Switching between views and performin
 - `:a/<artist name>`: Switch to the ARTIST mode and search for a given artist
 - `:t`: Switch to the TRACK mode
 - `:t/<track name>`: Switch to the TRACK mode and search for a given track
+- `:p`: Switch to the PLAYLIST mode
+- `:p/<playlist name>`: Switch to the PLAYLIST mode and search for a given playlist
+- `:likes`: Switch to PLAYLIST mode and load the list of songs the user has liked
 - `:np`: Switch to the now playing mode (current playback queue)
 - `:v/<volume>`: Change volume to the specified value
 - `:q`: Quit
