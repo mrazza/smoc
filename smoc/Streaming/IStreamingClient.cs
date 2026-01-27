@@ -82,4 +82,12 @@ public interface IStreamingClient {
   /// <param name="cancellationToken">Optional cancellation token.</param>
   /// <returns>A list of songs.</returns>
   Task<List<Song>> GetPlaylistSongsAsync(Playlist playlist, CancellationToken cancellationToken = default);
+
+  /// <summary>
+  /// Adds a song to the user's listen history.
+  /// </summary>
+  /// <param name="song">The song to add.</param>
+  /// <param name="cancellationToken">Optional cancellation token.</param>
+  /// <returns>A task that represents the asynchronous operation.</returns>
+  Task AddToListenHistory(Song song, CancellationToken cancellationToken = default);
 }

@@ -1,6 +1,8 @@
 using System.Reflection;
+using Smoc.Configuration;
 using Smoc.Services;
 using Smoc.Services.Audio.SoundFlow;
+using Smoc.Services.Streaming;
 using Smoc.Streaming;
 using Smoc.Ui.Models;
 using Terminal.Gui.Input;
@@ -19,8 +21,8 @@ public sealed class MainWindow : Runnable, IMainWindow {
   private readonly NowPlaying _nowPlaying;
   private readonly IPlaybackQueueService _playbackQueueService;
   private readonly CommandService _commandService;
-  private readonly IStreamingClient _streamingClient;
   private readonly HttpClient _httpClient;
+  private readonly IPlaybackTrackingService _playbackTrackingService;
 
   private Mode? _currentMode;
   private View? _preCommandFocusedView;
@@ -35,8 +37,19 @@ public sealed class MainWindow : Runnable, IMainWindow {
     Height = Dim.Fill();
     CanFocus = true;
 
-    this._streamingClient = streamingClient;
     _playbackQueueService = StandardPlaybackQueueService.UsingAudioService<SoundFlowAudioService>(this, streamingClient);
+    _playbackTrackingService = new StreamingListenHistoryService(
+      streamingClient,
+      TimeSpan.FromSeconds(ListenHistoryConfig.MinimumPositionSeconds),
+      ListenHistoryConfig.MinimumFraction);
+    if (ListenHistoryConfig.Enabled) {
+      _playbackQueueService.PositionChanged += (_, position) => {
+        if (_playbackQueueService.CurrentSong is { } song) {
+          _playbackTrackingService.TrackPlayback(song, position);
+        }
+      };
+    }
+
     _commandService = new CommandService();
     _httpClient = new HttpClient();
     _nowPlaying = new NowPlaying(this, _playbackQueueService, _commandService, _httpClient);
