@@ -5,6 +5,7 @@ using Smoc.Services;
 using Smoc.Streaming;
 using Smoc.Ui;
 using Smoc.Ui.Models;
+using Terminal.Gui.Drivers;
 using Terminal.Gui.Input;
 using Terminal.Gui.Views;
 using TerminalGuiFluentTesting;
@@ -80,7 +81,7 @@ public class PlaylistViewTest {
   }
 
   [Fact]
-  public void LikedSongsCommand_Repeat_KeepsPriorState() {
+  public void PlaylistCommand_PrevLikedSongs_KeepsPriorState() {
     using var context = NewPlaylistViewContext();
     _mockStreamingClient.Setup(x => x.GetLikedSongsAsync(It.IsAny<CancellationToken>())).ReturnsAsync([EntityTestFactory.GenerateSong()]);
     context.Then((_) => _commandService.ExecuteCommand("likes"));
@@ -107,4 +108,139 @@ public class PlaylistViewTest {
     context.WaitIteration();
     _screenshotDiffer.AssertEqualsGolden(context);
   }
+
+  [Fact]
+  public void SearchCommand_PlaylistApiFailure_ShowsError() {
+    using var context = NewPlaylistViewContext();
+    context.Then((_) => _commandService.ExecuteCommand("p/sick playlist"));
+    _screenshotDiffer.AssertEqualsGolden(context);
+  }
+
+  [Fact]
+  public void SearchCommand_PlaylistsMatch_ShowsResults() {
+    using var context = NewPlaylistViewContext();
+    _mockStreamingClient.Setup(client => client.SearchPlaylistsAsync("sick playlist", It.IsAny<CancellationToken>()))
+      .ReturnsAsync([new Playlist("123", "Sickest Playlist"), new Playlist("456", "lame ass shit")]);
+    context.Then((_) => _commandService.ExecuteCommand("p/sick playlist"));
+    _screenshotDiffer.AssertEqualsGolden(context);
+  }
+
+  [Fact]
+  public void SearchCommand_NoResults_ShowsMessage() {
+    using var context = NewPlaylistViewContext();
+    _mockStreamingClient.Setup(client => client.SearchPlaylistsAsync("sick playlist", It.IsAny<CancellationToken>()))
+      .ReturnsAsync([]);
+    context.Then((_) => _commandService.ExecuteCommand("p/sick playlist"));
+    _screenshotDiffer.AssertEqualsGolden(context);
+  }
+
+  [Fact]
+  public void PlaylistSelected_ApiError_ShowsError() {
+    using var context = NewPlaylistViewContext();
+    _mockStreamingClient.Setup(client => client.SearchPlaylistsAsync("sick playlist", It.IsAny<CancellationToken>()))
+      .ReturnsAsync([new Playlist("123", "Sickest Playlist"), new Playlist("456", "lame ass shit")]);
+    context.Then((_) => _commandService.ExecuteCommand("p/sick playlist")).KeyDown(Key.Enter);
+    _screenshotDiffer.AssertEqualsGolden(context);
+  }
+
+  [Fact]
+  public void PlaylistSelected_NoTracks_ShowsMessage() {
+    using var context = NewPlaylistViewContext();
+    var playlist = new Playlist("123", "Sickest Playlist");
+    _mockStreamingClient.Setup(client => client.SearchPlaylistsAsync("sick playlist", It.IsAny<CancellationToken>()))
+      .ReturnsAsync([playlist, new Playlist("456", "lame ass shit")]);
+    _mockStreamingClient.Setup(client => client.GetPlaylistSongsAsync(playlist, It.IsAny<CancellationToken>()))
+      .ReturnsAsync([]);
+    context.Then((_) => _commandService.ExecuteCommand("p/sick playlist")).KeyDown(Key.Enter);
+    _screenshotDiffer.AssertEqualsGolden(context);
+  }
+
+  [Fact]
+  public void PlaylistSelected_HasTracks_ShowsResults() {
+    using var context = NewPlaylistViewContext();
+    var playlist = new Playlist("123", "Sickest Playlist");
+    _mockStreamingClient.Setup(client => client.SearchPlaylistsAsync("sick playlist", It.IsAny<CancellationToken>()))
+      .ReturnsAsync([playlist, new Playlist("456", "lame ass shit")]);
+    _mockStreamingClient.Setup(client => client.GetPlaylistSongsAsync(playlist, It.IsAny<CancellationToken>()))
+      .ReturnsAsync([EntityTestFactory.GenerateSong(), EntityTestFactory.GenerateSong(), EntityTestFactory.GenerateSong()]);
+    context.Then((_) => _commandService.ExecuteCommand("p/sick playlist")).KeyDown(Key.Enter);
+    _screenshotDiffer.AssertEqualsGolden(context);
+  }
+
+  [Fact]
+  public void PlaylistSongSelected_ShowsContextMenu() {
+    using var context = NewPlaylistViewContext();
+    var playlist = new Playlist("123", "Sickest Playlist");
+    _mockStreamingClient.Setup(client => client.SearchPlaylistsAsync("sick playlist", It.IsAny<CancellationToken>()))
+      .ReturnsAsync([playlist, new Playlist("456", "lame ass shit")]);
+    _mockStreamingClient.Setup(client => client.GetPlaylistSongsAsync(playlist, It.IsAny<CancellationToken>()))
+      .ReturnsAsync([EntityTestFactory.GenerateSong(), EntityTestFactory.GenerateSong(), EntityTestFactory.GenerateSong()]);
+    context.Then((_) => _commandService.ExecuteCommand("p/sick playlist"))
+      .KeyDown(Key.Enter)
+      .KeyDown(Key.CursorRight)
+      .KeyDown(Key.CursorDown)
+      .KeyDown(Key.Enter);
+    _screenshotDiffer.AssertEqualsGolden(context);
+  }
+
+  [Fact]
+  public void PlaylistSongSelected_ExecutePlayback_PlaysCorrectSong() {
+    using var context = NewPlaylistViewContext();
+    var playlist = new Playlist("123", "Sickest Playlist");
+    _mockStreamingClient.Setup(client => client.SearchPlaylistsAsync("sick playlist", It.IsAny<CancellationToken>()))
+      .ReturnsAsync([playlist, new Playlist("456", "lame ass shit")]);
+    var song1 = EntityTestFactory.GenerateSong(postfix: "_1");
+    var song2 = EntityTestFactory.GenerateSong(postfix: "_2");
+    _mockStreamingClient.Setup(client => client.GetPlaylistSongsAsync(playlist, It.IsAny<CancellationToken>()))
+      .ReturnsAsync([song1, song2]);
+    context.Then((_) => _commandService.ExecuteCommand("p/sick playlist"))
+      .KeyDown(Key.Enter)
+      .KeyDown(Key.CursorRight)
+      .KeyDown(Key.Enter)
+      .KeyDown(Key.Enter);
+    _mockPlaybackQueue.Verify((player) => player.ClearPlaybackQueue());
+    _mockPlaybackQueue.Verify((player) => player.QueueLast(new List<Song> { song1, song2 }));
+    _mockPlaybackQueue.Verify((player) => player.ChangeTrack(0));
+  }
+
+  [Fact]
+  public void PlaylistCommand_PrevPlaylist_KeepsPriorState() {
+    using var context = NewPlaylistViewContext();
+    var playlist = new Playlist("123", "Sickest Playlist");
+    _mockStreamingClient.Setup(client => client.SearchPlaylistsAsync("sick playlist", It.IsAny<CancellationToken>()))
+      .ReturnsAsync([playlist, new Playlist("456", "lame ass shit")]);
+    _mockStreamingClient.Setup(client => client.GetPlaylistSongsAsync(playlist, It.IsAny<CancellationToken>()))
+      .ReturnsAsync([EntityTestFactory.GenerateSong(), EntityTestFactory.GenerateSong(), EntityTestFactory.GenerateSong()]);
+    context.Then((_) => _commandService.ExecuteCommand("p/sick playlist")).KeyDown(Key.Enter);
+    _screenshotDiffer.AssertEqualsGolden(context);
+    context.Then((_) => _commandService.ExecuteCommand("p")).KeyDown(Key.Enter);
+    _screenshotDiffer.AssertEqualsGolden(context);
+  }
+
+  [Fact]
+  public void SearchCommand_PrevLikedSongs_DisplaysCorrectState() {
+    using var context = NewPlaylistViewContext();
+    _mockStreamingClient.Setup(x => x.GetLikedSongsAsync(It.IsAny<CancellationToken>())).ReturnsAsync([EntityTestFactory.GenerateSong()]);
+    context.Then((_) => _commandService.ExecuteCommand("likes"));
+
+    _mockStreamingClient.Setup(client => client.SearchPlaylistsAsync("sick playlist", It.IsAny<CancellationToken>()))
+      .ReturnsAsync([new Playlist("123", "Sickest Playlist"), new Playlist("456", "lame ass shit")]);
+    context.Then((_) => _commandService.ExecuteCommand("p/sick playlist"));
+    _screenshotDiffer.AssertEqualsGolden(context);
+  }
+
+  [Fact]
+  public void LikedSongsCommand_PrevSearchedPlaylist_DisplaysCorrectState() {
+    using var context = NewPlaylistViewContext();
+    _mockStreamingClient.Setup(client => client.SearchPlaylistsAsync("sick playlist", It.IsAny<CancellationToken>()))
+      .ReturnsAsync([new Playlist("123", "Sickest Playlist"), new Playlist("456", "lame ass shit")]);
+    context.Then((_) => _commandService.ExecuteCommand("p/sick playlist"));
+
+    _mockStreamingClient.Setup(x => x.GetLikedSongsAsync(It.IsAny<CancellationToken>())).ReturnsAsync([EntityTestFactory.GenerateSong()]);
+    context.Then((_) => _commandService.ExecuteCommand("likes"));
+
+    _screenshotDiffer.AssertEqualsGolden(context);
+  }
+
+  // TODO: Missing new search cancels previous search and new playlist selection cancels previous selection.
 }

@@ -1,5 +1,7 @@
-PlaylistViewTest.LikedSongsCommand_ApiError_ShowsError_0:
+PlaylistViewTest.LikedSongsCommand_PrevSearchedPlaylist_DisplaysCorrectState_0:
 ┌──────────────────────────────────────────────────────────────────────────────────────────────────┐
+│Artist                        Album                         Track                         Length  │
+│Radiohead                     OK Computer                   LikedSongsCommand_PrevSearche 5:00    │
 │                                                                                                  │
 │                                                                                                  │
 │                                                                                                  │
@@ -7,8 +9,6 @@ PlaylistViewTest.LikedSongsCommand_ApiError_ShowsError_0:
 │                                                                                                  │
 │                                                                                                  │
 │                                                                                                  │
-│                                                                                                  │
-│                                      error loading tracks                                        │
 │                                                                                                  │
 │                                                                                                  │
 │                                                                                                  │
