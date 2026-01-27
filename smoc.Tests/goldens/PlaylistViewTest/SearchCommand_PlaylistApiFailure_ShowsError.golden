@@ -1,4 +1,4 @@
-PlaylistViewTest.InitialState_ShowsEmpty_0:
+PlaylistViewTest.SearchCommand_PlaylistApiFailure_ShowsError_0:
 ┌────────────────────────────┐┌────────────────────────────────────────────────────────────────────┐
 │                            ││                                                                    │
 │                            ││                                                                    │
@@ -8,7 +8,7 @@ PlaylistViewTest.InitialState_ShowsEmpty_0:
 │                            ││                                                                    │
 │                            ││                                                                    │
 │                            ││                                                                    │
-│     no playlists found     ││                             no tracks                              │
+│ error searching playlists  ││                         select a playlist                          │
 │                            ││                                                                    │
 │                            ││                                                                    │
 │                            ││                                                                    │

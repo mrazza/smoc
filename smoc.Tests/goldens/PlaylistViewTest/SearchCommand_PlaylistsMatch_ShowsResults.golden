@@ -1,14 +1,14 @@
-PlaylistViewTest.InitialState_ShowsEmpty_0:
+PlaylistViewTest.SearchCommand_PlaylistsMatch_ShowsResults_0:
 ┌────────────────────────────┐┌────────────────────────────────────────────────────────────────────┐
+│Sickest Playlist            ││                                                                    │
+│lame ass shit               ││                                                                    │
 │                            ││                                                                    │
 │                            ││                                                                    │
 │                            ││                                                                    │
 │                            ││                                                                    │
 │                            ││                                                                    │
 │                            ││                                                                    │
-│                            ││                                                                    │
-│                            ││                                                                    │
-│     no playlists found     ││                             no tracks                              │
+│                            ││                         select a playlist                          │
 │                            ││                                                                    │
 │                            ││                                                                    │
 │                            ││                                                                    │

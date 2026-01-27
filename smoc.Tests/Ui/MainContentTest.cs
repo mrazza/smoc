@@ -42,8 +42,8 @@ public class MainContentTest {
     using var context = NewContext();
     var mainContent = NewMainContent();
     context.Add(mainContent).Then((_) => mainContent.SetMode(Mode.Artist));
-    _screenshotDiffer.AssertEqualsGolden(context);
     Assert.IsType<ArtistView>(mainContent.MostFocused?.SuperView ?? mainContent.MostFocused);
+    _screenshotDiffer.AssertEqualsGolden(context);
   }
 
   [Fact]
@@ -51,8 +51,8 @@ public class MainContentTest {
     using var context = NewContext();
     var mainContent = NewMainContent();
     context.Add(mainContent).Then((_) => mainContent.SetMode(Mode.Song));
-    _screenshotDiffer.AssertEqualsGolden(context);
     Assert.IsType<SongView>(mainContent.MostFocused);
+    _screenshotDiffer.AssertEqualsGolden(context);
   }
 
   [Fact]
@@ -60,8 +60,8 @@ public class MainContentTest {
     using var context = NewContext();
     var mainContent = NewMainContent();
     context.Add(mainContent).Then((_) => mainContent.SetMode(Mode.Player));
-    _screenshotDiffer.AssertEqualsGolden(context);
     Assert.IsType<PlayerView>(mainContent.MostFocused);
+    _screenshotDiffer.AssertEqualsGolden(context);
   }
 
   [Fact]
@@ -77,7 +77,7 @@ public class MainContentTest {
     using var context = NewContext();
     var mainContent = NewMainContent();
     context.Add(mainContent).Then((_) => mainContent.SetMode(Mode.Playlist));
-    Assert.IsType<PlaylistView>(mainContent.MostFocused);
+    Assert.IsType<PlaylistView>(mainContent.MostFocused?.SuperView ?? mainContent.MostFocused);
     _screenshotDiffer.AssertEqualsGolden(context);
   }
 

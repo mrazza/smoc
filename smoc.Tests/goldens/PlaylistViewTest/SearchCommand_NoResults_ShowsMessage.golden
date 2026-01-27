@@ -1,4 +1,4 @@
-PlaylistViewTest.InitialState_ShowsEmpty_0:
+PlaylistViewTest.SearchCommand_NoResults_ShowsMessage_0:
 ┌────────────────────────────┐┌────────────────────────────────────────────────────────────────────┐
 │                            ││                                                                    │
 │                            ││                                                                    │
@@ -8,7 +8,7 @@ PlaylistViewTest.InitialState_ShowsEmpty_0:
 │                            ││                                                                    │
 │                            ││                                                                    │
 │                            ││                                                                    │
-│     no playlists found     ││                             no tracks                              │
+│     no playlists found     ││                         select a playlist                          │
 │                            ││                                                                    │
 │                            ││                                                                    │
 │                            ││                                                                    │

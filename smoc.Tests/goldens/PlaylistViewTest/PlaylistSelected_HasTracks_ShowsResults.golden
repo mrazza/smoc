@@ -1,14 +1,14 @@
-PlaylistViewTest.InitialState_ShowsEmpty_0:
+PlaylistViewTest.PlaylistSelected_HasTracks_ShowsResults_0:
 ┌────────────────────────────┐┌────────────────────────────────────────────────────────────────────┐
+│Sickest Playlist            ││Artist              Album               Track               Length  │
+│lame ass shit               ││Radiohead           OK Computer         PlaylistSelected_Ha 5:00    │
+│                            ││Radiohead           OK Computer         PlaylistSelected_Ha 5:00    │
+│                            ││Radiohead           OK Computer         PlaylistSelected_Ha 5:00    │
 │                            ││                                                                    │
 │                            ││                                                                    │
 │                            ││                                                                    │
 │                            ││                                                                    │
 │                            ││                                                                    │
-│                            ││                                                                    │
-│                            ││                                                                    │
-│                            ││                                                                    │
-│     no playlists found     ││                             no tracks                              │
 │                            ││                                                                    │
 │                            ││                                                                    │
 │                            ││                                                                    │

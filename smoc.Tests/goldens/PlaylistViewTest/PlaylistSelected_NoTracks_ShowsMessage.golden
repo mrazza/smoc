@@ -1,14 +1,14 @@
-PlaylistViewTest.InitialState_ShowsEmpty_0:
+PlaylistViewTest.PlaylistSelected_NoTracks_ShowsMessage_0:
 ┌────────────────────────────┐┌────────────────────────────────────────────────────────────────────┐
+│Sickest Playlist            ││                                                                    │
+│lame ass shit               ││                                                                    │
 │                            ││                                                                    │
 │                            ││                                                                    │
 │                            ││                                                                    │
 │                            ││                                                                    │
 │                            ││                                                                    │
 │                            ││                                                                    │
-│                            ││                                                                    │
-│                            ││                                                                    │
-│     no playlists found     ││                             no tracks                              │
+│                            ││                             no tracks                              │
 │                            ││                                                                    │
 │                            ││                                                                    │
 │                            ││                                                                    │

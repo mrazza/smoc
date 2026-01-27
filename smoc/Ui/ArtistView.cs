@@ -199,6 +199,7 @@ public sealed class ArtistView : View {
       _searchResultsLabel.Visible = false;
     } catch (OperationCanceledException) {
       // Ignore
+      Logging.Debug("Artist search cancelled");
     } catch (Exception ex) {
       Logging.Error($"Error searching artists: {ex.Message}");
       _mainWindow.DisplayError(Messages.SEARCH_ERROR);

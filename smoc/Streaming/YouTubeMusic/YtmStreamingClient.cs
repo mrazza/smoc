@@ -1,4 +1,6 @@
 using System.Net;
+using Microsoft.VisualBasic;
+using Smoc.Ui;
 using YouTubeMusicAPI.Client;
 using YouTubeMusicAPI.Models.Info;
 using YouTubeMusicAPI.Models.Search;
@@ -95,6 +97,7 @@ public sealed class YtmStreamingClient : IStreamingClient {
     return new SongStream(songId, highestAudioStreamInfo.Container.Codecs, stream);
   }
 
+  /// <inheritdoc/>
   public async Task<List<Song>> GetLikedSongsAsync(CancellationToken cancellationToken = default) {
     if (_authedYtmClient is null)
       throw new InvalidOperationException("No authed YTM client provided.");
@@ -102,6 +105,41 @@ public sealed class YtmStreamingClient : IStreamingClient {
     var result = _authedYtmClient.GetCommunityPlaylistSongsAsync(_authedYtmClient.GetCommunityPlaylistBrowseId("LM"));
     var results = await result.FetchItemsAsync(limit: 1000, cancellationToken: cancellationToken);
     return results.OfType<CommunityPlaylistSong>().Select(s =>
+        new Song(
+          s.Id,
+          new Album(
+            s.Album!.Id!,
+            new Artist(s.Artists.First().Id!, s.Artists.First().Name),
+            s.Album.Name,
+            ThumbnailUrl: s.Thumbnails.OrderBy(t => t.Height).Select(t => t.Url).FirstOrDefault()),
+          s.Name,
+          s.Duration)).ToList();
+  }
+
+  /// <inheritdoc/>
+  public async Task<List<Playlist>> SearchPlaylistsAsync(string query, CancellationToken cancellationToken = default) {
+    var queryWords = query.Split(' ');
+    var search = _ytmClient.SearchAsync(query, SearchCategory.CommunityPlaylists);
+    var libraryPlaylistsTask = _authedYtmClient?.GetLibraryCommunityPlaylistsAsync(cancellationToken: cancellationToken);
+    var searchResultsTask = search.FetchItemsAsync(limit: 100, cancellationToken: cancellationToken);
+    await Task.WhenAll(searchResultsTask, libraryPlaylistsTask ?? Task.CompletedTask);
+    var libraryPlaylists = libraryPlaylistsTask?.Result
+      .Where(p => queryWords.All(word => p.Name.Contains(word, StringComparison.InvariantCultureIgnoreCase)))
+      .Select(p => new Playlist(p.Id, p.Name)).ToList() ?? [];
+    var searchResults = searchResultsTask.Result.OfType<CommunityPlaylistSearchResult>()
+      .Where(p => !libraryPlaylists.Any(l => l.Id == p.Id))
+      .Select(r => new Playlist(r.Id, r.Name));
+    return [.. libraryPlaylists, .. searchResults];
+  }
+
+  /// <inheritdoc/>
+  public async Task<List<Song>> GetPlaylistSongsAsync(Playlist playlist, CancellationToken cancellationToken = default) {
+    if (_authedYtmClient is null)
+      throw new InvalidOperationException("No authed YTM client provided.");
+
+    var result = _authedYtmClient.GetCommunityPlaylistSongsAsync(_authedYtmClient.GetCommunityPlaylistBrowseId(playlist.Id));
+    var results = await result.FetchItemsAsync(limit: 1000, cancellationToken: cancellationToken);
+    return results.OfType<CommunityPlaylistSong>().Where(r => r.Album is not null && r.Artists.Length > 0).Select(s =>
         new Song(
           s.Id,
           new Album(

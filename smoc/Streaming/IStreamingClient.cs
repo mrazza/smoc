@@ -66,4 +66,20 @@ public interface IStreamingClient {
   /// <param name="cancellationToken">Optional cancellation token.</param>
   /// <returns>A list of liked songs.</returns>
   Task<List<Song>> GetLikedSongsAsync(CancellationToken cancellationToken = default);
+
+  /// <summary>
+  /// Searches for playlists matching the query.
+  /// </summary>
+  /// <param name="query">The search query.</param>
+  /// <param name="cancellationToken">Optional cancellation token.</param>
+  /// <returns>A list of matching playlists.</returns>
+  Task<List<Playlist>> SearchPlaylistsAsync(string query, CancellationToken cancellationToken = default);
+
+  /// <summary>
+  /// Retrieves songs from a specific playlist.
+  /// </summary>
+  /// <param name="playlist">The playlist.</param>
+  /// <param name="cancellationToken">Optional cancellation token.</param>
+  /// <returns>A list of songs.</returns>
+  Task<List<Song>> GetPlaylistSongsAsync(Playlist playlist, CancellationToken cancellationToken = default);
 }
