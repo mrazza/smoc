@@ -104,7 +104,7 @@ public sealed class ArtistView : View {
   }
 
   private void OnSongSelected(object? sender, List<Song> songs) {
-    _songContextMenu.MakeVisibleForTableInView(_songTable, this);
+    _songContextMenu.MakeVisibleInView(this);
     _songContextMenu.SetFocus();
   }
 

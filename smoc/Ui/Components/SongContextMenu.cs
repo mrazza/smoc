@@ -20,6 +20,8 @@ public sealed class SongContextMenu : PopoverMenu {
     public const string ADD_TO_QUEUE = "_queue last";
   }
 
+  private readonly SongTable _songTable;
+
   /// <summary>
   /// Initializes a new instance of the <see cref="SongContextMenu"/> class.
   /// </summary>
@@ -27,6 +29,8 @@ public sealed class SongContextMenu : PopoverMenu {
   /// <param name="songTable">The song table to get selection from.</param>
   public SongContextMenu(IPlaybackQueueService playbackQueueService, SongTable songTable)
       : base(CreateMenuItems(playbackQueueService, songTable)) {
+    _songTable = songTable;
+
     // Default PopoverMenu binds Left/Right for navigation (Bar behavior).
     // specific to Menu behavior we want Up/Down for vertical list.
     // Map Up to Previous (Backward)
@@ -59,11 +63,10 @@ public sealed class SongContextMenu : PopoverMenu {
   /// The context menu will be displayed at the bottom of the selected row if there is enough space below it
   /// in the provided view, otherwise it will be displayed above the selected row.
   /// </remarks>
-  /// <param name="songTable">The song table to get selection from.</param>
   /// <param name="view">The view to display the context menu in.</param>
-  public void MakeVisibleForTableInView(SongTable songTable, View view) {
-    var tableAdornments = songTable.GetAdornmentsThickness();
-    var yPos = songTable.GetSelectedRowFramePosition().Y + tableAdornments.Top + 1;
+  public void MakeVisibleInView(View view) {
+    var tableAdornments = _songTable.GetAdornmentsThickness();
+    var yPos = _songTable.GetSelectedRowFramePosition().Y + tableAdornments.Top + 1;
     int menuHeight = RequiredHeight;
 
     if (yPos + menuHeight > view.Frame.Height) {
@@ -72,10 +75,10 @@ public sealed class SongContextMenu : PopoverMenu {
       yPos = yPos - menuHeight - 1;
     }
 
-    MakeVisible(new Point(songTable.Frame.X + tableAdornments.Left, yPos));
+    MakeVisible(new Point(_songTable.Frame.X + tableAdornments.Left, yPos));
   }
 
-  private static IEnumerable<MenuItem> CreateMenuItems(IPlaybackQueueService playbackQueueService, SongTable songTable) {
+  private static List<MenuItem> CreateMenuItems(IPlaybackQueueService playbackQueueService, SongTable songTable) {
     var menuItems = new List<MenuItem> {
       new(Messages.PLAY_ALL, action: async () => {
         playbackQueueService.ClearPlaybackQueue();

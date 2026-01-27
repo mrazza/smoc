@@ -8,6 +8,7 @@ using Smoc.Services;
 using Smoc.Streaming;
 using Smoc.Ui.Components;
 using Terminal.Gui.Input;
+using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
 using TerminalGuiFluentTesting;
 using static Smoc.Ui.Components.SongTable;
@@ -21,11 +22,14 @@ public class SongContextMenuTest : IDisposable {
 
   public SongContextMenuTest(ITestOutputHelper output) {
     _mockPlaybackQueue = new Mock<IPlaybackQueueService>(MockBehavior.Strict);
-    _songTable = new SongTable(SongTableColumns.All);
+    _songTable = new SongTable(SongTableColumns.All) {
+      Width = Dim.Fill(),
+      Height = Dim.Fill()
+    };
     _screenshotDiffer = new ScreenshotDiffer(output);
   }
 
-  private static TerminalGuiFluentTesting.TestContext NewContext() => With.A<Runnable>(100, 20, TestDriver.ANSI.ToString());
+  private static TerminalGuiFluentTesting.TestContext NewContext(int width = 100, int height = 20) => With.A<Runnable>(width, height, TestDriver.ANSI.ToString());
 
   private SongContextMenu NewSongContextMenu() => new(_mockPlaybackQueue.Object, _songTable);
 
@@ -285,6 +289,28 @@ public class SongContextMenuTest : IDisposable {
   public void RequiredHeight_ReturnsFour() {
     var songContextMenu = NewSongContextMenu();
     Assert.Equal(4, songContextMenu.RequiredHeight);
+  }
+
+  [Fact]
+  public void MakeVisibleInView_ShouldDisplayCorrectly() {
+    using var context = NewContext(height: 20);
+    var songContextMenu = NewSongContextMenu();
+    context.Add(_songTable).Add(songContextMenu)
+      .Then((_) => _songTable.SetSongs([EntityTestFactory.GenerateSong(), EntityTestFactory.GenerateSong()]))
+      .Then((_) => _songTable.SelectedRow = 0)
+      .Then((_) => songContextMenu.MakeVisibleInView(songContextMenu.SuperView!));
+    _screenshotDiffer.AssertEqualsGolden(context);
+  }
+
+  [Fact]
+  public void MakeVisibleInView_BottomOfViewport_ShouldDisplayCorrectly() {
+    using var context = NewContext(height: 8);
+    var songContextMenu = NewSongContextMenu();
+    context.Add(_songTable).Add(songContextMenu)
+      .Then((_) => _songTable.SetSongs([EntityTestFactory.GenerateSong(), EntityTestFactory.GenerateSong(), EntityTestFactory.GenerateSong(), EntityTestFactory.GenerateSong()]))
+      .Then((_) => _songTable.SelectedRow = 4)
+      .Then((_) => songContextMenu.MakeVisibleInView(songContextMenu.SuperView!));
+    _screenshotDiffer.AssertEqualsGolden(context);
   }
 
   [Fact]
