@@ -85,6 +85,6 @@ Commits follow the [Conventional Commits](https://www.conventionalcommits.org/en
   - [x] Play Audio Stream
   - [x] Album Art
   - [ ] Caching
-  - [ ] History Tracking
+  - [x] History Tracking
   - [ ] Like
   - [ ] Dislike

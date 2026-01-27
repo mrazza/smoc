@@ -1,6 +1,4 @@
 using System.Net;
-using Microsoft.VisualBasic;
-using Smoc.Ui;
 using YouTubeMusicAPI.Client;
 using YouTubeMusicAPI.Models.Info;
 using YouTubeMusicAPI.Models.Search;
@@ -149,6 +147,14 @@ public sealed class YtmStreamingClient : IStreamingClient {
             ThumbnailUrl: s.Thumbnails.OrderBy(t => t.Height).Select(t => t.Url).FirstOrDefault()),
           s.Name,
           s.Duration)).ToList();
+  }
+
+  /// <inheritdoc/>
+  public async Task AddToListenHistory(Song song, CancellationToken cancellationToken = default) {
+    if (_authedYtmClient is null)
+      throw new InvalidOperationException("No authed YTM client provided.");
+
+    await _authedYtmClient.AddToWatchHistoryAsync(await _authedYtmClient.GetSongVideoInfoAsync(song.Id, cancellationToken), cancellationToken);
   }
 
   /// <summary>
