@@ -81,12 +81,12 @@ public sealed class MainWindow : Runnable, IMainWindow {
       _preCommandFocusedView?.SetFocus();
     };
     _commandLine.Accepted += (sender, e) => {
-      var command = (e.Context as CommandContext<string>?)?.Binding;
+      var command = (e.Context as CommandLineCommandContext?)?.CommandText;
       SetMode(_preCommandMode!.Value);
       _preCommandFocusedView?.SetFocus();
 
       if (command is not null && command.Length > 0) {
-        if (!_commandService.ExecuteCommand(command!)) {
+        if (!_commandService.ExecuteCommand(command)) {
           _commandLine.DisplayError($"not a valid commmand: {command}");
         }
       }

@@ -32,7 +32,7 @@ public class PlaylistView : View {
   private readonly Label _songsLabel;
   private readonly SongContextMenu _songContextMenu;
   private readonly Label _searchResultsLabel;
-  private readonly SearchResultsList _searchResults;
+  private readonly SearchResultsList<SearchResultRow<Playlist>> _searchResults;
   private readonly UniqueResource<CancellationTokenSource> _loadPlaylistCtsResource;
   private readonly UniqueResource<CancellationTokenSource> _searchCtsResource;
   private readonly IStreamingClient _streamingClient;
@@ -47,14 +47,14 @@ public class PlaylistView : View {
     Height = Dim.Fill();
     CanFocus = true;
 
-    _searchResults = new SearchResultsList() {
+    _searchResults = new SearchResultsList<SearchResultRow<Playlist>>() {
       X = Pos.Absolute(0),
       Y = Pos.Absolute(0),
       Width = Dim.Absolute(30),
       Height = Dim.Fill(),
     };
     _searchResults.BorderStyle = LineStyle.Single;
-    _searchResults.OpenSelectedItem += OnPlaylistSelected;
+    _searchResults.SearchResultSelected += OnPlaylistSelected;
     _searchResultsLabel = new Label() {
       X = Pos.Absolute(1),
       Y = Pos.Center(),
@@ -165,12 +165,7 @@ public class PlaylistView : View {
     }
   }
 
-  private async void OnPlaylistSelected(object? sender, ListViewItemEventArgs e) {
-    if (e.Value is not SearchResultRow<Playlist> selectedPlaylist) {
-      ResetSongsTable();
-      return;
-    }
-
+  private async void OnPlaylistSelected(object? sender, SearchResultRow<Playlist> selectedPlaylist) {
     _searchCtsResource.Resource?.Cancel();
     var token = _loadPlaylistCtsResource.Replace(new CancellationTokenSource()).Token;
     ResetSongsTable(Messages.LOADING_SONGS);

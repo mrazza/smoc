@@ -3,7 +3,6 @@ namespace Smoc.Ui;
 using System;
 using System.Collections.ObjectModel;
 using System.Data;
-using System.Drawing;
 using Smoc.Services;
 using Smoc.Streaming;
 using Smoc.Ui.Components;
@@ -33,7 +32,7 @@ public sealed class ArtistView : View {
 
   private readonly SongTable _songTable;
   private readonly SongContextMenu _songContextMenu;
-  private readonly SearchResultsList _searchResults;
+  private readonly SearchResultsList<SearchResultRow<Artist>> _searchResults;
   private readonly Label _searchResultsLabel;
   private readonly Label _songsLabel;
 
@@ -57,13 +56,13 @@ public sealed class ArtistView : View {
     Height = Dim.Fill();
     CanFocus = true;
 
-    _searchResults = new SearchResultsList() {
+    _searchResults = new SearchResultsList<SearchResultRow<Artist>>() {
       X = Pos.Absolute(0),
       Y = Pos.Absolute(0),
       Width = Dim.Absolute(30),
       Height = Dim.Fill(),
     };
-    _searchResults.OpenSelectedItem += OnArtistSelected;
+    _searchResults.SearchResultSelected += OnArtistSelected;
     _searchResults.BorderStyle = LineStyle.Single;
 
     _songTable = new SongTable() {
@@ -98,7 +97,7 @@ public sealed class ArtistView : View {
 
   protected override void Dispose(bool disposing) {
     CancelPendingSearches();
-    _searchResults.OpenSelectedItem -= OnArtistSelected;
+    _searchResults.SearchResultSelected -= OnArtistSelected;
     _songTable.SongSelected -= OnSongSelected;
     base.Dispose(disposing);
   }
@@ -108,12 +107,7 @@ public sealed class ArtistView : View {
     _songContextMenu.SetFocus();
   }
 
-  private async void OnArtistSelected(object? sender, ListViewItemEventArgs e) {
-    if (e.Value is not SearchResultRow<Artist> selectedArtist) {
-      ResetSongsTable();
-      return;
-    }
-
+  private async void OnArtistSelected(object? sender, SearchResultRow<Artist> selectedArtist) {
     CancelPendingSearches();
     _selectArtistCts = new CancellationTokenSource();
     var token = _selectArtistCts.Token;
