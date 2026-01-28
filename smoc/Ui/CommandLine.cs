@@ -1,4 +1,5 @@
 using Smoc.Ui.Components;
+using Smoc.Ui.Models;
 using Terminal.Gui.App;
 using Terminal.Gui.Configuration;
 using Terminal.Gui.Input;
@@ -98,7 +99,7 @@ public sealed class CommandLine : View {
   }
 
   private bool? OnCommandAccepted(ICommandContext? ctx) {
-    this.RaiseAccepted(new CommandContext<string>(Command.Accept, this, _commandTextField.Text.TrimStart(':')));
+    RaiseAccepted(new CommandLineCommandContext(Command.Accept, this, ctx?.Binding, _commandTextField.Text.TrimStart(':')));
     return true;
   }
 }
