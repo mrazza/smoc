@@ -5,6 +5,7 @@ using Smoc.Streaming;
 using Smoc.Ui.Components;
 using Terminal.Gui.App;
 using Terminal.Gui.Drawing;
+using Terminal.Gui.Drivers;
 using Terminal.Gui.Input;
 using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
@@ -20,6 +21,9 @@ public sealed class NowPlaying : View {
     public const string NO_ARTIST = "no artist";
     public const string VOLUME = "volume: {0}%";
   }
+
+  private static readonly Key _previousKey = new(',');
+  private static readonly Key _nextKey = new('.');
 
   private readonly IMainWindow _mainWindow;
   private readonly IPlaybackQueueService _playbackQueueService;
@@ -116,6 +120,8 @@ public sealed class NowPlaying : View {
     AddCommand(Command.HotKey, OnHotKey);
     HotKeyBindings.Add(Key.Space, this, Command.HotKey);
     HotKeyBindings.Add(Key.Space.WithCtrl, this, Command.HotKey);
+    HotKeyBindings.Add(_previousKey, this, Command.HotKey);
+    HotKeyBindings.Add(_nextKey, this, Command.HotKey);
   }
 
   protected override void Dispose(bool disposing) {
@@ -131,6 +137,10 @@ public sealed class NowPlaying : View {
         _ = _playbackQueueService.PlayPause();
       } else if (pressedKey == Key.Space.WithCtrl) {
         _playbackQueueService.Stop();
+      } else if (pressedKey == _previousKey) {
+        _ = _playbackQueueService.PreviousTrack();
+      } else if (pressedKey == _nextKey) {
+        _ = _playbackQueueService.NextTrack();
       }
     }
     return true;

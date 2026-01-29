@@ -59,6 +59,26 @@ public class NowPlayingTest {
   }
 
   [Fact]
+  public void NextSongHotKey_MovesNext() {
+    using var context = NewContext();
+    var nowPlaying = NewNowPlaying();
+    _mockPlaybackQueue.Setup((ps) => ps.NextTrack()).Verifiable(Times.Once());
+    context.Add(nowPlaying)
+        .KeyDown(new Key('.'));
+    _mockPlaybackQueue.Verify();
+  }
+
+  [Fact]
+  public void PreviousSongHotKey_MovesPrevious() {
+    using var context = NewContext();
+    var nowPlaying = NewNowPlaying();
+    _mockPlaybackQueue.Setup((ps) => ps.PreviousTrack(false, null)).Verifiable(Times.Once());
+    context.Add(nowPlaying)
+        .KeyDown(new Key(','));
+    _mockPlaybackQueue.Verify();
+  }
+
+  [Fact]
   public void InitialState_ShowsEmpty() {
     using var context = NewNowPlayingContext();
     _screenshotDiffer.AssertEqualsGolden(context);

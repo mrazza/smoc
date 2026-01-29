@@ -54,4 +54,11 @@ public class FakePlaybackService(Song song) : IPlaybackService {
     PlaybackState = PlaybackState.Stopped;
     PlaybackStateChanged?.Invoke(this, PlaybackState);
   }
+
+  public void Seek(TimeSpan position) {
+    if (CurrentTime == position) return;
+    if (position > Duration) throw new ArgumentException("Position cannot be greater than duration", nameof(position));
+    CurrentTime = position;
+    PositionChanged?.Invoke(this, position);
+  }
 }
