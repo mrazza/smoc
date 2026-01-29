@@ -218,7 +218,7 @@ public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
   public async Task PreviousTrack(bool skipIgnoreThreshold = false, TimeSpan? skipThreshold = null) {
     if (!skipIgnoreThreshold && CurrentTime > (skipThreshold ?? TimeSpan.FromSeconds(10))) {
       Logging.Debug("Previous song above threshold, going to start...");
-      _playbackService.Resource?.Seek(TimeSpan.Zero);
+      SeekTo(TimeSpan.Zero);
     } else if (_currentPlaybackIndex > 0) {
       Logging.Debug("Previous song below threshold, going to previous...");
       await ChangeTrack(_currentPlaybackIndex - 1);
@@ -240,6 +240,28 @@ public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
       Logging.Debug($"Reached the end of the queue, stopping playback.");
       Stop();
     }
+  }
+
+  /// <inheritdoc/>
+  public void SeekTo(TimeSpan position) {
+    if (_playbackService.Resource is not { } playback) {
+      Logging.Debug("Can't seek, no current song (no playback resource)");
+      return;
+    }
+    ArgumentOutOfRangeException.ThrowIfGreaterThan(position, Duration);
+    playback.Seek(position);
+  }
+
+  /// <inheritdoc/>
+  public void SeekForward(TimeSpan duration) {
+    var targetPosition = CurrentTime + duration;
+    SeekTo(targetPosition > Duration ? Duration : targetPosition);
+  }
+
+  /// <inheritdoc/>
+  public void SeekBackward(TimeSpan duration) {
+    var targetPosition = CurrentTime - duration;
+    SeekTo(targetPosition < TimeSpan.Zero ? TimeSpan.Zero : targetPosition);
   }
 
   /// <inheritdoc/>

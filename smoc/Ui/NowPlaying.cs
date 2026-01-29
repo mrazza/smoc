@@ -24,6 +24,8 @@ public sealed class NowPlaying : View {
 
   private static readonly Key _previousKey = new(',');
   private static readonly Key _nextKey = new('.');
+  private static readonly Key _seekBackwardKey = new('[');
+  private static readonly Key _seekForwardKey = new(']');
 
   private readonly IMainWindow _mainWindow;
   private readonly IPlaybackQueueService _playbackQueueService;
@@ -122,6 +124,8 @@ public sealed class NowPlaying : View {
     HotKeyBindings.Add(Key.Space.WithCtrl, this, Command.HotKey);
     HotKeyBindings.Add(_previousKey, this, Command.HotKey);
     HotKeyBindings.Add(_nextKey, this, Command.HotKey);
+    HotKeyBindings.Add(_seekBackwardKey, this, Command.HotKey);
+    HotKeyBindings.Add(_seekForwardKey, this, Command.HotKey);
   }
 
   protected override void Dispose(bool disposing) {
@@ -141,6 +145,10 @@ public sealed class NowPlaying : View {
         _ = _playbackQueueService.PreviousTrack();
       } else if (pressedKey == _nextKey) {
         _ = _playbackQueueService.NextTrack();
+      } else if (pressedKey == _seekBackwardKey) {
+        _playbackQueueService.SeekBackward(TimeSpan.FromSeconds(10));
+      } else if (pressedKey == _seekForwardKey) {
+        _playbackQueueService.SeekForward(TimeSpan.FromSeconds(10));
       }
     }
     return true;

@@ -79,6 +79,26 @@ public class NowPlayingTest {
   }
 
   [Fact]
+  public void SeekForwardHotKey_SeeksForward() {
+    using var context = NewContext();
+    var nowPlaying = NewNowPlaying();
+    _mockPlaybackQueue.Setup((ps) => ps.SeekForward(It.IsAny<TimeSpan>())).Verifiable(Times.Once());
+    context.Add(nowPlaying)
+        .KeyDown(new Key(']'));
+    _mockPlaybackQueue.Verify();
+  }
+
+  [Fact]
+  public void SeekBackwardHotKey_SeeksBackward() {
+    using var context = NewContext();
+    var nowPlaying = NewNowPlaying();
+    _mockPlaybackQueue.Setup((ps) => ps.SeekBackward(It.IsAny<TimeSpan>())).Verifiable(Times.Once());
+    context.Add(nowPlaying)
+        .KeyDown(new Key('['));
+    _mockPlaybackQueue.Verify();
+  }
+
+  [Fact]
   public void InitialState_ShowsEmpty() {
     using var context = NewNowPlayingContext();
     _screenshotDiffer.AssertEqualsGolden(context);
