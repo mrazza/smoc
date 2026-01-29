@@ -60,4 +60,10 @@ public interface IPlaybackService : IDisposable {
   /// Stops playback (resets position).
   /// </summary>
   void Stop();
+
+  /// <summary>
+  /// Seeks to a specific position in the song.
+  /// </summary>
+  /// <param name="position">The position to seek to.</param>
+  void Seek(TimeSpan position);
 }

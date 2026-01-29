@@ -215,6 +215,34 @@ public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
   }
 
   /// <inheritdoc/>
+  public async Task PreviousTrack(bool skipIgnoreThreshold = false, TimeSpan? skipThreshold = null) {
+    if (!skipIgnoreThreshold && CurrentTime > (skipThreshold ?? TimeSpan.FromSeconds(10))) {
+      Logging.Debug("Previous song above threshold, going to start...");
+      _playbackService.Resource?.Seek(TimeSpan.Zero);
+    } else if (_currentPlaybackIndex > 0) {
+      Logging.Debug("Previous song below threshold, going to previous...");
+      await ChangeTrack(_currentPlaybackIndex - 1);
+      await Play();
+    } else {
+      Logging.Debug("Previous song below threshold, no previous song, stopping playback...");
+      Stop();
+    }
+  }
+
+  /// <inheritdoc/>
+  public async Task NextTrack() {
+    Logging.Debug($"Playing next song...");
+    if (_currentPlaybackIndex + 1 < _playbackQueue.Count) {
+      Logging.Debug($"Playing next song...");
+      await ChangeTrack(_currentPlaybackIndex + 1);
+      await Play();
+    } else {
+      Logging.Debug($"Reached the end of the queue, stopping playback.");
+      Stop();
+    }
+  }
+
+  /// <inheritdoc/>
   public void Dispose() {
     _playbackCts.Dispose();
     _playbackService.Dispose();
@@ -223,14 +251,7 @@ public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
 
   private async void OnSongEnded(object? sender, EventArgs e) {
     Logging.Debug($"Playback ended for {CurrentSong?.Title} ({CurrentSong?.Id}).");
-
-    if (_currentPlaybackIndex + 1 < _playbackQueue.Count) {
-      Logging.Debug($"Playing next song...");
-      await ChangeTrack(_currentPlaybackIndex + 1);
-      await Play();
-    } else {
-      Logging.Debug($"Reached the end of the queue, stopping playback.");
-    }
+    await NextTrack();
   }
 
   private void OnPositionChanged(object? sender, TimeSpan e) {

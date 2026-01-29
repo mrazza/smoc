@@ -99,6 +99,11 @@ public sealed class SoundFlowPlaybackService : IPlaybackService {
   }
 
   /// <inheritdoc/>
+  public void Seek(TimeSpan position) {
+    _soundPlayer.Seek(position);
+  }
+
+  /// <inheritdoc/>
   public void Dispose() {
     _playbackDevice.MasterMixer.RemoveComponent(_soundPlayer);
     _soundPlayer.Dispose();

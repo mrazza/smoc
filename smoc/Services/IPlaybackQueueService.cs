@@ -120,4 +120,16 @@ public interface IPlaybackQueueService : IDisposable {
   /// Stops playback and resets the playback state to Stopped.
   /// </summary>
   void Stop();
+
+  /// <summary>
+  /// Skips to the previous track in the queue or restarts the current track if the skip threshold is not met.
+  /// </summary>
+  /// <param name="skipIgnoreThreshold">If true, the skip threshold is ignored.</param>
+  /// <param name="skipThreshold">The threshold to skip to the previous track; if unset, defaults to 10 seconds.</param>
+  Task PreviousTrack(bool skipIgnoreThreshold = false, TimeSpan? skipThreshold = null);
+
+  /// <summary>
+  /// Skips to the next track in the queue.
+  /// </summary>
+  Task NextTrack();
 }
