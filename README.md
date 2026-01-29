@@ -59,10 +59,10 @@ Commits follow the [Conventional Commits](https://www.conventionalcommits.org/en
 - [ ] Playback
   - [x] Play
   - [x] Pause
-  - [ ] Stop
-  - [ ] Skip
-  - [ ] Previous
-  - [ ] Start Over
+  - [x] Stop
+  - [x] Skip
+  - [x] Previous
+  - [x] Start Over
   - [ ] Repeat Track
   - [x] Volume
   - [ ] Playback Device Selection
