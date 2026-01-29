@@ -49,6 +49,16 @@ public class NowPlayingTest {
   }
 
   [Fact]
+  public void StopHotKey_StopsMusic() {
+    using var context = NewContext();
+    var nowPlaying = NewNowPlaying();
+    _mockPlaybackQueue.Setup((ps) => ps.Stop()).Verifiable(Times.Once());
+    context.Add(nowPlaying)
+        .KeyDown(Key.Space.WithCtrl);
+    _mockPlaybackQueue.Verify();
+  }
+
+  [Fact]
   public void InitialState_ShowsEmpty() {
     using var context = NewNowPlayingContext();
     _screenshotDiffer.AssertEqualsGolden(context);
