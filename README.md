@@ -25,6 +25,15 @@ SMoC operates via a vim-style command bar. Switching between views and performin
 - `:v/<volume>`: Change volume to the specified value
 - `:q`: Quit
 
+## Playback Hotkeys
+Playback can be controlled via the following hotkeys:
+- `space`: Play/Pause
+- `ctrl+space`: Stop
+- `,` (comma): Previous Track (or restart track if > 10 seconds into song)
+- `.` (period): Next Track
+- `[`: Seek backward 10 seconds
+- `]`: Seek forward 10 seconds
+
 ## Browsing and Tables
 Browsing elements in a table can be done with either directional arrow keys (`up`, `down`, `left`, `right`) or vim bindings (`h`, `j`, `k`, `l`). The current active table can be changed by either navigating left and right or pressing tab. Actions can be performed on the currently selected element by either pressing an action shortcut (below) or pressing `enter` which will bring up a context-specific action pop-over.
 
