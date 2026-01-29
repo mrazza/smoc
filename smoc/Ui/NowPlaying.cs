@@ -115,6 +115,7 @@ public sealed class NowPlaying : View {
     commandService.RegisterCommand("v", OnSetVolumeCommand);
     AddCommand(Command.HotKey, OnHotKey);
     HotKeyBindings.Add(Key.Space, this, Command.HotKey);
+    HotKeyBindings.Add(Key.Space.WithCtrl, this, Command.HotKey);
   }
 
   protected override void Dispose(bool disposing) {
@@ -125,7 +126,13 @@ public sealed class NowPlaying : View {
   }
 
   private bool? OnHotKey(ICommandContext? ctx) {
-    _ = _playbackQueueService.PlayPause();
+    if (ctx?.Binding is KeyBinding keyBinding && keyBinding.Key is Key pressedKey) {
+      if (pressedKey == Key.Space) {
+        _ = _playbackQueueService.PlayPause();
+      } else if (pressedKey == Key.Space.WithCtrl) {
+        _playbackQueueService.Stop();
+      }
+    }
     return true;
   }
 
