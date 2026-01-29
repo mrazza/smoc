@@ -132,4 +132,19 @@ public interface IPlaybackQueueService : IDisposable {
   /// Skips to the next track in the queue.
   /// </summary>
   Task NextTrack();
+
+  /// <summary>
+  /// Seeks to a specific position in the current track.
+  /// </summary>
+  void SeekTo(TimeSpan position);
+
+  /// <summary>
+  /// Seeks forward by a specified duration in the current track.
+  /// </summary>
+  void SeekForward(TimeSpan duration);
+
+  /// <summary>
+  /// Seeks backward by a specified duration in the current track.
+  /// </summary>
+  void SeekBackward(TimeSpan duration);
 }

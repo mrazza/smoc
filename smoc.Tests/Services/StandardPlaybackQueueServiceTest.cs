@@ -867,6 +867,93 @@ public class StandardPlaybackQueueServiceTest {
   }
 
   [Fact]
+  public void SeekTo_NoSong_DoesNothing() {
+    using var sut = NewStandardPlaybackQueue();
+    sut.SeekTo(TimeSpan.FromSeconds(30));
+    Assert.Equal(TimeSpan.Zero, sut.CurrentTime);
+  }
+
+  [Fact]
+  public async Task SeekTo_BeyondDuration_Throws() {
+    using var sut = NewStandardPlaybackQueue();
+    var song1 = EntityTestFactory.GenerateSong(id: "1", postfix: "1");
+    var fakePlayerService1 = new FakePlaybackService(song1);
+    _mockAudioService.Setup(a => a.MakePlaybackService(song1, It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+      .Returns(fakePlayerService1);
+    _mockStreamingClient.Setup(c => c.GetSongStreamAsync(song1.Id, It.IsAny<CancellationToken>()))
+      .ReturnsAsync(new SongStream(song1.Id, "m4a", new MemoryStream()));
+    sut.QueueNext([song1]);
+    await sut.Play();
+    var beforeTime = sut.CurrentTime;
+    Assert.Throws<ArgumentOutOfRangeException>(() => sut.SeekTo(sut.Duration + TimeSpan.FromSeconds(10)));
+    Assert.Equal(beforeTime, sut.CurrentTime);
+  }
+
+  [Fact]
+  public async Task SeekTo_NewTime_Seeks() {
+    using var sut = NewStandardPlaybackQueue();
+    var song1 = EntityTestFactory.GenerateSong(id: "1", postfix: "1");
+    var fakePlayerService1 = new FakePlaybackService(song1);
+    _mockAudioService.Setup(a => a.MakePlaybackService(song1, It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+      .Returns(fakePlayerService1);
+    _mockStreamingClient.Setup(c => c.GetSongStreamAsync(song1.Id, It.IsAny<CancellationToken>()))
+      .ReturnsAsync(new SongStream(song1.Id, "m4a", new MemoryStream()));
+    sut.QueueNext([song1]);
+    await sut.Play();
+    fakePlayerService1.SetCurrentTime(TimeSpan.Zero);
+    sut.SeekTo(TimeSpan.FromSeconds(30));
+    Assert.Equal(TimeSpan.FromSeconds(30), sut.CurrentTime);
+  }
+
+  [Fact]
+  public async Task SeekForward_Seeks() {
+    using var sut = NewStandardPlaybackQueue();
+    var song1 = EntityTestFactory.GenerateSong(id: "1", postfix: "1");
+    var fakePlayerService1 = new FakePlaybackService(song1);
+    _mockAudioService.Setup(a => a.MakePlaybackService(song1, It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+      .Returns(fakePlayerService1);
+    _mockStreamingClient.Setup(c => c.GetSongStreamAsync(song1.Id, It.IsAny<CancellationToken>()))
+      .ReturnsAsync(new SongStream(song1.Id, "m4a", new MemoryStream()));
+    sut.QueueNext([song1]);
+    await sut.Play();
+    fakePlayerService1.SetCurrentTime(TimeSpan.Zero);
+    sut.SeekForward(TimeSpan.FromSeconds(30));
+    Assert.Equal(TimeSpan.FromSeconds(30), sut.CurrentTime);
+  }
+
+  [Fact]
+  public async Task SeekForward_BeyondDuration_HitsCeiling() {
+    using var sut = NewStandardPlaybackQueue();
+    var song1 = EntityTestFactory.GenerateSong(id: "1", postfix: "1");
+    var fakePlayerService1 = new FakePlaybackService(song1);
+    _mockAudioService.Setup(a => a.MakePlaybackService(song1, It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+      .Returns(fakePlayerService1);
+    _mockStreamingClient.Setup(c => c.GetSongStreamAsync(song1.Id, It.IsAny<CancellationToken>()))
+      .ReturnsAsync(new SongStream(song1.Id, "m4a", new MemoryStream()));
+    sut.QueueNext([song1]);
+    await sut.Play();
+    fakePlayerService1.SetCurrentTime(fakePlayerService1.Duration - TimeSpan.FromSeconds(15));
+    sut.SeekForward(TimeSpan.FromSeconds(30));
+    Assert.Equal(fakePlayerService1.Duration, sut.CurrentTime);
+  }
+
+  [Fact]
+  public async Task SeekBackward_Seeks() {
+    using var sut = NewStandardPlaybackQueue();
+    var song1 = EntityTestFactory.GenerateSong(id: "1", postfix: "1");
+    var fakePlayerService1 = new FakePlaybackService(song1);
+    _mockAudioService.Setup(a => a.MakePlaybackService(song1, It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+      .Returns(fakePlayerService1);
+    _mockStreamingClient.Setup(c => c.GetSongStreamAsync(song1.Id, It.IsAny<CancellationToken>()))
+      .ReturnsAsync(new SongStream(song1.Id, "m4a", new MemoryStream()));
+    sut.QueueNext([song1]);
+    await sut.Play();
+    fakePlayerService1.SetCurrentTime(TimeSpan.FromMinutes(1));
+    sut.SeekBackward(TimeSpan.FromSeconds(30));
+    Assert.Equal(TimeSpan.FromSeconds(30), sut.CurrentTime);
+  }
+
+  [Fact]
   public async Task Dispose_DisposesPlayerService() {
     var song = EntityTestFactory.GenerateSong();
     var sut = NewStandardPlaybackQueue();
