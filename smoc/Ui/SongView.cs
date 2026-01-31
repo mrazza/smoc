@@ -22,6 +22,7 @@ public sealed class SongView : View {
   }
 
   private readonly IMainWindow _mainWindow;
+  private readonly CommandService _commandService;
   private readonly SongTable _songTable;
   private readonly SongContextMenu _songContextMenu;
   private readonly Label _songsLabel;
@@ -38,6 +39,7 @@ public sealed class SongView : View {
   /// <param name="playbackQueueService">The player service for playback options.</param>
   public SongView(IMainWindow mainWindow, CommandService commandService, IStreamingClient streamingClient, IPlaybackQueueService playbackQueueService) {
     _mainWindow = mainWindow;
+    _commandService = commandService;
     _streamingClient = streamingClient;
 
     Width = Dim.Fill();
@@ -51,21 +53,22 @@ public sealed class SongView : View {
     };
     _songTable = new SongTable(SongTableColumns.Artist | SongTableColumns.Album | SongTableColumns.Song | SongTableColumns.Length) {
       Width = Dim.Fill(),
-      Height = Dim.Fill()
+      Height = Dim.Fill(),
+      BorderStyle = LineStyle.Single
     };
     _songTable.Style.ShowHeaders = false;
-    _songTable.BorderStyle = LineStyle.Single;
     _songTable.SongSelected += OnSongSelected;
     _songContextMenu = new SongContextMenu(playbackQueueService, _songTable);
 
     Add(_songTable, _songsLabel, _songContextMenu);
 
-    commandService.RegisterCommand("t", OnTrackSearchCommand);
+    _commandService.RegisterCommand("t", OnTrackSearchCommand);
   }
 
   protected override void Dispose(bool disposing) {
     CancelPendingSearches();
     _songTable.SongSelected -= OnSongSelected;
+    _commandService.UnregisterCommand("t");
     base.Dispose(disposing);
   }
 

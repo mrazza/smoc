@@ -28,6 +28,7 @@ public class PlaylistView : View {
   }
 
   private readonly IMainWindow _mainWindow;
+  private readonly CommandService _commandService;
   private readonly SongTable _songTable;
   private readonly Label _songsLabel;
   private readonly SongContextMenu _songContextMenu;
@@ -39,6 +40,7 @@ public class PlaylistView : View {
 
   public PlaylistView(IMainWindow mainWindow, CommandService commandService, IPlaybackQueueService playbackQueueService, IStreamingClient streamingClient) {
     _mainWindow = mainWindow;
+    _commandService = commandService;
     _streamingClient = streamingClient;
     _loadPlaylistCtsResource = new UniqueResource<CancellationTokenSource>((source) => source.Cancel());
     _searchCtsResource = new UniqueResource<CancellationTokenSource>((source) => source.Cancel());
@@ -47,13 +49,13 @@ public class PlaylistView : View {
     Height = Dim.Fill();
     CanFocus = true;
 
-    _searchResults = new SearchResultsList<SearchResultRow<Playlist>>() {
+    _searchResults = new SearchResultsList<SearchResultRow<Playlist>> {
       X = Pos.Absolute(0),
       Y = Pos.Absolute(0),
       Width = Dim.Absolute(30),
       Height = Dim.Fill(),
+      BorderStyle = LineStyle.Single
     };
-    _searchResults.BorderStyle = LineStyle.Single;
     _searchResults.SearchResultSelected += OnPlaylistSelected;
     _searchResultsLabel = new Label() {
       X = Pos.Absolute(1),
@@ -66,10 +68,10 @@ public class PlaylistView : View {
     _songTable = new SongTable(SongTableColumns.Artist | SongTableColumns.Album | SongTableColumns.Song | SongTableColumns.Length) {
       X = Pos.Right(_searchResults),
       Width = Dim.Fill(),
-      Height = Dim.Fill()
+      Height = Dim.Fill(),
+      BorderStyle = LineStyle.Single
     };
     _songTable.Style.ShowHeaders = false;
-    _songTable.BorderStyle = LineStyle.Single;
     _songTable.SongSelected += OnSongSelected;
     _songsLabel = new Label() {
       X = Pos.Right(_searchResults) + 1,
@@ -77,17 +79,23 @@ public class PlaylistView : View {
       Width = _songTable.Width - 2,
       TextAlignment = Alignment.Center
     };
-
     _songContextMenu = new SongContextMenu(playbackQueueService, _songTable);
-
-
     ResetSongsTable();
 
     Add(_searchResults, _searchResultsLabel, _songTable, _songsLabel, _songContextMenu);
 
-    commandService.RegisterCommand("p", OnPlaylistCommand);
-    commandService.RegisterCommand("likes", OnLikedPlaylistCommand);
-    commandService.RegisterCommand("url", OnUrlPlaylistCommand);
+    _commandService.RegisterCommand("p", OnPlaylistCommand);
+    _commandService.RegisterCommand("likes", OnLikedPlaylistCommand);
+    _commandService.RegisterCommand("url", OnUrlPlaylistCommand);
+  }
+
+  protected override void Dispose(bool disposing) {
+    _searchCtsResource.Dispose();
+    _loadPlaylistCtsResource.Dispose();
+    _commandService.UnregisterCommand("p");
+    _commandService.UnregisterCommand("likes");
+    _commandService.UnregisterCommand("url");
+    base.Dispose(disposing);
   }
 
   private async void OnUrlPlaylistCommand(string command, string args) {

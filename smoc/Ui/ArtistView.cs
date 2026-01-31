@@ -37,6 +37,7 @@ public sealed class ArtistView : View {
   private readonly Label _songsLabel;
 
   private readonly IMainWindow _mainWindow;
+  private readonly CommandService _commandService;
   private readonly IStreamingClient _streamingClient;
 
   private CancellationTokenSource? _searchCts;
@@ -51,6 +52,7 @@ public sealed class ArtistView : View {
   /// <param name="playbackQueueService">The playback queue service for playback options.</param>
   public ArtistView(IMainWindow mainWindow, CommandService commandService, IStreamingClient streamingClient, IPlaybackQueueService playbackQueueService) {
     _mainWindow = mainWindow;
+    _commandService = commandService;
     _streamingClient = streamingClient;
     Width = Dim.Fill();
     Height = Dim.Fill();
@@ -92,13 +94,14 @@ public sealed class ArtistView : View {
 
     Add(_searchResults, _songTable, _searchResultsLabel, _songsLabel, _songContextMenu);
 
-    commandService.RegisterCommand("a", OnArtistSearchCommand);
+    _commandService.RegisterCommand("a", OnArtistSearchCommand);
   }
 
   protected override void Dispose(bool disposing) {
     CancelPendingSearches();
     _searchResults.SearchResultSelected -= OnArtistSelected;
     _songTable.SongSelected -= OnSongSelected;
+    _commandService.UnregisterCommand("a");
     base.Dispose(disposing);
   }
 

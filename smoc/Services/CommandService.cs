@@ -20,11 +20,17 @@ public sealed class CommandService {
   /// <param name="handler">The handler to callback when the command is executed.</param>
   /// <exception cref="ArgumentException">Thrown if the command is already registered.</exception>
   public void RegisterCommand(string command, CommandHandler handler) {
-    if (commands.ContainsKey(command)) {
-      throw new ArgumentException("Command already registered");
-    }
+    if (commands.ContainsKey(command)) throw new ArgumentException("Command already registered");
 
     commands.Add(command, handler);
+  }
+
+  /// <summary>
+  /// Unregisters a command handler.
+  /// </summary>
+  /// <param name="command">The command name to unregister.</param>
+  public void UnregisterCommand(string command) {
+    if (!commands.Remove(command)) throw new ArgumentException("Command not registered");
   }
 
   /// <summary>

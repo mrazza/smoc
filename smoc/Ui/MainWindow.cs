@@ -119,8 +119,9 @@ public sealed class MainWindow : Runnable, IMainWindow {
   }
 
   protected override void Dispose(bool disposing) {
-    base.Dispose(disposing);
     _httpClient.Dispose();
+    _commandService.UnregisterCommand("q");
+    base.Dispose(disposing);
   }
 
   private bool? OnCommandLineHotKey(ICommandContext? context) {

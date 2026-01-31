@@ -29,6 +29,7 @@ public sealed class NowPlaying : View {
 
   private readonly IMainWindow _mainWindow;
   private readonly IPlaybackQueueService _playbackQueueService;
+  private readonly CommandService _commandService;
   private string? _albumArtUrl;
   private readonly SixelImageView _albumArtView;
   private readonly Label _songLabel;
@@ -49,6 +50,7 @@ public sealed class NowPlaying : View {
   public NowPlaying(IMainWindow mainWindow, IPlaybackQueueService playbackQueueService, CommandService commandService, HttpClient httpClient) {
     _mainWindow = mainWindow;
     _playbackQueueService = playbackQueueService;
+    _commandService = commandService;
     _httpClient = httpClient;
     _albumArtUrl = null;
     Width = Dim.Fill();
@@ -118,7 +120,7 @@ public sealed class NowPlaying : View {
     _playbackQueueService.PositionChanged += OnPositionChanged;
     _playbackQueueService.VolumeChanged += OnVolumeChanged;
 
-    commandService.RegisterCommand("v", OnSetVolumeCommand);
+    _commandService.RegisterCommand("v", OnSetVolumeCommand);
     AddCommand(Command.HotKey, OnHotKey);
     HotKeyBindings.Add(Key.Space, this, Command.HotKey);
     HotKeyBindings.Add(Key.Space.WithCtrl, this, Command.HotKey);
@@ -132,6 +134,7 @@ public sealed class NowPlaying : View {
     _playbackQueueService.SongChanged -= OnSongChanged;
     _playbackQueueService.PositionChanged -= OnPositionChanged;
     _playbackQueueService.VolumeChanged -= OnVolumeChanged;
+    _commandService.UnregisterCommand("v");
     base.Dispose(disposing);
   }
 

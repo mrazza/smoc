@@ -18,6 +18,7 @@ public sealed class PlayerView : View {
   private readonly Label _noSongsLabel;
   private readonly IPlaybackQueueService _playbackQueueService;
   private readonly IMainWindow _mainWindow;
+  private readonly CommandService _commandService;
 
   /// <summary>
   /// Initializes a new instance of the <see cref="PlayerView"/> class.
@@ -27,6 +28,7 @@ public sealed class PlayerView : View {
   /// <param name="playerService">The player service for managing the queue.</param>
   public PlayerView(IMainWindow mainWindow, CommandService commandService, IPlaybackQueueService playbackQueueService) {
     _mainWindow = mainWindow;
+    _commandService = commandService;
     _playbackQueueService = playbackQueueService;
     Width = Dim.Fill();
     Height = Dim.Fill();
@@ -46,7 +48,7 @@ public sealed class PlayerView : View {
 
     Add(_songTable, _noSongsLabel);
 
-    commandService.RegisterCommand("np", OnNowPlayingCommand);
+    _commandService.RegisterCommand("np", OnNowPlayingCommand);
 
     _playbackQueueService.QueueChanged += OnQueueChanged;
     _playbackQueueService.SongChanged += OnSongChanged;
@@ -58,6 +60,7 @@ public sealed class PlayerView : View {
     _playbackQueueService.QueueChanged -= OnQueueChanged;
     _playbackQueueService.SongChanged -= OnSongChanged;
     _songTable.SongSelected -= OnSongSelected;
+    _commandService.UnregisterCommand("np");
     base.Dispose(disposing);
   }
 
