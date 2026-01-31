@@ -199,6 +199,15 @@ This project is written in C# using the .NET 10 SDK. We're following the [Google
 Commits follow the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) specification with branches and PRs following [Conventional Branch](https://conventional-branch.github.io/).
 
 ### Planned Features
+- [ ] UI
+  - [x] Search Support
+  - [x] Command Bar
+  - [x] Song Table
+  - [x] Now Playing Bar
+  - [x] Album Art (Sixel)
+  - [x] Status Bar
+  - [ ] Visualizations
+  - [ ] Now Playing Screen
 - [ ] Playback
   - [x] Play
   - [x] Pause
