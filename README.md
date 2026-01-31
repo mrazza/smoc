@@ -59,6 +59,138 @@ It is recommended to do this in a new incognito/private window and immediately c
 ### PO Token and Visitor Data
 More recently, additional tokens are often needed. SMoC can generate these for you if you have provided a valid cookie in the `cookie.txt` file. Run `smoc --gentokens`; this will create a `tokens.json` file in the same config directory.
 
+## Configuration
+The configuration for SMoC shares the same directory as the aforementioned `cookie.txt` file. To override or change default configurations, create `~/.config/smoc/config.json`.
+
+### Themes
+You can change the theming of the SMoC via this `config.json` file. An example `config.json` file containing an example theme, based on the default SMoC theme (which itself is based on gruvbox), is below:
+```json
+{
+    "Theme": "gruvbox-custom",
+    "Themes": [
+        {
+            "gruvbox-custom": {
+                "Schemes": [
+                    {
+                        "Runnable": {
+                            "Normal": {
+                                "Foreground": "#ebdbb2",
+                                "Background": "#00000000"
+                            },
+                            "Focus": {
+                                "Foreground": "#ebdbb2",
+                                "Background": "#639494"
+                            },
+                            "Active": {
+                                "Foreground": "#ebdbb2",
+                                "Background": "#394e4e"
+                            }
+                        }
+                    },
+                    {
+                        "Base": {
+                            "Normal": {
+                                "Foreground": "#ebdbb2",
+                                "Background": "#00000000"
+                            }
+                        }
+                    },
+                    {
+                        "TableCurrentTrack": {
+                            "Normal": {
+                                "Foreground": "#ebdbb2",
+                                "Background": "#394e4e",
+                                "Style": "Bold"
+                            },
+                            "Focus": {
+                                "Foreground": "#ebdbb2",
+                                "Background": "#639494",
+                                "Style": "Bold"
+                            },
+                            "Active": {
+                                "Foreground": "#ebdbb2",
+                                "Background": "#394e4e",
+                                "Style": "Bold"
+                            }
+                        }
+                    },
+                    {
+                        "TableNormalTracks": {
+                            "Normal": {
+                                "Foreground": "#ebdbb2",
+                                "Background": "#00000000"
+                            },
+                            "Focus": {
+                                "Foreground": "#ebdbb2",
+                                "Background": "#639494"
+                            },
+                            "Active": {
+                                "Foreground": "#ebdbb2",
+                                "Background": "#394e4e"
+                            }
+                        }
+                    },
+                    {
+                        "Menu": {
+                            "Normal": {
+                                "Foreground": "#ebdbb2",
+                                "Background": "#3a3a3a"
+                            },
+                            "Focus": {
+                                "Foreground": "#ebdbb2",
+                                "Background": "#639494"
+                            },
+                            "Active": {
+                                "Foreground": "#ebdbb2",
+                                "Background": "#394e4e"
+                            }
+                        }
+                    },
+                    {
+                        "StatusBar": {
+                            "Normal": {
+                                "Foreground": "#949494",
+                                "Background": "#3a3a3a"
+                            }
+                        }
+                    },
+                    {
+                        "StatusBar_Mode": {
+                            "Normal": {
+                                "Foreground": "#262626",
+                                "Background": "#949494",
+                                "Style": "Bold"
+                            }
+                        }
+                    },
+                    {
+                        "CommandLine": {
+                            "Normal": {
+                                "Foreground": "#ebdbb2",
+                                "Background": "#00000000"
+                            },
+                            "Editable": {
+                                "Foreground": "#ebdbb2",
+                                "Background": "#00000000"
+                            }
+                        }
+                    },
+                    {
+                        "CommandLineError": {
+                            "Normal": {
+                                "Foreground": "#262626",
+                                "Background": "#d75f5f",
+                                "Style": "Bold"
+                            }
+                        }
+                    }
+                ]
+            }
+        }
+    ]
+}
+```
+
 ## Development
 SMoC is currently in active development. Please report any issues you may encounter.
 
