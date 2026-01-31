@@ -11,10 +11,10 @@ public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
   private readonly IMainWindow _mainWindow;
   private readonly IStreamingClient _streamingClient;
 
-  private UniqueResource<IPlaybackService> _playbackService;
+  private readonly UniqueResource<IPlaybackService> _playbackService;
   private readonly List<Song> _playbackQueue;
   private int _currentPlaybackIndex;
-  private UniqueResource<CancellationTokenSource> _playbackCts;
+  private readonly UniqueResource<CancellationTokenSource> _playbackCts;
 
   /// <inheritdoc/>
   public event EventHandler<float>? VolumeChanged;
@@ -75,11 +75,11 @@ public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
     _playbackQueue = [];
     _currentPlaybackIndex = 0;
     _playbackCts = new UniqueResource<CancellationTokenSource>((token) => token.Cancel());
-    _playbackService = new UniqueResource<IPlaybackService>(((service) => {
+    _playbackService = new UniqueResource<IPlaybackService>((service) => {
       service.PlaybackStateChanged -= OnPlaybackStateChanged;
       service.PositionChanged -= OnPositionChanged;
       service.SongEnded -= OnSongEnded;
-    }));
+    });
   }
 
   /// <inheritdoc/>
