@@ -87,6 +87,42 @@ public class PlaylistView : View {
 
     commandService.RegisterCommand("p", OnPlaylistCommand);
     commandService.RegisterCommand("likes", OnLikedPlaylistCommand);
+    commandService.RegisterCommand("url", OnUrlPlaylistCommand);
+  }
+
+  private async void OnUrlPlaylistCommand(string command, string args) {
+    _mainWindow.SetMode(Mode.Playlist);
+
+    if (args.Length == 0) {
+      return;
+    }
+
+    HideSearchResults();
+    ResetSongsTable(Messages.LOADING_SONGS);
+
+    _searchCtsResource.Resource?.Cancel();
+    var token = _loadPlaylistCtsResource.Replace(new CancellationTokenSource()).Token;
+
+    try {
+      var songs = await _streamingClient.GetPlaylistSongsFromUrlAsync(args, token);
+
+      token.ThrowIfCancellationRequested();
+
+      if (songs.Count == 0) {
+        ResetSongsTable();
+        return;
+      }
+
+      _songTable.SetSongs(songs);
+      _songTable.Style.ShowHeaders = true;
+      _songsLabel.Visible = false;
+    } catch (OperationCanceledException) {
+      Logging.Debug("Loading url playlist cancelled");
+    } catch (Exception ex) {
+      ResetSongsTable(Messages.SONG_LOAD_ERROR);
+      Logging.Error($"Error loading url: {ex.Message}");
+      _mainWindow.DisplayError("error loading url");
+    }
   }
 
   private void OnSongSelected(object? sender, List<Song> songs) {
