@@ -1,0 +1,22 @@
+PlaylistViewTest.UrlCommand_ValidUrl_ShowsSongs_0:
+┌──────────────────────────────────────────────────────────────────────────────────────────────────┐
+│Artist                        Album                         Track                         Length  │
+│Radiohead                     OK Computer                   UrlCommand_ValidUrl_ShowsSong 5:00    │
+│Radiohead                     OK Computer                   UrlCommand_ValidUrl_ShowsSong 5:00    │
+│Radiohead                     OK Computer                   UrlCommand_ValidUrl_ShowsSong 5:00    │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+└──────────────────────────────────────────────────────────────────────────────────────────────────┘
+

@@ -84,6 +84,21 @@ public interface IStreamingClient {
   Task<List<Song>> GetPlaylistSongsAsync(Playlist playlist, CancellationToken cancellationToken = default);
 
   /// <summary>
+  /// Retrieves songs from the specified URL.
+  /// </summary>
+  /// <remarks>
+  /// The results of this method should be interperted as a playlist by SMoC. However,
+  /// there is no requirement that the URL actually points to a playlist, rather some
+  /// collection of 1 or more songs.
+  /// 
+  /// This means the URL could be a playlist, an album, a song, or something else entirely.
+  /// </remarks>
+  /// <param name="url">The URL.</param>
+  /// <param name="cancellationToken">Optional cancellation token.</param>
+  /// <returns>A list of songs.</returns>
+  Task<List<Song>> GetPlaylistSongsFromUrlAsync(string url, CancellationToken cancellationToken = default);
+
+  /// <summary>
   /// Adds a song to the user's listen history.
   /// </summary>
   /// <param name="song">The song to add.</param>

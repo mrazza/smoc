@@ -157,6 +157,21 @@ public sealed class YtmStreamingClient : IStreamingClient {
     await _authedYtmClient.AddToWatchHistoryAsync(await _authedYtmClient.GetSongVideoInfoAsync(song.Id, cancellationToken), cancellationToken);
   }
 
+  /// <inheritdoc/>
+  public async Task<List<Song>> GetPlaylistSongsFromUrlAsync(string url, CancellationToken cancellationToken = default) {
+    if (_authedYtmClient is null)
+      throw new InvalidOperationException("No authed YTM client provided.");
+
+    var (entityType, id) = YtmUrlParser.ParseUrl(url);
+
+    return entityType switch {
+      _ when entityType == typeof(Song) => [await GetSongAsync(id, cancellationToken)],
+      _ when entityType == typeof(Playlist) => await GetPlaylistSongsAsync(new Playlist(id, ""), cancellationToken),
+      _ => throw new ArgumentException("Invalid URL.", nameof(url))
+    };
+
+  }
+
   /// <summary>
   /// Parses cookies from the specified cookie file.
   /// </summary>

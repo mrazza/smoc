@@ -1,3 +1,4 @@
+using JetBrains.Annotations;
 using Moq;
 using smoc.Tests.Fakes;
 using smoc.Tests.TestInfra;
@@ -318,4 +319,58 @@ public class PlaylistViewTest {
     context.WaitIteration();
     _screenshotDiffer.AssertEqualsGolden(context);
   }
+
+  [Fact]
+  public void UrlCommand_ValidUrl_ShowsSongs() {
+    using var context = NewPlaylistViewContext();
+    _mockStreamingClient.Setup(client => client.GetPlaylistSongsFromUrlAsync("http://best.music.ever/playlist", It.IsAny<CancellationToken>()))
+      .ReturnsAsync([EntityTestFactory.GenerateSong(), EntityTestFactory.GenerateSong(), EntityTestFactory.GenerateSong()]);
+    context.Then((_) => _commandService.ExecuteCommand("url/http://best.music.ever/playlist"));
+    _screenshotDiffer.AssertEqualsGolden(context);
+  }
+
+  [Fact]
+  public void UrlCommand_InvalidUrl_ShowsError() {
+    using var context = NewPlaylistViewContext();
+    context.Then((_) => _commandService.ExecuteCommand("url/invalid"));
+    _screenshotDiffer.AssertEqualsGolden(context);
+  }
+
+  [Fact]
+  public void UrlCommand_ValidUrl_NoSongs() {
+    using var context = NewPlaylistViewContext();
+    _mockStreamingClient.Setup(client => client.GetPlaylistSongsFromUrlAsync("http://best.music.ever/playlist", It.IsAny<CancellationToken>()))
+      .ReturnsAsync([]);
+    context.Then((_) => _commandService.ExecuteCommand("url/http://best.music.ever/playlist"));
+    _screenshotDiffer.AssertEqualsGolden(context);
+  }
+
+  [Fact]
+  public void UrlCommand_SetsMode() {
+    _fakeMainWindow.SetMode(Mode.Artist);
+    using var context = NewPlaylistViewContext();
+    Assert.NotEqual(Mode.Playlist, _fakeMainWindow.CurrentMode);
+    context.Then((_) => _commandService.ExecuteCommand("url"));
+    Assert.Equal(Mode.Playlist, _fakeMainWindow.CurrentMode);
+  }
+
+  [Fact]
+  public void UrlCommand_CancelsPreviousSearchCommand() {
+    using var context = NewPlaylistViewContext();
+    using var latch = new AsyncLatch(true);
+
+    _mockStreamingClient.Setup(client => client.SearchPlaylistsAsync("sick playlist", It.IsAny<CancellationToken>()))
+      .Returns(latch.GetWaiter().ContinueWith(_ => new List<Playlist>([new Playlist("123", "sick playlist")])));
+    context.Then((_) => _commandService.ExecuteCommand("p/sick playlist"));
+
+    var song = EntityTestFactory.GenerateSong(trackName: "sicker song", postfix: "_2");
+    _mockStreamingClient.Setup(client => client.GetPlaylistSongsFromUrlAsync("http://best.music.ever/playlist", It.IsAny<CancellationToken>()))
+      .ReturnsAsync([song]);
+    context.Then((_) => _commandService.ExecuteCommand("url/http://best.music.ever/playlist"));
+
+    latch.Release();
+    context.WaitIteration();
+    _screenshotDiffer.AssertEqualsGolden(context);
+  }
+
 }
