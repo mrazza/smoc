@@ -1,7 +1,4 @@
-using System.Buffers.Text;
 using System.Net;
-using System.Runtime.CompilerServices;
-using JetBrains.Annotations;
 using Moq;
 using Moq.Protected;
 using smoc.Tests.Fakes;

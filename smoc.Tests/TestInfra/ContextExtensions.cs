@@ -1,5 +1,3 @@
-using System.ComponentModel.Design;
-using Terminal.Gui.App;
 using Terminal.Gui.Configuration;
 using Terminal.Gui.Time;
 using Terminal.Gui.ViewBase;

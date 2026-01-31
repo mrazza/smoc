@@ -1,8 +1,6 @@
 using smoc.Tests.TestInfra;
 using Smoc.Ui;
-using Terminal.Gui.Configuration;
 using Terminal.Gui.Input;
-using Terminal.Gui.Time;
 using Terminal.Gui.Views;
 using TerminalGuiFluentTesting;
 

@@ -1,4 +1,3 @@
-using System.CommandLine.Completions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 
