@@ -1,5 +1,4 @@
 using Smoc.Ui;
-using Smoc.Ui.Components;
 using Smoc.Ui.Models;
 using Terminal.Gui.App;
 

@@ -1,13 +1,9 @@
-using System.Diagnostics.Contracts;
-using System.Threading.Tasks;
 using Moq;
 using smoc.Tests.Fakes;
 using smoc.Tests.TestInfra;
 using Smoc.Services;
 using Smoc.Services.Audio;
 using Smoc.Streaming;
-using SoundFlow.Editing;
-using SoundFlow.Providers;
 
 namespace smoc.Tests.Services;
 
@@ -951,6 +947,22 @@ public class StandardPlaybackQueueServiceTest {
     fakePlayerService1.SetCurrentTime(TimeSpan.FromMinutes(1));
     sut.SeekBackward(TimeSpan.FromSeconds(30));
     Assert.Equal(TimeSpan.FromSeconds(30), sut.CurrentTime);
+  }
+
+  [Fact]
+  public async Task SeekBackward_BeyondStart_HitsFloor() {
+    using var sut = NewStandardPlaybackQueue();
+    var song1 = EntityTestFactory.GenerateSong(id: "1", postfix: "1");
+    var fakePlayerService1 = new FakePlaybackService(song1);
+    _mockAudioService.Setup(a => a.MakePlaybackService(song1, It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+      .Returns(fakePlayerService1);
+    _mockStreamingClient.Setup(c => c.GetSongStreamAsync(song1.Id, It.IsAny<CancellationToken>()))
+      .ReturnsAsync(new SongStream(song1.Id, "m4a", new MemoryStream()));
+    sut.QueueNext([song1]);
+    await sut.Play();
+    fakePlayerService1.SetCurrentTime(TimeSpan.FromSeconds(30));
+    sut.SeekBackward(TimeSpan.FromSeconds(60));
+    Assert.Equal(TimeSpan.Zero, sut.CurrentTime);
   }
 
   [Fact]

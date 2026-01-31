@@ -1,5 +1,4 @@
 using System.Drawing;
-using System.Runtime.CompilerServices;
 using smoc.Tests.TestInfra;
 using Smoc.Streaming;
 using Smoc.Ui.Components;

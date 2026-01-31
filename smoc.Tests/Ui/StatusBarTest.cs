@@ -2,7 +2,6 @@ using Moq;
 using smoc.Tests.TestInfra;
 using Smoc.Services;
 using Smoc.Streaming;
-using Terminal.Gui.Configuration;
 using Terminal.Gui.Views;
 using TerminalGuiFluentTesting;
 using StatusBar = Smoc.Ui.StatusBar;

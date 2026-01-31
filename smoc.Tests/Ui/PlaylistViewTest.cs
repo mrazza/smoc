@@ -1,4 +1,3 @@
-using JetBrains.Annotations;
 using Moq;
 using smoc.Tests.Fakes;
 using smoc.Tests.TestInfra;
@@ -6,7 +5,6 @@ using Smoc.Services;
 using Smoc.Streaming;
 using Smoc.Ui;
 using Smoc.Ui.Models;
-using Terminal.Gui.Drivers;
 using Terminal.Gui.Input;
 using Terminal.Gui.Views;
 using TerminalGuiFluentTesting;

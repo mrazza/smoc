@@ -8,7 +8,6 @@ using TerminalGuiFluentTesting;
 using smoc.Tests.Fakes;
 using Terminal.Gui.Input;
 using smoc.Tests.TestInfra;
-using System.Runtime.InteropServices;
 using Xunit.Sdk;
 
 namespace smoc.Tests.Ui;

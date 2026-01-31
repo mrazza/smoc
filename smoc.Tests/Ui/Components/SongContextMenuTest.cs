@@ -1,7 +1,4 @@
-using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
-using Acornima.Ast;
-using Castle.Components.DictionaryAdapter.Xml;
 using Moq;
 using smoc.Tests.TestInfra;
 using Smoc.Services;
