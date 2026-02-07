@@ -1,4 +1,5 @@
 using System.Net;
+using Terminal.Gui.App;
 using YouTubeMusicAPI.Client;
 using YouTubeMusicAPI.Models.Info;
 using YouTubeMusicAPI.Models.Search;
@@ -214,7 +215,7 @@ public sealed class YtmStreamingClient : IStreamingClient {
   /// <param name="tokens">The generated tokens.</param>
   /// <returns>An initialized client.</returns>
   public static YtmStreamingClient Create(List<Cookie> cookies, YtmTokens tokens) {
-    return new YtmStreamingClient(new(cookies: cookies, poToken: tokens.PoToken, visitorData: tokens.VisitorData));
+    return new YtmStreamingClient(new(logger: Logging.Logger, cookies: cookies, poToken: tokens.PoToken, visitorData: tokens.VisitorData));
   }
 
   /// <summary>

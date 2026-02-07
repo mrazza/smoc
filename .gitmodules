@@ -1,3 +1,6 @@
 [submodule "Terminal.Gui"]
 	path = Terminal.Gui
 	url = https://github.com/mrazza/Terminal.Gui.git
+[submodule "YouTubeMusicAPI"]
+	path = YouTubeMusicAPI
+	url = https://github.com/mrazza/YouTubeMusicAPI
