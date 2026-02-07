@@ -3,4 +3,4 @@
 	url = https://github.com/mrazza/Terminal.Gui.git
 [submodule "YouTubeMusicAPI"]
 	path = YouTubeMusicAPI
-	url = https://github.com/mrazza/YouTubeMusicAPI
+	url = https://github.com/mrazza/YouTubeMusicAPI.git
