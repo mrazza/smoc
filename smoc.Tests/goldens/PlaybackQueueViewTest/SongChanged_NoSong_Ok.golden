@@ -1,14 +1,14 @@
-PlayerViewTest.SongChanged_HighlightsSong_0_ansi:
-[38;2;95;158;160m[48;2;54;69;79m┌──────────────────────────────────────────────────────────────────────────────────────────────────┐
-│Artist                        Album                         Track                         Length  │
-│Radiohead                     OK Computer                   SongChanged_HighlightsSong1   5:00    │
-│[38;2;0;0;0m[48;2;255;255;255m[1mRadiohead                     OK Computer                   SongChanged_HighlightsSong2   5:00    [38;2;95;158;160m[48;2;54;69;79m[22m│
+PlaybackQueueViewTest.SongChanged_NoSong_Ok_0:
+┌──────────────────────────────────────────────────────────────────────────────────────────────────┐
 │                                                                                                  │
 │                                                                                                  │
 │                                                                                                  │
 │                                                                                                  │
 │                                                                                                  │
 │                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                          queue is empty                                          │
 │                                                                                                  │
 │                                                                                                  │
 │                                                                                                  │
