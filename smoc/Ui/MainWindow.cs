@@ -18,7 +18,7 @@ public sealed class MainWindow : Runnable, IMainWindow {
   private readonly CommandLine _commandLine;
   private readonly StatusBar _statusBar;
   private readonly MainContent _mainContent;
-  private readonly NowPlaying _nowPlaying;
+  private readonly NowPlayingBar _nowPlayingBar;
   private readonly IPlaybackQueueService _playbackQueueService;
   private readonly CommandService _commandService;
   private readonly HttpClient _httpClient;
@@ -52,7 +52,7 @@ public sealed class MainWindow : Runnable, IMainWindow {
 
     _commandService = new CommandService();
     _httpClient = new HttpClient();
-    _nowPlaying = new NowPlaying(this, _playbackQueueService, _commandService, _httpClient);
+    _nowPlayingBar = new NowPlayingBar(this, _playbackQueueService, _commandService, _httpClient);
     _commandLine = new CommandLine() {
       Y = Pos.AnchorEnd()
     };
@@ -60,10 +60,10 @@ public sealed class MainWindow : Runnable, IMainWindow {
       Y = Pos.Top(_commandLine) - 1
     };
     _mainContent = new MainContent(this, _commandService, _playbackQueueService, streamingClient) {
-      Y = Pos.Bottom(_nowPlaying),
+      Y = Pos.Bottom(_nowPlayingBar),
       Height = Dim.Fill() - _statusBar.Height - _commandLine.Height
     };
-    Add(_nowPlaying, _mainContent, _statusBar, _commandLine);
+    Add(_nowPlayingBar, _mainContent, _statusBar, _commandLine);
 
     _commandService.RegisterCommand("q", (_, args) => {
       if (args.Length > 0) {

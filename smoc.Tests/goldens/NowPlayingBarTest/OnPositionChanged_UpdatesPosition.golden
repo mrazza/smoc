@@ -1,7 +1,7 @@
-NowPlayingTest.Volume_ShowsVolume_0:
+NowPlayingBarTest.OnPositionChanged_UpdatesPosition_0:
  ┌╌╌╌╌┐ no track                                                                                    
- ┆ ?? ┆ no artist                                                                       volume: 50% 
- └╌╌╌╌┘ --:--                                                                                 --:-- 
+ ┆ ?? ┆ no artist                                                                        volume: 0% 
+ └╌╌╌╌┘ 00:00                                                                                 05:00 
                                                                                                     
                                                                                                     
                                                                                                     

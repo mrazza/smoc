@@ -1,4 +1,4 @@
-NowPlayingTest.InitialState_ShowsEmpty_0:
+NowPlayingBarTest.InitialState_ShowsEmpty_0:
  ┌╌╌╌╌┐ no track                                                                                    
  ┆ ?? ┆ no artist                                                                        volume: 0% 
  └╌╌╌╌┘ --:--                                                                                 --:-- 
