@@ -10,7 +10,7 @@ namespace Smoc.Ui;
 /// </summary>
 public sealed class MainContent : View {
   private readonly ArtistView _artistView;
-  private readonly PlayerView _playerView;
+  private readonly PlaybackQueueView _playbackQueueView;
   private readonly SongView _songView;
   private readonly PlaylistView _playlistView;
 
@@ -32,7 +32,7 @@ public sealed class MainContent : View {
     _artistView = new ArtistView(mainWindow, commandService, streamingClient, playbackQueueService) {
       Visible = false
     };
-    _playerView = new PlayerView(mainWindow, commandService, playbackQueueService) {
+    _playbackQueueView = new PlaybackQueueView(mainWindow, commandService, playbackQueueService) {
       Visible = false
     };
     _songView = new SongView(mainWindow, commandService, streamingClient, playbackQueueService) {
@@ -41,7 +41,7 @@ public sealed class MainContent : View {
     _playlistView = new PlaylistView(mainWindow, commandService, playbackQueueService, streamingClient) {
       Visible = false
     };
-    Add(_artistView, _playerView, _songView, _playlistView);
+    Add(_artistView, _playbackQueueView, _songView, _playlistView);
   }
 
   /// <summary>
@@ -55,7 +55,7 @@ public sealed class MainContent : View {
     }
 
     _currentView = mode switch {
-      Mode.Player => _playerView,
+      Mode.Queue => _playbackQueueView,
       Mode.Artist => _artistView,
       Mode.Song => _songView,
       Mode.Playlist => _playlistView,

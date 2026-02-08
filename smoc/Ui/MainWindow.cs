@@ -93,7 +93,7 @@ public sealed class MainWindow : Runnable, IMainWindow {
     };
 
     _currentMode = null;
-    SetMode(Mode.Player);
+    SetMode(Mode.Queue);
     _mainContent.SetFocus();
   }
 

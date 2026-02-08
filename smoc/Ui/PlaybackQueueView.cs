@@ -13,7 +13,7 @@ using static Smoc.Ui.Components.SongTable;
 /// <summary>
 /// A view that displays the current playback queue in a table.
 /// </summary>
-public sealed class PlayerView : View {
+public sealed class PlaybackQueueView : View {
   private readonly SongTable _songTable;
   private readonly Label _noSongsLabel;
   private readonly IPlaybackQueueService _playbackQueueService;
@@ -21,12 +21,12 @@ public sealed class PlayerView : View {
   private readonly CommandService _commandService;
 
   /// <summary>
-  /// Initializes a new instance of the <see cref="PlayerView"/> class.
+  /// Initializes a new instance of the <see cref="PlaybackQueueView"/> class.
   /// </summary>
   /// <param name="mainWindow">The main window reference.</param>
   /// <param name="commandService">The command service.</param>
   /// <param name="playerService">The player service for managing the queue.</param>
-  public PlayerView(IMainWindow mainWindow, CommandService commandService, IPlaybackQueueService playbackQueueService) {
+  public PlaybackQueueView(IMainWindow mainWindow, CommandService commandService, IPlaybackQueueService playbackQueueService) {
     _mainWindow = mainWindow;
     _commandService = commandService;
     _playbackQueueService = playbackQueueService;
@@ -48,7 +48,7 @@ public sealed class PlayerView : View {
 
     Add(_songTable, _noSongsLabel);
 
-    _commandService.RegisterCommand("np", OnNowPlayingCommand);
+    _commandService.RegisterCommand("pq", OnQueueCommand);
 
     _playbackQueueService.QueueChanged += OnQueueChanged;
     _playbackQueueService.SongChanged += OnSongChanged;
@@ -60,7 +60,7 @@ public sealed class PlayerView : View {
     _playbackQueueService.QueueChanged -= OnQueueChanged;
     _playbackQueueService.SongChanged -= OnSongChanged;
     _songTable.SongSelected -= OnSongSelected;
-    _commandService.UnregisterCommand("np");
+    _commandService.UnregisterCommand("pq");
     base.Dispose(disposing);
   }
 
@@ -99,7 +99,7 @@ public sealed class PlayerView : View {
     }
   }
 
-  private void OnNowPlayingCommand(string command, string args) {
-    _mainWindow.SetMode(Mode.Player);
+  private void OnQueueCommand(string _, string __) {
+    _mainWindow.SetMode(Mode.Queue);
   }
 }

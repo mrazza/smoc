@@ -1,4 +1,4 @@
-PlayerViewTest.QueueChanged_WithNoSongs_UpdatesUi_0:
+MainContentTest.SetMode_Queue_ShowsQueue_0:
 ┌──────────────────────────────────────────────────────────────────────────────────────────────────┐
 │                                                                                                  │
 │                                                                                                  │

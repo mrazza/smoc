@@ -34,7 +34,7 @@ public class ArtistViewTest {
 
   [Fact]
   public void SearchCommand_ChangesModeToArtist() {
-    _fakeMainWindow.CurrentMode = Mode.Player;
+    _fakeMainWindow.CurrentMode = Mode.Queue;
     using var context = NewArtistViewContext();
 
     Assert.NotEqual(Mode.Artist, _fakeMainWindow.CurrentMode);
@@ -208,7 +208,7 @@ public class ArtistViewTest {
 
   [Fact]
   public void ArtistCommand_ChangesModeToArtist() {
-    _fakeMainWindow.CurrentMode = Mode.Player;
+    _fakeMainWindow.CurrentMode = Mode.Queue;
     using var context = NewArtistViewContext();
 
     Assert.NotEqual(Mode.Artist, _fakeMainWindow.CurrentMode);
@@ -246,7 +246,7 @@ public class ArtistViewTest {
     using var priorTextWriter = new StringWriter();
     context.ScreenShot("", priorTextWriter);
 
-    _fakeMainWindow.SetMode(Mode.Player);
+    _fakeMainWindow.SetMode(Mode.Queue);
     context.Then((_) => _commandService.ExecuteCommand("a"));
 
     Assert.Equal(Mode.Artist, _fakeMainWindow.CurrentMode);

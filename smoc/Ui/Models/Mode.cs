@@ -5,10 +5,10 @@ namespace Smoc.Ui.Models;
 /// </summary>
 public enum Mode {
   /// <summary>
-  /// The Now Playing / Player view.
+  /// The Playback Queue view.
   /// </summary>
-  [DisplayName("PLAYER")]
-  Player,
+  [DisplayName("QUEUE")]
+  Queue,
 
   /// <summary>
   /// The Artist detail view.

@@ -56,11 +56,11 @@ public class MainContentTest {
   }
 
   [Fact]
-  public void SetMode_Player_ShowsPlayer() {
+  public void SetMode_Queue_ShowsQueue() {
     using var context = NewContext();
     var mainContent = NewMainContent();
-    context.Add(mainContent).Then((_) => mainContent.SetMode(Mode.Player));
-    Assert.IsType<PlayerView>(mainContent.MostFocused);
+    context.Add(mainContent).Then((_) => mainContent.SetMode(Mode.Queue));
+    Assert.IsType<PlaybackQueueView>(mainContent.MostFocused);
     _screenshotDiffer.AssertEqualsGolden(context);
   }
 
@@ -68,7 +68,7 @@ public class MainContentTest {
   public void SetMode_ChangeMode_ShowsCorrectMode() {
     using var context = NewContext();
     var mainContent = NewMainContent();
-    context.Add(mainContent).Then((_) => mainContent.SetMode(Mode.Player)).Then((_) => mainContent.SetMode(Mode.Artist));
+    context.Add(mainContent).Then((_) => mainContent.SetMode(Mode.Queue)).Then((_) => mainContent.SetMode(Mode.Artist));
     _screenshotDiffer.AssertEqualsGolden(context);
   }
 
