@@ -15,7 +15,7 @@ namespace Smoc.Ui;
 /// <summary>
 /// A view that displays the currently playing track information, including album art, progress, and volume.
 /// </summary>
-public sealed class NowPlaying : View {
+public sealed class NowPlayingBar : View {
   private static class Messages {
     public const string NO_SONG = "no track";
     public const string NO_ARTIST = "no artist";
@@ -42,12 +42,12 @@ public sealed class NowPlaying : View {
   private CancellationTokenSource? _albumArtCancellationTokenSource;
 
   /// <summary>
-  /// Initializes a new instance of the <see cref="NowPlaying"/> class.
+  /// Initializes a new instance of the <see cref="NowPlayingBar"/> class.
   /// </summary>
   /// <param name="mainWindow">The main window reference.</param>
   /// <param name="playbackQueueService">The player service for playback information.</param>
   /// <param name="commandService">The command service for registering volume commands.</param>
-  public NowPlaying(IMainWindow mainWindow, IPlaybackQueueService playbackQueueService, CommandService commandService, HttpClient httpClient) {
+  public NowPlayingBar(IMainWindow mainWindow, IPlaybackQueueService playbackQueueService, CommandService commandService, HttpClient httpClient) {
     _mainWindow = mainWindow;
     _playbackQueueService = playbackQueueService;
     _commandService = commandService;

@@ -1,6 +1,6 @@
-NowPlayingTest.OnSongChanged_SongIsNull_UpdatesSongDetails_0:
- ┌╌╌╌╌┐ no track                                                                                    
- ┆ ?? ┆ no artist                                                                        volume: 0% 
+NowPlayingBarTest.OnSongChanged_UpdatesSongDetails_0:
+ ┌╌╌╌╌┐ OnSongChangedUpdatesSongDetails                                                             
+ ┆ ?? ┆ Radiohead                                                                        volume: 0% 
  └╌╌╌╌┘ --:--                                                                                 --:-- 
                                                                                                     
                                                                                                     

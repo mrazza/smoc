@@ -12,7 +12,7 @@ using TerminalGuiFluentTesting;
 
 namespace smoc.Tests.Ui;
 
-public class NowPlayingTest {
+public class NowPlayingBarTest {
   private readonly FakeMainWindow _fakeMainWindow;
   private readonly Mock<IPlaybackQueueService> _mockPlaybackQueue;
   private readonly Mock<HttpClientHandler> _mockHttpClientHandler;
@@ -20,7 +20,7 @@ public class NowPlayingTest {
   private readonly CommandService _commandService;
   private readonly ScreenshotDiffer _screenshotDiffer;
 
-  public NowPlayingTest(ITestOutputHelper output) {
+  public NowPlayingBarTest(ITestOutputHelper output) {
     _fakeMainWindow = new FakeMainWindow();
     _mockPlaybackQueue = new Mock<IPlaybackQueueService>();
     _commandService = new CommandService();
@@ -31,7 +31,7 @@ public class NowPlayingTest {
 
   private static TerminalGuiFluentTesting.TestContext NewContext() => With.A<Runnable>(100, 20, TestDriver.ANSI.ToString());
 
-  private NowPlaying NewNowPlaying() => new NowPlaying(_fakeMainWindow, _mockPlaybackQueue.Object, _commandService, _httpClient);
+  private NowPlayingBar NewNowPlaying() => new NowPlayingBar(_fakeMainWindow, _mockPlaybackQueue.Object, _commandService, _httpClient);
 
   private TerminalGuiFluentTesting.TestContext NewNowPlayingContext() => NewContext().Add(NewNowPlaying());
 
