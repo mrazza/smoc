@@ -23,7 +23,8 @@ SMoC operates via a vim-style command bar. Switching between views and performin
 - `:likes`: Switch to PLAYLIST mode and load the list of songs the user has liked
 - `:url`: Switch to PLAYLIST mode
 - `:url/<url>`: Switch to PLAYLIST mode and load the list of songs from the given URL
-- `:np`: Switch to the now playing mode (current playback queue)
+- `:pq`: Switch to the QUEUE mode which shows the current playback queue
+- `:np`: Switch to the NOW PLAYING mode which shows the currently playing song and album art
 - `:v/<volume>`: Change volume to the specified value
 - `:q`: Quit
 
@@ -207,7 +208,7 @@ Commits follow the [Conventional Commits](https://www.conventionalcommits.org/en
   - [x] Album Art (Sixel)
   - [x] Status Bar
   - [ ] Visualizations
-  - [ ] Now Playing Screen
+  - [x] Now Playing Screen
 - [ ] Playback
   - [x] Play
   - [x] Pause
