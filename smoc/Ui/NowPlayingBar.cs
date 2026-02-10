@@ -45,8 +45,9 @@ public sealed class NowPlayingBar : View {
   /// Initializes a new instance of the <see cref="NowPlayingBar"/> class.
   /// </summary>
   /// <param name="mainWindow">The main window reference.</param>
-  /// <param name="playbackQueueService">The player service for playback information.</param>
+  /// <param name="playbackQueueService">The playback queue service for playback information.</param>
   /// <param name="commandService">The command service for registering volume commands.</param>
+  /// <param name="httpClient">The HTTP client for downloading album art.</param>
   public NowPlayingBar(IMainWindow mainWindow, IPlaybackQueueService playbackQueueService, CommandService commandService, HttpClient httpClient) {
     _mainWindow = mainWindow;
     _playbackQueueService = playbackQueueService;

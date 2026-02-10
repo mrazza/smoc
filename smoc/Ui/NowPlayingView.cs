@@ -13,7 +13,7 @@ using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
 
 /// <summary>
-/// A view that displays the current playback queue in a table.
+/// A view that displays the currently playing track with album art and progress information.
 /// </summary>
 public sealed class NowPlayingView : View {
 
@@ -44,7 +44,8 @@ public sealed class NowPlayingView : View {
   /// </summary>
   /// <param name="mainWindow">The main window reference.</param>
   /// <param name="commandService">The command service.</param>
-  /// <param name="playerService">The player service for managing the queue.</param>
+  /// <param name="playbackQueueService">The playback queue service for managing the queue.</param>
+  /// <param name="httpClient">The HTTP client for downloading album art.</param>
   public NowPlayingView(IMainWindow mainWindow, CommandService commandService, IPlaybackQueueService playbackQueueService, HttpClient httpClient) {
     _mainWindow = mainWindow;
     _commandService = commandService;
