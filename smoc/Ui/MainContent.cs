@@ -13,6 +13,7 @@ public sealed class MainContent : View {
   private readonly PlaybackQueueView _playbackQueueView;
   private readonly SongView _songView;
   private readonly PlaylistView _playlistView;
+  private readonly NowPlayingView _nowPlayingView;
 
   private View? _currentView;
 
@@ -23,7 +24,7 @@ public sealed class MainContent : View {
   /// <param name="commandService">The command service.</param>
   /// <param name="playbackQueueService">The playback queue service.</param>
   /// <param name="streamingClient">The streaming client.</param>
-  public MainContent(IMainWindow mainWindow, CommandService commandService, IPlaybackQueueService playbackQueueService, IStreamingClient streamingClient) {
+  public MainContent(IMainWindow mainWindow, CommandService commandService, IPlaybackQueueService playbackQueueService, IStreamingClient streamingClient, HttpClient httpClient) {
     Width = Dim.Fill();
     Height = Dim.Fill();
     CanFocus = true;
@@ -41,7 +42,10 @@ public sealed class MainContent : View {
     _playlistView = new PlaylistView(mainWindow, commandService, playbackQueueService, streamingClient) {
       Visible = false
     };
-    Add(_artistView, _playbackQueueView, _songView, _playlistView);
+    _nowPlayingView = new NowPlayingView(mainWindow, commandService, playbackQueueService, httpClient) {
+      Visible = false
+    };
+    Add(_artistView, _playbackQueueView, _songView, _playlistView, _nowPlayingView);
   }
 
   /// <summary>
@@ -59,6 +63,7 @@ public sealed class MainContent : View {
       Mode.Artist => _artistView,
       Mode.Song => _songView,
       Mode.Playlist => _playlistView,
+      Mode.NowPlaying => _nowPlayingView,
       _ => throw new ArgumentException("Invalid mode"),
     };
     _currentView!.Visible = true;

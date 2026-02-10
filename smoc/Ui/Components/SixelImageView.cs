@@ -11,19 +11,17 @@ namespace Smoc.Ui.Components;
 /// A view that renders images using Sixel graphics sequences.
 /// </summary>
 public sealed class SixelImageView : View {
-  private SixelSupportDetector? _sixelSupportDetector;
-  private SixelSupportResult? _sixelSupportResult;
+  private readonly IMainWindow _mainWindow;
   private Image<Rgba32>? _image;
   private SixelToRender? _sixelToRender;
-  private readonly SixelEncoder _encoder;
 
   /// <summary>
   /// Initializes a new instance of the <see cref="SixelImageView"/> class.
   /// </summary>
   /// <param name="image">The initial image to display.</param>
-  public SixelImageView(Image<Rgba32>? image = null) {
+  public SixelImageView(IMainWindow mainWindow, Image<Rgba32>? image = null) {
+    _mainWindow = mainWindow;
     _image = image;
-    _encoder = new SixelEncoder();
   }
 
   /// <summary>
@@ -36,7 +34,6 @@ public sealed class SixelImageView : View {
 
     _image = null;
     _sixelToRender = null;
-    App!.Driver!.GetSixels().Clear();
     SetNeedsDraw();
   }
 
@@ -60,49 +57,35 @@ public sealed class SixelImageView : View {
   protected override bool OnDrawingContent(DrawContext? context) {
     base.OnDrawingContent(context);
 
-    if (_sixelSupportResult is not null && _sixelSupportResult.IsSupported && _sixelToRender is not null) {
-      if (!App!.Driver!.GetSixels().Contains(_sixelToRender)) {
-        App!.Driver!.GetSixels().Clear();
-        App!.Driver!.GetSixels().Enqueue(_sixelToRender);
-      }
-
-      context?.AddDrawnRectangle(RenderableArea);
-
+    if (_sixelToRender is not null) {
+      _mainWindow.SixelDriver.EnqueueSixel(_sixelToRender);
+      context?.AddDrawnRectangle(GetRenderableArea());
       return true;
-    } else {
-      if (_sixelSupportDetector is null) {
-        // We delay initialization of sixel support detector until it's needed and we
-        // have confidence the driver is accurate.
-        _sixelSupportDetector = new SixelSupportDetector(App!.Driver);
-        _sixelSupportDetector.Detect((result) => {
-          App!.Invoke(() => {
-            _sixelSupportResult = result;
-            UpdateSixelData();
-            SetNeedsDraw();
-          });
-        });
-      }
     }
 
     return false;
   }
 
-  private System.Drawing.Rectangle RenderableArea => new(
-      Frame.X + (Margin?.Thickness.Left ?? 0),
-      Frame.Y + (Margin?.Thickness.Top ?? 0),
-      Frame.Width - (Margin?.Thickness.Horizontal ?? 0),
-      Frame.Height - (Margin?.Thickness.Vertical ?? 0));
+  private System.Drawing.Rectangle GetRenderableArea() {
+    var frame = FrameToScreen();
+    return new(
+      frame.X + (Margin?.Thickness.Left ?? 0),
+      frame.Y + (Margin?.Thickness.Top ?? 0),
+      frame.Width - (Margin?.Thickness.Horizontal ?? 0),
+      frame.Height - (Margin?.Thickness.Vertical ?? 0));
+  }
 
   private void UpdateSixelData() {
-    if (_image is null || _sixelSupportResult is null) {
+    if (_image is null || !_mainWindow.SixelDriver.IsSupported) {
       return;
     }
 
+    var boundsRect = GetRenderableArea();
     var resizedImage = _image.Clone(
-        i => i.Resize(RenderableArea.Width * _sixelSupportResult!.Resolution.Width, RenderableArea.Height * _sixelSupportResult!.Resolution.Height));
+        i => i.Resize(boundsRect.Width * _mainWindow.SixelDriver.Resolution!.Value.Width, boundsRect.Height * _mainWindow.SixelDriver.Resolution!.Value.Height));
     _sixelToRender = new SixelToRender() {
-      SixelData = _encoder.EncodeSixel(ConvertToColorArray(resizedImage)),
-      ScreenPosition = new System.Drawing.Point(RenderableArea.X, RenderableArea.Y)
+      SixelData = _mainWindow.SixelDriver.EncodeSixel(ConvertToColorArray(resizedImage)),
+      ScreenPosition = new System.Drawing.Point(boundsRect.X, boundsRect.Y)
     };
   }
 

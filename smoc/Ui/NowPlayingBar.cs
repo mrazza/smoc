@@ -58,11 +58,14 @@ public sealed class NowPlayingBar : View {
     Padding!.Thickness = new Thickness(0, 0, 1, 0);
     CanFocus = false;
 
-    _albumArtView = new SixelImageView() {
+    _albumArtView = new SixelImageView(_mainWindow) {
       X = Pos.Absolute(1),
       Y = Pos.Absolute(0),
-      Width = Dim.Absolute(7),
       Height = Dim.Fill(),
+      Width = Dim.Func((view) => {
+        int height = view!.Frame.Height;
+        return (int)Math.Round(height * _mainWindow.SixelDriver.CellAspectRatio);
+      }, this) + 1,
       BorderStyle = LineStyle.Dashed,
       TextAlignment = Alignment.Center,
       Text = "??"
@@ -197,15 +200,15 @@ public sealed class NowPlayingBar : View {
     _artistLabel.Text = song.Artist.Name;
 
     // Only bother downloading the album art if it has changed.
-    if (song.Album.ThumbnailUrl is null || song.Album.ThumbnailUrl.Length == 0) {
+    if (song.Album.SmallThumbnailUrl is null || song.Album.SmallThumbnailUrl.Length == 0) {
       _albumArtView.ClearImage();
-    } else if (_albumArtUrl != song.Album.ThumbnailUrl) {
-      _albumArtUrl = song.Album.ThumbnailUrl;
+    } else if (_albumArtUrl != song.Album.SmallThumbnailUrl) {
+      _albumArtUrl = song.Album.SmallThumbnailUrl;
       _albumArtCancellationTokenSource?.Cancel();
       _albumArtCancellationTokenSource = new CancellationTokenSource();
       var token = _albumArtCancellationTokenSource.Token;
       try {
-        var albumResponse = await _httpClient.GetAsync(song.Album.ThumbnailUrl, token);
+        var albumResponse = await _httpClient.GetAsync(song.Album.SmallThumbnailUrl, token);
         var image = Image.Load<Rgba32>(albumResponse.Content.ReadAsStream());
         Logging.Debug($"Album art loaded: {song.Title}");
         token.ThrowIfCancellationRequested();
@@ -223,6 +226,7 @@ public sealed class NowPlayingBar : View {
     _artistLabel.Text = Messages.NO_ARTIST;
     _positionLabel.Text = "--:--";
     _durationLabel.Text = "--:--";
+    _albumArtView.ClearImage();
     _volumeLabel.Text = string.Format(Messages.VOLUME, (int)Math.Round(_playbackQueueService.Volume * 100));
     _progressBar.Fraction = 0.0f;
   }

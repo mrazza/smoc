@@ -38,7 +38,8 @@ public sealed class YtmStreamingClient : IStreamingClient {
                 r.Album!.Id!,
                 new Artist(r.Artists.First().Id!, r.Artists.First().Name),
                 r.Album.Name,
-                ThumbnailUrl: r.Thumbnails.OrderBy(t => t.Height).Select(t => t.Url).FirstOrDefault()),
+                SmallThumbnailUrl: r.Thumbnails.OrderBy(t => t.Height).Select(t => t.Url).FirstOrDefault(),
+                LargeThumbnailUrl: r.Thumbnails.OrderByDescending(t => t.Height).Select(t => t.Url).FirstOrDefault()),
             r.Name,
             r.Duration)).ToList();
   }
@@ -54,7 +55,8 @@ public sealed class YtmStreamingClient : IStreamingClient {
             new Artist(albumInfo.Artists.First().Id!, albumInfo.Artists.First().Name),
             albumInfo.Name,
             albumInfo.ReleaseYear,
-            albumInfo.Thumbnails.OrderBy(t => t.Height).Select(t => t.Url).FirstOrDefault()),
+            SmallThumbnailUrl: albumInfo.Thumbnails.OrderBy(t => t.Height).Select(t => t.Url).FirstOrDefault(),
+            LargeThumbnailUrl: albumInfo.Thumbnails.OrderByDescending(t => t.Height).Select(t => t.Url).FirstOrDefault()),
         songInfo.Name,
         songInfo.Duration);
   }
@@ -73,7 +75,8 @@ public sealed class YtmStreamingClient : IStreamingClient {
         artist,
         s.Name,
         s.ReleaseYear,
-        s.Thumbnails.OrderBy(t => t.Height).Select(t => t.Url).FirstOrDefault())).ToList();
+        SmallThumbnailUrl: s.Thumbnails.OrderBy(t => t.Height).Select(t => t.Url).FirstOrDefault(),
+        LargeThumbnailUrl: s.Thumbnails.OrderByDescending(t => t.Height).Select(t => t.Url).FirstOrDefault())).ToList();
   }
 
   /// <inheritdoc/>
@@ -110,7 +113,8 @@ public sealed class YtmStreamingClient : IStreamingClient {
             s.Album!.Id!,
             new Artist(s.Artists.First().Id!, s.Artists.First().Name),
             s.Album.Name,
-            ThumbnailUrl: s.Thumbnails.OrderBy(t => t.Height).Select(t => t.Url).FirstOrDefault()),
+            SmallThumbnailUrl: s.Thumbnails.OrderBy(t => t.Height).Select(t => t.Url).FirstOrDefault(),
+            LargeThumbnailUrl: s.Thumbnails.OrderByDescending(t => t.Height).Select(t => t.Url).FirstOrDefault()),
           s.Name,
           s.Duration)).ToList();
   }
@@ -145,7 +149,8 @@ public sealed class YtmStreamingClient : IStreamingClient {
             s.Album!.Id!,
             new Artist(s.Artists.First().Id!, s.Artists.First().Name),
             s.Album.Name,
-            ThumbnailUrl: s.Thumbnails.OrderBy(t => t.Height).Select(t => t.Url).FirstOrDefault()),
+            SmallThumbnailUrl: s.Thumbnails.OrderBy(t => t.Height).Select(t => t.Url).FirstOrDefault(),
+            LargeThumbnailUrl: s.Thumbnails.OrderByDescending(t => t.Height).Select(t => t.Url).FirstOrDefault()),
           s.Name,
           s.Duration)).ToList();
   }

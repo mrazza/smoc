@@ -1,3 +1,4 @@
+using Smoc.Ui.Drawing;
 using Smoc.Ui.Models;
 using Terminal.Gui.App;
 
@@ -11,6 +12,11 @@ public interface IMainWindow {
   /// Gets the application instance.
   /// </summary>
   IApplication? App { get; }
+
+  /// <summary>
+  /// Gets the sixel driver.
+  /// </summary>
+  ISixelDriver SixelDriver { get; }
 
   /// <summary>
   /// Changes the application's current mode (view).
