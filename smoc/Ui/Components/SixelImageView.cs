@@ -18,6 +18,7 @@ public sealed class SixelImageView : View {
   /// <summary>
   /// Initializes a new instance of the <see cref="SixelImageView"/> class.
   /// </summary>
+  /// <param name="mainWindow">The main window.</param>
   /// <param name="image">The initial image to display.</param>
   public SixelImageView(IMainWindow mainWindow, Image<Rgba32>? image = null) {
     _mainWindow = mainWindow;
@@ -92,11 +93,11 @@ public sealed class SixelImageView : View {
   private static Color[,] ConvertToColorArray(Image<Rgba32> image) {
     int width = image.Width;
     int height = image.Height;
-    Color[,] colors = new Color[width, height];
+    var colors = new Color[width, height];
 
     for (var x = 0; x < width; x++) {
       for (var y = 0; y < height; y++) {
-        Rgba32 pixel = image[x, y];
+        var pixel = image[x, y];
         colors[x, y] = new(pixel.R, pixel.G, pixel.B);
       }
     }

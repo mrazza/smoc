@@ -6,6 +6,9 @@ using Terminal.Gui.App;
 using Terminal.Gui.Drawing;
 using Color = Terminal.Gui.Drawing.Color;
 
+/// <summary>
+/// Standard implementation of <see cref="ISixelDriver"/>.
+/// </summary>
 public sealed class SixelDriver : ISixelDriver {
   private SixelSupportDetector? _sixelSupportDetector;
   private SixelSupportResult? _sixelSupportResult;
@@ -13,26 +16,31 @@ public sealed class SixelDriver : ISixelDriver {
   private readonly IApplication _app;
   private readonly ConcurrentQueue<Action<SixelDriver>> _sixelInitQueue = new();
 
-  /// <summary>
-  /// Gets the aspect ratio (height/width) of terminal character cells in pixels.
-  /// Returns 2.0 as a default if not yet detected.
-  /// </summary>
+  /// <inheritdoc/>
   public double CellAspectRatio =>
       _sixelSupportResult?.Resolution.Height / (double?)_sixelSupportResult?.Resolution.Width ?? 2.0;
 
+  /// <inheritdoc/>
   public bool IsSupported => _sixelSupportResult?.IsSupported ?? false;
 
+  /// <inheritdoc/>
   public Size? Resolution => _sixelSupportResult?.Resolution;
 
+  /// <summary>
+  /// Initializes a new instance of the <see cref="SixelDriver"/> class.
+  /// </summary>
+  /// <param name="app">The application instance to use when rendering.</param>
   public SixelDriver(IApplication app) {
     _encoder = new SixelEncoder();
     _app = app;
   }
 
+  /// <inheritdoc/>
   public void Initialize() {
     EnsureInitialized();
   }
 
+  /// <inheritdoc/>
   public void EnqueueSixel(SixelToRender sixelToRender) {
     if (_sixelSupportResult is null) {
       _sixelInitQueue.Enqueue((driver) => driver.EnqueueSixel(sixelToRender));
@@ -44,6 +52,7 @@ public sealed class SixelDriver : ISixelDriver {
     }
   }
 
+  /// <inheritdoc/>
   public string EncodeSixel(Color[,] colors) {
     return _encoder.EncodeSixel(colors);
   }
