@@ -5,6 +5,7 @@ using Smoc.Configuration;
 using Smoc.Streaming;
 using Smoc.Streaming.YouTubeMusic;
 using Smoc.Ui;
+using Smoc.Ui.Drawing;
 using Terminal.Gui.App;
 using Terminal.Gui.Configuration;
 
@@ -54,7 +55,9 @@ public static class Program {
       application.Mouse.IsMouseDisabled = true;
       VimKeyBindings.AddNavigationKeyBindings(application.Keyboard.KeyBindings);
       IStreamingClient streamingClient = CreateStreamingClient();
-      using var window = new MainWindow(streamingClient);
+      var sixelDriver = new SixelDriver(application);
+      sixelDriver.Initialize();
+      using var window = new MainWindow(streamingClient, sixelDriver);
       try {
         application.Run(window, (e) => {
           Logging.Error(e.ToString());

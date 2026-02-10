@@ -4,6 +4,7 @@ using Smoc.Services;
 using Smoc.Services.Audio.SoundFlow;
 using Smoc.Services.Streaming;
 using Smoc.Streaming;
+using Smoc.Ui.Drawing;
 using Smoc.Ui.Models;
 using Terminal.Gui.Input;
 using Terminal.Gui.ViewBase;
@@ -23,20 +24,25 @@ public sealed class MainWindow : Runnable, IMainWindow {
   private readonly CommandService _commandService;
   private readonly HttpClient _httpClient;
   private readonly IPlaybackTrackingService _playbackTrackingService;
+  private readonly ISixelDriver _sixelDriver;
 
   private Mode? _currentMode;
   private View? _preCommandFocusedView;
   private Mode? _preCommandMode;
 
+  /// <inheritdoc/>
+  public ISixelDriver SixelDriver => _sixelDriver;
+
   /// <summary>
   /// Initializes a new instance of the <see cref="MainWindow"/> class.
   /// </summary>
   /// <param name="streamingClient">The initialized streaming client.</param>
-  public MainWindow(IStreamingClient streamingClient) {
+  public MainWindow(IStreamingClient streamingClient, ISixelDriver sixelDriver) {
     Width = Dim.Fill();
     Height = Dim.Fill();
     CanFocus = true;
 
+    _sixelDriver = sixelDriver;
     _playbackQueueService = StandardPlaybackQueueService.UsingAudioService<SoundFlowAudioService>(this, streamingClient);
     _playbackTrackingService = new StreamingListenHistoryService(
       streamingClient,
@@ -59,7 +65,7 @@ public sealed class MainWindow : Runnable, IMainWindow {
     _statusBar = new StatusBar(_playbackQueueService) {
       Y = Pos.Top(_commandLine) - 1
     };
-    _mainContent = new MainContent(this, _commandService, _playbackQueueService, streamingClient) {
+    _mainContent = new MainContent(this, _commandService, _playbackQueueService, streamingClient, _httpClient) {
       Y = Pos.Bottom(_nowPlayingBar),
       Height = Dim.Fill() - _statusBar.Height - _commandLine.Height
     };
@@ -104,6 +110,14 @@ public sealed class MainWindow : Runnable, IMainWindow {
     }
 
     if (mode != Mode.Command) {
+      switch (mode) {
+        case Mode.NowPlaying:
+          _nowPlayingBar.Visible = false;
+          break;
+        default:
+          _nowPlayingBar.Visible = true;
+          break;
+      }
       _mainContent.SetMode(mode);
     } else {
       _commandLine.SetFocus();

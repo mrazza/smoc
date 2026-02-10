@@ -32,5 +32,11 @@ public enum Mode {
   /// The Playlist view.
   /// </summary>
   [DisplayName("PLAYLIST")]
-  Playlist
+  Playlist,
+
+  /// <summary>
+  /// The Now Playing view.
+  /// </summary>
+  [DisplayName("NOW PLAYING")]
+  NowPlaying
 }

@@ -13,6 +13,8 @@ namespace smoc.Tests.Ui;
 public class MainContentTest {
   private readonly Mock<IStreamingClient> _mockStreamingClient;
   private readonly Mock<IPlaybackQueueService> _mockPlaybackQueue;
+  private readonly Mock<HttpClientHandler> _mockHttpClientHandler;
+  private readonly HttpClient _httpClient;
   private readonly CommandService _commandService;
   private readonly FakeMainWindow _fakeMainWindow;
   private readonly ScreenshotDiffer _screenshotDiffer;
@@ -23,9 +25,11 @@ public class MainContentTest {
     _fakeMainWindow = new FakeMainWindow();
     _commandService = new CommandService();
     _screenshotDiffer = new ScreenshotDiffer(output);
+    _mockHttpClientHandler = new Mock<HttpClientHandler>();
+    _httpClient = new HttpClient(_mockHttpClientHandler.Object);
   }
 
-  private MainContent NewMainContent() => new(_fakeMainWindow, _commandService, _mockPlaybackQueue.Object, _mockStreamingClient.Object);
+  private MainContent NewMainContent() => new(_fakeMainWindow, _commandService, _mockPlaybackQueue.Object, _mockStreamingClient.Object, _httpClient);
 
   private static TerminalGuiFluentTesting.TestContext NewContext() => With.A<Runnable>(100, 20, TestDriver.ANSI.ToString()).ConfigureDefaultTheme();
 

@@ -33,7 +33,7 @@ public class NowPlayingBarTest {
 
   private NowPlayingBar NewNowPlaying() => new NowPlayingBar(_fakeMainWindow, _mockPlaybackQueue.Object, _commandService, _httpClient);
 
-  private TerminalGuiFluentTesting.TestContext NewNowPlayingContext() => NewContext().Add(NewNowPlaying());
+  private TerminalGuiFluentTesting.TestContext NewNowPlayingContext() => NewContext().AddAndLayout(NewNowPlaying());
 
   [Fact]
   public void PlayPauseHotKey_PlaysMusic() {
