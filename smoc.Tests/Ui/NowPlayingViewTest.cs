@@ -1,7 +1,10 @@
+using System.Net;
 using Moq;
+using Moq.Protected;
 using smoc.Tests.Fakes;
 using smoc.Tests.TestInfra;
 using Smoc.Services;
+using Smoc.Streaming;
 using Smoc.Ui;
 using Smoc.Ui.Models;
 using Terminal.Gui.Views;
@@ -26,11 +29,11 @@ public class NowPlayingViewTest {
     _httpClient = new HttpClient(_mockHttpClientHandler.Object);
   }
 
-  private static TerminalGuiFluentTesting.TestContext NewContext() => With.A<Runnable>(100, 20, TestDriver.ANSI.ToString());
+  private static TerminalGuiFluentTesting.TestContext NewContext(int width = 100, int height = 25) => With.A<Runnable>(width, height, TestDriver.ANSI.ToString());
 
   private NowPlayingView NewNowPlaying() => new NowPlayingView(_fakeMainWindow, _commandService, _mockPlaybackQueue.Object, _httpClient);
 
-  private TerminalGuiFluentTesting.TestContext NewNowPlayingContext() => NewContext().AddAndLayout(NewNowPlaying());
+  private TerminalGuiFluentTesting.TestContext NewNowPlayingContext(int width = 100, int height = 25) => NewContext(width, height).AddAndLayout(NewNowPlaying());
 
   [Fact]
   public void NowPlayingCommand_ChangesModeToNowPlaying() {
@@ -40,5 +43,115 @@ public class NowPlayingViewTest {
     Assert.NotEqual(Mode.NowPlaying, _fakeMainWindow.CurrentMode);
     context.Then((_) => _commandService.ExecuteCommand("np"));
     Assert.Equal(Mode.NowPlaying, _fakeMainWindow.CurrentMode);
+  }
+
+  [Fact]
+  public void InitialState_ShowsEmptyNowPlayingInfo() {
+    using var context = NewNowPlayingContext();
+    _screenshotDiffer.AssertEqualsGolden(context);
+  }
+
+  [Fact]
+  public void InitialState_ShowsEmptyNowPlayingInfo_Wide() {
+    using var context = NewNowPlayingContext(width: 120);
+    _screenshotDiffer.AssertEqualsGolden(context);
+  }
+
+  [Fact]
+  public void InitialState_ShowsEmptyNowPlayingInfo_Tall() {
+    using var context = NewNowPlayingContext(height: 40);
+    _screenshotDiffer.AssertEqualsGolden(context);
+  }
+
+  [Fact]
+  public void OnSongChanged_UpdatesSongDetails() {
+    var song = EntityTestFactory.GenerateSong();
+    EventHandler<Song?>? handler = null;
+    _mockPlaybackQueue.SetupAdd((ps) => ps.SongChanged += It.IsAny<EventHandler<Song?>>())
+        .Callback<EventHandler<Song?>>(h => handler = h);
+    using var context = NewNowPlayingContext().Then((_) => handler?.Invoke(null, song));
+    _screenshotDiffer.AssertEqualsGolden(context);
+  }
+
+  [Fact]
+  public void OnSongChanged_SongIsNull_UpdatesSongDetails() {
+    var song = EntityTestFactory.GenerateSong();
+    EventHandler<Song?>? handler = null;
+    _mockPlaybackQueue.SetupAdd((ps) => ps.SongChanged += It.IsAny<EventHandler<Song?>>())
+        .Callback<EventHandler<Song?>>(h => handler = h);
+    using var context = NewNowPlayingContext()
+        .Then((_) => handler?.Invoke(null, song))
+        .Then((_) => handler?.Invoke(null, null));
+    _screenshotDiffer.AssertEqualsGolden(context);
+  }
+
+  [Fact]
+  public void OnSongChanged_LoadsAlbumArt() {
+    var song = EntityTestFactory.GenerateSong();
+    EventHandler<Song?>? handler = null;
+    _mockPlaybackQueue.SetupAdd((ps) => ps.SongChanged += It.IsAny<EventHandler<Song?>>())
+        .Callback<EventHandler<Song?>>(h => handler = h);
+    _mockHttpClientHandler.Protected().Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
+                .ReturnsAsync(new HttpResponseMessage {
+                  StatusCode = HttpStatusCode.OK,
+                  Content = new ByteArrayContent(GetImageBytes())
+                }).Verifiable(Times.Once());
+    using var context = NewNowPlayingContext().Then((_) => handler?.Invoke(null, song));
+    _mockHttpClientHandler.Verify();
+  }
+
+  [Fact]
+  public void OnSongChanged_RepeatAlbum_CachesAlbumArt() {
+    var song = EntityTestFactory.GenerateSong();
+    EventHandler<Song?>? handler = null;
+    _mockPlaybackQueue.SetupAdd((ps) => ps.SongChanged += It.IsAny<EventHandler<Song?>>())
+        .Callback<EventHandler<Song?>>(h => handler = h);
+    _mockHttpClientHandler.Protected().Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
+                .ReturnsAsync(new HttpResponseMessage {
+                  StatusCode = HttpStatusCode.OK,
+                  Content = new ByteArrayContent(GetImageBytes())
+                }).Verifiable(Times.Once());
+    using var context = NewNowPlayingContext()
+        .Then((_) => handler?.Invoke(null, song))
+        .Then((_) => handler?.Invoke(null, song));
+    _mockHttpClientHandler.Verify();
+  }
+
+  [Fact]
+  public void OnSongChanged_NoAlbumArt_ClearsAlbumArt() {
+    var song = EntityTestFactory.GenerateSong(noArt: true);
+    EventHandler<Song?>? handler = null;
+    _mockPlaybackQueue.SetupAdd((ps) => ps.SongChanged += It.IsAny<EventHandler<Song?>>())
+        .Callback<EventHandler<Song?>>(h => handler = h);
+    _mockHttpClientHandler.Protected().Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
+                .Verifiable(Times.Never());
+    using var context = NewNowPlayingContext().Then((_) => handler?.Invoke(null, song));
+    _mockHttpClientHandler.Verify();
+  }
+
+  [Fact]
+  public void OnPositionChanged_UpdatesPosition() {
+    EventHandler<TimeSpan>? handler = null;
+    _mockPlaybackQueue.SetupAdd((ps) => ps.PositionChanged += It.IsAny<EventHandler<TimeSpan>>())
+        .Callback<EventHandler<TimeSpan>>(h => handler = h);
+    _mockPlaybackQueue.SetupGet((ps) => ps.Duration).Returns(TimeSpan.FromMinutes(5));
+    using var context = NewNowPlayingContext().Then((_) => handler?.Invoke(null, TimeSpan.Zero));
+    _screenshotDiffer.AssertEqualsGolden(context);
+  }
+
+  [Fact]
+  public void OnPositionChanged_UpdatesPosition_MultipleTimes() {
+    EventHandler<TimeSpan>? handler = null;
+    _mockPlaybackQueue.SetupAdd((ps) => ps.PositionChanged += It.IsAny<EventHandler<TimeSpan>>())
+        .Callback<EventHandler<TimeSpan>>(h => handler = h);
+    _mockPlaybackQueue.SetupGet((ps) => ps.Duration).Returns(TimeSpan.FromMinutes(5));
+    using var context = NewNowPlayingContext()
+        .Then((_) => handler?.Invoke(null, TimeSpan.Zero))
+        .Then((_) => handler?.Invoke(null, TimeSpan.FromMinutes(2)));
+    _screenshotDiffer.AssertEqualsGolden(context);
+  }
+
+  private static byte[] GetImageBytes() {
+    return Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAFUlEQVR42mP8z8BQz0AEYBxVSF+FABJADveWkH6oAAAAAElFTkSuQmCC");
   }
 }
