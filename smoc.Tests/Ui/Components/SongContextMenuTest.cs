@@ -100,7 +100,7 @@ public class SongContextMenuTest : IDisposable {
     var songContextMenu = NewSongContextMenu();
     context.Add(songContextMenu);
     var radiohead = new Artist("123", "Radiohead");
-    var okComputer = new Album("321", radiohead, "OK Computer", 1970, "http://url.com/thumb.jpg");
+    var okComputer = new Album("321", radiohead, "OK Computer", [EntityTestFactory.GenerateAlbumCover()], 1970);
     var paranoidAndroid = new Song("456", okComputer, "Paranoid Android", TimeSpan.FromMinutes(5), 1);
     var climbingUpTheWalls = new Song("457", okComputer, "Climbing Up the Walls", TimeSpan.FromMinutes(3), 2);
     List<Song> songs = [paranoidAndroid, climbingUpTheWalls];
@@ -122,7 +122,7 @@ public class SongContextMenuTest : IDisposable {
     var songContextMenu = NewSongContextMenu();
     context.Add(songContextMenu);
     var radiohead = new Artist("123", "Radiohead");
-    var okComputer = new Album("321", radiohead, "OK Computer", 1970, "http://url.com/thumb.jpg");
+    var okComputer = new Album("321", radiohead, "OK Computer", [EntityTestFactory.GenerateAlbumCover()], 1970);
     var paranoidAndroid = new Song("456", okComputer, "Paranoid Android", TimeSpan.FromMinutes(5), 1);
     var climbingUpTheWalls = new Song("457", okComputer, "Climbing Up the Walls", TimeSpan.FromMinutes(3), 2);
     var climbingDownTheWalls = new Song("458", okComputer, "Climbing Down the Walls", TimeSpan.FromMinutes(3), 2);
@@ -147,7 +147,7 @@ public class SongContextMenuTest : IDisposable {
     var songContextMenu = NewSongContextMenu();
     context.Add(songContextMenu);
     var radiohead = new Artist("123", "Radiohead");
-    var okComputer = new Album("321", radiohead, "OK Computer", 1970, "http://url.com/thumb.jpg");
+    var okComputer = new Album("321", radiohead, "OK Computer", [EntityTestFactory.GenerateAlbumCover()], 1970);
     var paranoidAndroid = new Song("456", okComputer, "Paranoid Android", TimeSpan.FromMinutes(5), 1);
     var climbingUpTheWalls = new Song("457", okComputer, "Climbing Up the Walls", TimeSpan.FromMinutes(3), 2);
     var climbingDownTheWalls = new Song("458", okComputer, "Climbing Down the Walls", TimeSpan.FromMinutes(3), 2);
@@ -171,7 +171,7 @@ public class SongContextMenuTest : IDisposable {
     var songContextMenu = NewSongContextMenu();
     context.Add(songContextMenu);
     var radiohead = new Artist("123", "Radiohead");
-    var okComputer = new Album("321", radiohead, "OK Computer", 1970, "http://url.com/thumb.jpg");
+    var okComputer = new Album("321", radiohead, "OK Computer", [EntityTestFactory.GenerateAlbumCover()], 1970);
     var paranoidAndroid = new Song("456", okComputer, "Paranoid Android", TimeSpan.FromMinutes(5), 1);
     var climbingUpTheWalls = new Song("457", okComputer, "Climbing Up the Walls", TimeSpan.FromMinutes(3), 2);
     var climbingDownTheWalls = new Song("458", okComputer, "Climbing Down the Walls", TimeSpan.FromMinutes(3), 2);
@@ -194,7 +194,7 @@ public class SongContextMenuTest : IDisposable {
     var songContextMenu = NewSongContextMenu();
     context.Add(songContextMenu);
     var radiohead = new Artist("123", "Radiohead");
-    var okComputer = new Album("321", radiohead, "OK Computer", 1970, "http://url.com/thumb.jpg");
+    var okComputer = new Album("321", radiohead, "OK Computer", [EntityTestFactory.GenerateAlbumCover()], 1970);
     var paranoidAndroid = new Song("456", okComputer, "Paranoid Android", TimeSpan.FromMinutes(5), 1);
     var climbingUpTheWalls = new Song("457", okComputer, "Climbing Up the Walls", TimeSpan.FromMinutes(3), 2);
     var climbingDownTheWalls = new Song("458", okComputer, "Climbing Down the Walls", TimeSpan.FromMinutes(3), 2);
@@ -216,7 +216,7 @@ public class SongContextMenuTest : IDisposable {
     var songContextMenu = NewSongContextMenu();
     context.Add(songContextMenu);
     var radiohead = new Artist("123", "Radiohead");
-    var okComputer = new Album("321", radiohead, "OK Computer", 1970, "http://url.com/thumb.jpg");
+    var okComputer = new Album("321", radiohead, "OK Computer", [EntityTestFactory.GenerateAlbumCover()], 1970);
     var paranoidAndroid = new Song("456", okComputer, "Paranoid Android", TimeSpan.FromMinutes(5), 1);
     var climbingUpTheWalls = new Song("457", okComputer, "Climbing Up the Walls", TimeSpan.FromMinutes(3), 2);
     var climbingDownTheWalls = new Song("458", okComputer, "Climbing Down the Walls", TimeSpan.FromMinutes(3), 2);
@@ -240,7 +240,7 @@ public class SongContextMenuTest : IDisposable {
     var songContextMenu = NewSongContextMenu();
     context.Add(songContextMenu);
     var radiohead = new Artist("123", "Radiohead");
-    var okComputer = new Album("321", radiohead, "OK Computer", 1970, "http://url.com/thumb.jpg");
+    var okComputer = new Album("321", radiohead, "OK Computer", [EntityTestFactory.GenerateAlbumCover()], 1970);
     var paranoidAndroid = new Song("456", okComputer, "Paranoid Android", TimeSpan.FromMinutes(5), 1);
     var climbingUpTheWalls = new Song("457", okComputer, "Climbing Up the Walls", TimeSpan.FromMinutes(3), 2);
     var climbingDownTheWalls = new Song("458", okComputer, "Climbing Down the Walls", TimeSpan.FromMinutes(3), 2);

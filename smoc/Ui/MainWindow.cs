@@ -22,7 +22,6 @@ public sealed class MainWindow : Runnable, IMainWindow {
   private readonly NowPlayingBar _nowPlayingBar;
   private readonly IPlaybackQueueService _playbackQueueService;
   private readonly CommandService _commandService;
-  private readonly HttpClient _httpClient;
   private readonly IPlaybackTrackingService _playbackTrackingService;
   private readonly ISixelDriver _sixelDriver;
 
@@ -57,15 +56,14 @@ public sealed class MainWindow : Runnable, IMainWindow {
     }
 
     _commandService = new CommandService();
-    _httpClient = new HttpClient();
-    _nowPlayingBar = new NowPlayingBar(this, _playbackQueueService, _commandService, _httpClient);
+    _nowPlayingBar = new NowPlayingBar(this, _playbackQueueService, _commandService, streamingClient);
     _commandLine = new CommandLine() {
       Y = Pos.AnchorEnd()
     };
     _statusBar = new StatusBar(_playbackQueueService) {
       Y = Pos.Top(_commandLine) - 1
     };
-    _mainContent = new MainContent(this, _commandService, _playbackQueueService, streamingClient, _httpClient) {
+    _mainContent = new MainContent(this, _commandService, _playbackQueueService, streamingClient) {
       Y = Pos.Bottom(_nowPlayingBar),
       Height = Dim.Fill() - _statusBar.Height - _commandLine.Height
     };
@@ -133,7 +131,6 @@ public sealed class MainWindow : Runnable, IMainWindow {
   }
 
   protected override void Dispose(bool disposing) {
-    _httpClient.Dispose();
     _commandService.UnregisterCommand("q");
     base.Dispose(disposing);
   }

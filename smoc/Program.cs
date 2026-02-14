@@ -2,6 +2,7 @@ using System.CommandLine;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Smoc.Configuration;
+using Smoc.Services.Caching;
 using Smoc.Streaming;
 using Smoc.Streaming.YouTubeMusic;
 using Smoc.Ui;
@@ -87,12 +88,12 @@ public static class Program {
   private static YtmStreamingClient CreateStreamingClient() {
     if (!File.Exists(_cookiesPath) || !File.Exists(_tokensPath)) {
       Logging.Information("Cookies or tokens not found. Creating new YTM client without authentication.");
-      return YtmStreamingClient.Create();
+      return YtmStreamingClient.Create(new TempFileCacheService("songs"), new TempFileCacheService("art"));
     }
 
     Logging.Information("Cookies and tokens found. Creating new YTM client with authentication.");
     var cookies = YtmStreamingClient.GetCookiesFromFile(_cookiesPath);
     var tokens = JsonSerializer.Deserialize<YtmTokens>(File.ReadAllText(_tokensPath));
-    return YtmStreamingClient.Create(cookies, tokens!);
+    return YtmStreamingClient.Create(cookies, tokens!, new TempFileCacheService("songs"), new TempFileCacheService("art"));
   }
 }
