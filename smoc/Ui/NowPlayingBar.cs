@@ -30,7 +30,7 @@ public sealed class NowPlayingBar : View {
   private readonly IMainWindow _mainWindow;
   private readonly IPlaybackQueueService _playbackQueueService;
   private readonly CommandService _commandService;
-  private string? _albumArtUrl;
+  private Album? _currentAlbum;
   private readonly SixelImageView _albumArtView;
   private readonly Label _songLabel;
   private readonly Label _artistLabel;
@@ -38,7 +38,7 @@ public sealed class NowPlayingBar : View {
   private readonly ProgressBar _progressBar;
   private readonly Label _durationLabel;
   private readonly Label _volumeLabel;
-  private readonly HttpClient _httpClient;
+  private readonly IStreamingClient _streamingClient;
   private CancellationTokenSource? _albumArtCancellationTokenSource;
 
   /// <summary>
@@ -48,12 +48,12 @@ public sealed class NowPlayingBar : View {
   /// <param name="playbackQueueService">The playback queue service for playback information.</param>
   /// <param name="commandService">The command service for registering volume commands.</param>
   /// <param name="httpClient">The HTTP client for downloading album art.</param>
-  public NowPlayingBar(IMainWindow mainWindow, IPlaybackQueueService playbackQueueService, CommandService commandService, HttpClient httpClient) {
+  public NowPlayingBar(IMainWindow mainWindow, IPlaybackQueueService playbackQueueService, CommandService commandService, IStreamingClient streamingClient) {
     _mainWindow = mainWindow;
     _playbackQueueService = playbackQueueService;
     _commandService = commandService;
-    _httpClient = httpClient;
-    _albumArtUrl = null;
+    _streamingClient = streamingClient;
+    _currentAlbum = null;
     Width = Dim.Fill();
     Height = Dim.Absolute(3);
     Padding!.Thickness = new Thickness(0, 0, 1, 0);
@@ -201,16 +201,15 @@ public sealed class NowPlayingBar : View {
     _artistLabel.Text = song.Artist.Name;
 
     // Only bother downloading the album art if it has changed.
-    if (song.Album.SmallThumbnailUrl is null || song.Album.SmallThumbnailUrl.Length == 0) {
+    if (!song.Album.Covers.Any()) {
       _albumArtView.ClearImage();
-    } else if (_albumArtUrl != song.Album.SmallThumbnailUrl) {
-      _albumArtUrl = song.Album.SmallThumbnailUrl;
+    } else if (_currentAlbum != song.Album) {
+      _currentAlbum = song.Album;
       _albumArtCancellationTokenSource?.Cancel();
       _albumArtCancellationTokenSource = new CancellationTokenSource();
       var token = _albumArtCancellationTokenSource.Token;
       try {
-        var albumResponse = await _httpClient.GetAsync(song.Album.SmallThumbnailUrl, token);
-        var image = Image.Load<Rgba32>(albumResponse.Content.ReadAsStream());
+        var image = await _streamingClient.GetAlbumArtAsync(song.Album, (covers) => covers.OrderBy(c => c.Width).First(), token);
         Logging.Debug($"Album art loaded: {song.Title}");
         token.ThrowIfCancellationRequested();
         _albumArtView.SetImage(image);

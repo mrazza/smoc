@@ -24,7 +24,7 @@ public sealed class MainContent : View {
   /// <param name="commandService">The command service.</param>
   /// <param name="playbackQueueService">The playback queue service.</param>
   /// <param name="streamingClient">The streaming client.</param>
-  public MainContent(IMainWindow mainWindow, CommandService commandService, IPlaybackQueueService playbackQueueService, IStreamingClient streamingClient, HttpClient httpClient) {
+  public MainContent(IMainWindow mainWindow, CommandService commandService, IPlaybackQueueService playbackQueueService, IStreamingClient streamingClient) {
     Width = Dim.Fill();
     Height = Dim.Fill();
     CanFocus = true;
@@ -42,7 +42,7 @@ public sealed class MainContent : View {
     _playlistView = new PlaylistView(mainWindow, commandService, playbackQueueService, streamingClient) {
       Visible = false
     };
-    _nowPlayingView = new NowPlayingView(mainWindow, commandService, playbackQueueService, httpClient) {
+    _nowPlayingView = new NowPlayingView(mainWindow, commandService, playbackQueueService, streamingClient) {
       Visible = false
     };
     Add(_artistView, _playbackQueueView, _songView, _playlistView, _nowPlayingView);

@@ -98,7 +98,7 @@ public class ArtistViewTest {
 
     context.Then((_) => _commandService.ExecuteCommand("a/radiohead"));
 
-    var okComputer = new Album("321", radiohead, "OK Computer", 1970, "http://url.com/thumb.jpg");
+    var okComputer = new Album("321", radiohead, "OK Computer", [EntityTestFactory.GenerateAlbumCover()], 1970);
     _mockStreamingClient.Setup(client => client.GetAlbumsByArtistAsync(radiohead, It.IsAny<CancellationToken>()))
       .ReturnsAsync([okComputer]);
 
@@ -116,7 +116,7 @@ public class ArtistViewTest {
 
     context.Then((_) => _commandService.ExecuteCommand("a/radiohead"));
 
-    var okComputer = new Album("321", radiohead, "OK Computer", 1970, "http://url.com/thumb.jpg");
+    var okComputer = new Album("321", radiohead, "OK Computer", [EntityTestFactory.GenerateAlbumCover()], 1970);
     _mockStreamingClient.Setup(client => client.GetAlbumsByArtistAsync(radiohead, It.IsAny<CancellationToken>()))
       .ReturnsAsync([okComputer]);
     var paranoidAndroid = new Song("456", okComputer, "Paranoid Android", TimeSpan.FromMinutes(5), 1);
@@ -137,7 +137,7 @@ public class ArtistViewTest {
 
     context.Then((_) => _commandService.ExecuteCommand("a/radiohead"));
 
-    var okComputer = new Album("321", radiohead, "OK Computer", 1970, "http://url.com/thumb.jpg");
+    var okComputer = new Album("321", radiohead, "OK Computer", [EntityTestFactory.GenerateAlbumCover()], 1970);
     _mockStreamingClient.Setup(client => client.GetAlbumsByArtistAsync(radiohead, It.IsAny<CancellationToken>()))
       .ReturnsAsync([okComputer]);
     var paranoidAndroid = new Song("456", okComputer, "Paranoid Android", TimeSpan.FromMinutes(5), 1);
@@ -158,7 +158,7 @@ public class ArtistViewTest {
 
     context.Then((_) => _commandService.ExecuteCommand("a/radiohead"));
 
-    var okComputer = new Album("321", radiohead, "OK Computer", 1970, "http://url.com/thumb.jpg");
+    var okComputer = new Album("321", radiohead, "OK Computer", [EntityTestFactory.GenerateAlbumCover()], 1970);
     _mockStreamingClient.Setup(client => client.GetAlbumsByArtistAsync(radiohead, It.IsAny<CancellationToken>()))
       .ReturnsAsync([okComputer]);
     var paranoidAndroid = new Song("456", okComputer, "Paranoid Android", TimeSpan.FromMinutes(5), 1);
@@ -197,7 +197,7 @@ public class ArtistViewTest {
 
     context.Then((_) => _commandService.ExecuteCommand("a/radiohead"));
 
-    var okComputer = new Album("321", radiohead, "OK Computer", 1970, "http://url.com/thumb.jpg");
+    var okComputer = new Album("321", radiohead, "OK Computer", [EntityTestFactory.GenerateAlbumCover()], 1970);
     _mockStreamingClient.Setup(client => client.GetAlbumsByArtistAsync(radiohead, It.IsAny<CancellationToken>()))
       .ReturnsAsync([okComputer]);
     _mockStreamingClient.Setup(client => client.GetSongsByAlbumAsync(okComputer, It.IsAny<CancellationToken>()))
@@ -234,7 +234,7 @@ public class ArtistViewTest {
 
     context.Then((_) => _commandService.ExecuteCommand("a/radiohead"));
 
-    var okComputer = new Album("321", radiohead, "OK Computer", 1970, "http://url.com/thumb.jpg");
+    var okComputer = new Album("321", radiohead, "OK Computer", [EntityTestFactory.GenerateAlbumCover()], 1970);
     _mockStreamingClient.Setup(client => client.GetAlbumsByArtistAsync(radiohead, It.IsAny<CancellationToken>()))
       .ReturnsAsync([okComputer]);
     var paranoidAndroid = new Song("456", okComputer, "Paranoid Android", TimeSpan.FromMinutes(5), 1);
@@ -320,8 +320,8 @@ public class ArtistViewTest {
     context.Then((_) => _commandService.ExecuteCommand("a/radiohead"));
 
     using var latch = new AsyncLatch(true);
-    var okComputer = new Album("321", radiohead, "OK Computer", 1970, "http://url.com/thumb.jpg");
-    var nokayComputer = new Album("322", almostRadiohead, "NOKAY Computer", 1970, "http://url.com/thumb.jpg");
+    var okComputer = new Album("321", radiohead, "OK Computer", [EntityTestFactory.GenerateAlbumCover()], 1970);
+    var nokayComputer = new Album("322", almostRadiohead, "NOKAY Computer", [EntityTestFactory.GenerateAlbumCover()], 1970);
     _mockStreamingClient.Setup(client => client.GetAlbumsByArtistAsync(radiohead, It.IsAny<CancellationToken>()))
       .ReturnsAsync([okComputer]);
     _mockStreamingClient.Setup(client => client.GetAlbumsByArtistAsync(almostRadiohead, It.IsAny<CancellationToken>()))

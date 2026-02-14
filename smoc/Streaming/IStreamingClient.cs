@@ -1,3 +1,6 @@
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
+
 namespace Smoc.Streaming;
 
 /// <summary>
@@ -105,4 +108,13 @@ public interface IStreamingClient {
   /// <param name="cancellationToken">Optional cancellation token.</param>
   /// <returns>A task that represents the asynchronous operation.</returns>
   Task AddToListenHistory(Song song, CancellationToken cancellationToken = default);
+
+  /// <summary>
+  /// Retrieves the album art for a specific album.
+  /// </summary>
+  /// <param name="album">The album.</param>
+  /// <param name="coverSelector">Optional function to select the album cover. If null, the first cover will be selected.</param>
+  /// <param name="cancellationToken">Optional cancellation token.</param>
+  /// <returns>The album art.</returns>
+  Task<Image<Rgba32>> GetAlbumArtAsync(Album album, Func<IEnumerable<AlbumCover>, AlbumCover>? coverSelector = null, CancellationToken cancellationToken = default);
 }

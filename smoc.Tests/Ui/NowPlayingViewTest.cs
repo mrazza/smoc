@@ -1,6 +1,8 @@
 using System.Net;
 using Moq;
 using Moq.Protected;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 using smoc.Tests.Fakes;
 using smoc.Tests.TestInfra;
 using Smoc.Services;
@@ -15,8 +17,7 @@ namespace smoc.Tests.Ui;
 public class NowPlayingViewTest {
   private readonly FakeMainWindow _fakeMainWindow;
   private readonly Mock<IPlaybackQueueService> _mockPlaybackQueue;
-  private readonly Mock<HttpClientHandler> _mockHttpClientHandler;
-  private readonly HttpClient _httpClient;
+  private readonly Mock<IStreamingClient> _mockStreamingClient;
   private readonly CommandService _commandService;
   private readonly ScreenshotDiffer _screenshotDiffer;
 
@@ -25,13 +26,12 @@ public class NowPlayingViewTest {
     _mockPlaybackQueue = new Mock<IPlaybackQueueService>();
     _commandService = new CommandService();
     _screenshotDiffer = new ScreenshotDiffer(output);
-    _mockHttpClientHandler = new Mock<HttpClientHandler>();
-    _httpClient = new HttpClient(_mockHttpClientHandler.Object);
+    _mockStreamingClient = new Mock<IStreamingClient>();
   }
 
   private static TerminalGuiFluentTesting.TestContext NewContext(int width = 100, int height = 25) => With.A<Runnable>(width, height, TestDriver.ANSI.ToString());
 
-  private NowPlayingView NewNowPlaying() => new NowPlayingView(_fakeMainWindow, _commandService, _mockPlaybackQueue.Object, _httpClient);
+  private NowPlayingView NewNowPlaying() => new NowPlayingView(_fakeMainWindow, _commandService, _mockPlaybackQueue.Object, _mockStreamingClient.Object);
 
   private TerminalGuiFluentTesting.TestContext NewNowPlayingContext(int width = 100, int height = 25) => NewContext(width, height).AddAndLayout(NewNowPlaying());
 
@@ -91,13 +91,11 @@ public class NowPlayingViewTest {
     EventHandler<Song?>? handler = null;
     _mockPlaybackQueue.SetupAdd((ps) => ps.SongChanged += It.IsAny<EventHandler<Song?>>())
         .Callback<EventHandler<Song?>>(h => handler = h);
-    _mockHttpClientHandler.Protected().Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
-                .ReturnsAsync(new HttpResponseMessage {
-                  StatusCode = HttpStatusCode.OK,
-                  Content = new ByteArrayContent(GetImageBytes())
-                }).Verifiable(Times.Once());
+    using var imageStream = GetImage();
+    _mockStreamingClient.Setup(client => client.GetAlbumArtAsync(song.Album, It.IsAny<Func<IEnumerable<AlbumCover>, AlbumCover>>(), It.IsAny<CancellationToken>()))
+        .ReturnsAsync(imageStream).Verifiable(Times.Once());
     using var context = NewNowPlayingContext().Then((_) => handler?.Invoke(null, song));
-    _mockHttpClientHandler.Verify();
+    _mockStreamingClient.Verify();
   }
 
   [Fact]
@@ -106,15 +104,13 @@ public class NowPlayingViewTest {
     EventHandler<Song?>? handler = null;
     _mockPlaybackQueue.SetupAdd((ps) => ps.SongChanged += It.IsAny<EventHandler<Song?>>())
         .Callback<EventHandler<Song?>>(h => handler = h);
-    _mockHttpClientHandler.Protected().Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
-                .ReturnsAsync(new HttpResponseMessage {
-                  StatusCode = HttpStatusCode.OK,
-                  Content = new ByteArrayContent(GetImageBytes())
-                }).Verifiable(Times.Once());
+    using var imageStream = GetImage();
+    _mockStreamingClient.Setup(client => client.GetAlbumArtAsync(song.Album, It.IsAny<Func<IEnumerable<AlbumCover>, AlbumCover>>(), It.IsAny<CancellationToken>()))
+        .ReturnsAsync(imageStream).Verifiable(Times.Once());
     using var context = NewNowPlayingContext()
         .Then((_) => handler?.Invoke(null, song))
         .Then((_) => handler?.Invoke(null, song));
-    _mockHttpClientHandler.Verify();
+    _mockStreamingClient.Verify();
   }
 
   [Fact]
@@ -123,10 +119,10 @@ public class NowPlayingViewTest {
     EventHandler<Song?>? handler = null;
     _mockPlaybackQueue.SetupAdd((ps) => ps.SongChanged += It.IsAny<EventHandler<Song?>>())
         .Callback<EventHandler<Song?>>(h => handler = h);
-    _mockHttpClientHandler.Protected().Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
-                .Verifiable(Times.Never());
+    _mockStreamingClient.Setup(client => client.GetAlbumArtAsync(song.Album, It.IsAny<Func<IEnumerable<AlbumCover>, AlbumCover>>(), It.IsAny<CancellationToken>()))
+        .Verifiable(Times.Never());
     using var context = NewNowPlayingContext().Then((_) => handler?.Invoke(null, song));
-    _mockHttpClientHandler.Verify();
+    _mockStreamingClient.Verify();
   }
 
   [Fact]
@@ -151,7 +147,7 @@ public class NowPlayingViewTest {
     _screenshotDiffer.AssertEqualsGolden(context);
   }
 
-  private static byte[] GetImageBytes() {
-    return Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAFUlEQVR42mP8z8BQz0AEYBxVSF+FABJADveWkH6oAAAAAElFTkSuQmCC");
+  private static Image<Rgba32> GetImage() {
+    return new Image<Rgba32>(10, 10);
   }
 }

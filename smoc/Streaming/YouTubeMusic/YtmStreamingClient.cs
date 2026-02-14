@@ -1,4 +1,8 @@
 using System.Net;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
+using Smoc.Services;
+using Smoc.Services.Caching;
 using Terminal.Gui.App;
 using YouTubeMusicAPI.Client;
 using YouTubeMusicAPI.Models.Info;
@@ -14,10 +18,16 @@ namespace Smoc.Streaming.YouTubeMusic;
 /// </summary>
 public sealed class YtmStreamingClient : IStreamingClient {
   private readonly YouTubeMusicClient? _authedYtmClient;
+  private readonly ICacheService _songCacheService;
+  private readonly ICacheService _albumArtCacheService;
   private readonly YouTubeMusicClient _ytmClient;
-  private YtmStreamingClient(YouTubeMusicClient? authedYtmClient = null) {
+  private readonly HttpClient _httpClient;
+  private YtmStreamingClient(YouTubeMusicClient? authedYtmClient = null, ICacheService? songCacheService = null, ICacheService? albumArtCacheService = null) {
     _authedYtmClient = authedYtmClient;
+    _songCacheService = songCacheService ?? new NoCachingCacheService();
+    _albumArtCacheService = albumArtCacheService ?? new NoCachingCacheService();
     _ytmClient = new();
+    _httpClient = new();
   }
 
   /// <inheritdoc/>
@@ -38,8 +48,7 @@ public sealed class YtmStreamingClient : IStreamingClient {
                 r.Album!.Id!,
                 new Artist(r.Artists.First().Id!, r.Artists.First().Name),
                 r.Album.Name,
-                SmallThumbnailUrl: r.Thumbnails.OrderBy(t => t.Height).Select(t => t.Url).FirstOrDefault(),
-                LargeThumbnailUrl: r.Thumbnails.OrderByDescending(t => t.Height).Select(t => t.Url).FirstOrDefault()),
+                r.Thumbnails.Select(t => new AlbumCover(t.Url, t.Width, t.Height))),
             r.Name,
             r.Duration)).ToList();
   }
@@ -54,9 +63,8 @@ public sealed class YtmStreamingClient : IStreamingClient {
             albumInfo.Id,
             new Artist(albumInfo.Artists.First().Id!, albumInfo.Artists.First().Name),
             albumInfo.Name,
-            albumInfo.ReleaseYear,
-            SmallThumbnailUrl: albumInfo.Thumbnails.OrderBy(t => t.Height).Select(t => t.Url).FirstOrDefault(),
-            LargeThumbnailUrl: albumInfo.Thumbnails.OrderByDescending(t => t.Height).Select(t => t.Url).FirstOrDefault()),
+            albumInfo.Thumbnails.Select(t => new AlbumCover(t.Url, t.Width, t.Height)),
+            albumInfo.ReleaseYear),
         songInfo.Name,
         songInfo.Duration);
   }
@@ -74,9 +82,8 @@ public sealed class YtmStreamingClient : IStreamingClient {
         s.Id,
         artist,
         s.Name,
-        s.ReleaseYear,
-        SmallThumbnailUrl: s.Thumbnails.OrderBy(t => t.Height).Select(t => t.Url).FirstOrDefault(),
-        LargeThumbnailUrl: s.Thumbnails.OrderByDescending(t => t.Height).Select(t => t.Url).FirstOrDefault())).ToList();
+        s.Thumbnails.Select(t => new AlbumCover(t.Url, t.Width, t.Height)),
+        s.ReleaseYear)).ToList();
   }
 
   /// <inheritdoc/>
@@ -95,7 +102,10 @@ public sealed class YtmStreamingClient : IStreamingClient {
         .OfType<AudioStreamInfo>()
         .OrderByDescending(info => info.Bitrate)
         .First();
-    var stream = await highestAudioStreamInfo.GetStreamAsync(cancellationToken: cancellationToken);
+    var stream = await _songCacheService.GetOrAddAsync(
+      string.Concat(songId, "-", highestAudioStreamInfo.Bitrate.ToString()),
+      highestAudioStreamInfo.GetStreamAsync,
+      cancellationToken);
     return new SongStream(songId, highestAudioStreamInfo.Container.Codecs, stream);
   }
 
@@ -113,8 +123,7 @@ public sealed class YtmStreamingClient : IStreamingClient {
             s.Album!.Id!,
             new Artist(s.Artists.First().Id!, s.Artists.First().Name),
             s.Album.Name,
-            SmallThumbnailUrl: s.Thumbnails.OrderBy(t => t.Height).Select(t => t.Url).FirstOrDefault(),
-            LargeThumbnailUrl: s.Thumbnails.OrderByDescending(t => t.Height).Select(t => t.Url).FirstOrDefault()),
+            s.Thumbnails.Select(t => new AlbumCover(t.Url, t.Width, t.Height))),
           s.Name,
           s.Duration)).ToList();
   }
@@ -149,8 +158,7 @@ public sealed class YtmStreamingClient : IStreamingClient {
             s.Album!.Id!,
             new Artist(s.Artists.First().Id!, s.Artists.First().Name),
             s.Album.Name,
-            SmallThumbnailUrl: s.Thumbnails.OrderBy(t => t.Height).Select(t => t.Url).FirstOrDefault(),
-            LargeThumbnailUrl: s.Thumbnails.OrderByDescending(t => t.Height).Select(t => t.Url).FirstOrDefault()),
+            s.Thumbnails.Select(t => new AlbumCover(t.Url, t.Width, t.Height))),
           s.Name,
           s.Duration)).ToList();
   }
@@ -175,7 +183,23 @@ public sealed class YtmStreamingClient : IStreamingClient {
       _ when entityType == typeof(Playlist) => await GetPlaylistSongsAsync(new Playlist(id, ""), cancellationToken),
       _ => throw new ArgumentException("Invalid URL.", nameof(url))
     };
+  }
 
+  /// <inheritdoc/>
+  public async Task<Image<Rgba32>> GetAlbumArtAsync(Album album, Func<IEnumerable<AlbumCover>, AlbumCover>? coverSelector = null, CancellationToken cancellationToken = default) {
+    if (!album.Covers.Any())
+      throw new ArgumentException("Album has no covers.", nameof(album));
+
+    var cover = coverSelector?.Invoke(album.Covers) ?? album.Covers.First();
+
+    using var albumArt = await _albumArtCacheService.GetOrAddAsync(
+      string.Concat(album.Id, "-", cover.Width, "x", cover.Height),
+      async ct => {
+        var albumResponse = await _httpClient.GetAsync(cover.Url, cancellationToken);
+        return await albumResponse.Content.ReadAsStreamAsync(cancellationToken);
+      },
+      cancellationToken);
+    return await Image.LoadAsync<Rgba32>(albumArt, cancellationToken);
   }
 
   /// <summary>
@@ -218,16 +242,18 @@ public sealed class YtmStreamingClient : IStreamingClient {
   /// </summary>
   /// <param name="cookies">The user's cookies.</param>
   /// <param name="tokens">The generated tokens.</param>
+  /// <param name="cacheService">Optional cache service to use for caching streams; if not provided, no caching will be used.</param>
   /// <returns>An initialized client.</returns>
-  public static YtmStreamingClient Create(List<Cookie> cookies, YtmTokens tokens) {
-    return new YtmStreamingClient(new(logger: Logging.Logger, cookies: cookies, poToken: tokens.PoToken, visitorData: tokens.VisitorData));
+  public static YtmStreamingClient Create(List<Cookie> cookies, YtmTokens tokens, ICacheService? songCacheService = null, ICacheService? albumArtCacheService = null) {
+    return new YtmStreamingClient(new(logger: Logging.Logger, cookies: cookies, poToken: tokens.PoToken, visitorData: tokens.VisitorData), songCacheService, albumArtCacheService);
   }
 
   /// <summary>
   /// Creates an unauthenticated YouTube Music client.
   /// </summary>
+  /// <param name="cacheService">Optional cache service to use for caching streams; if not provided, no caching will be used.</param>
   /// <returns>An initialized client.</returns>
-  public static YtmStreamingClient Create() {
-    return new YtmStreamingClient();
+  public static YtmStreamingClient Create(ICacheService? songCacheService = null, ICacheService? albumArtCacheService = null) {
+    return new YtmStreamingClient(songCacheService: songCacheService, albumArtCacheService: albumArtCacheService);
   }
 }
