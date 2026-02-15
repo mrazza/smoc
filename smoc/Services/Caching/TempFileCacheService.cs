@@ -10,6 +10,20 @@ namespace Smoc.Services.Caching;
 /// A cache service that stores streams in temporary files.
 /// </summary>
 public class TempFileCacheService : ICacheService {
+  /// <summary>
+  /// The persistence characteristics of the cache.
+  /// </summary>
+  public enum CachePersistence {
+    /// <summary>
+    /// The cache may be deleted when the application is running, closes, or the system is rebooted.
+    /// </summary>
+    VOLATILE,
+    /// <summary>
+    /// The cache will be placed in a location designed to persist across application or system restarts.
+    /// </summary>
+    SEMIPERSISTENT
+  }
+
   private readonly string _cacheDirectory;
   private readonly string _subDirectory;
   private readonly CacheConfig _cacheConfig;
@@ -19,10 +33,15 @@ public class TempFileCacheService : ICacheService {
   /// </summary>
   /// <param name="subDirectory">The sub-directory to use for caching.</param>
   /// <param name="cacheConfig">The configuration for how this cache should behave.</param>
-  public TempFileCacheService(string subDirectory, CacheConfig cacheConfig) {
+  /// <param name="cachePersistence">The persistence of the cache.</param>
+  public TempFileCacheService(string subDirectory, CacheConfig cacheConfig, CachePersistence cachePersistence = CachePersistence.SEMIPERSISTENT) {
     _subDirectory = subDirectory;
     _cacheConfig = cacheConfig;
-    _cacheDirectory = GetCacheDirectory(subDirectory);
+    _cacheDirectory = cachePersistence switch {
+      CachePersistence.VOLATILE => GetVolitileCacheDirectory(subDirectory),
+      CachePersistence.SEMIPERSISTENT => GetSemiPersistentCacheDirectory(subDirectory),
+      _ => throw new NotImplementedException($"Cache persistence {cachePersistence} is not implemented.")
+    };
   }
 
   /// <inheritdoc/>
@@ -106,7 +125,20 @@ public class TempFileCacheService : ICacheService {
     }, cancellationToken);
   }
 
-  private static string GetCacheDirectory(string? subDirectory = null) {
+  private static string GetVolitileCacheDirectory(string? subDirectory = null) {
+    var baseCachePath = Path.Combine(Path.GetTempPath(), Program.ProductName.ToLowerInvariant(), "cache");
+    if (!string.IsNullOrEmpty(subDirectory)) {
+      baseCachePath = Path.Combine(baseCachePath, subDirectory);
+    }
+
+    if (!Directory.Exists(baseCachePath)) {
+      Directory.CreateDirectory(baseCachePath);
+    }
+
+    return baseCachePath;
+  }
+
+  private static string GetSemiPersistentCacheDirectory(string? subDirectory = null) {
     string baseCachePath;
 
     if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
@@ -131,12 +163,12 @@ public class TempFileCacheService : ICacheService {
       string? xdgCache = Environment.GetEnvironmentVariable("XDG_CACHE_HOME");
 
       if (!string.IsNullOrEmpty(xdgCache)) {
-        baseCachePath = Path.Combine(xdgCache, Program.ProductName.ToLower());
+        baseCachePath = Path.Combine(xdgCache, Program.ProductName.ToLowerInvariant());
       } else {
         baseCachePath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
             ".cache",
-            Program.ProductName.ToLower()
+            Program.ProductName.ToLowerInvariant()
         );
       }
     }
