@@ -5,6 +5,9 @@ namespace Smoc.Services.Caching;
 /// </summary>
 public class NoCachingCacheService : ICacheService {
   /// <inheritdoc/>
+  public Task Evict(CancellationToken cancellationToken = default) => Task.CompletedTask;
+
+  /// <inheritdoc/>
   public async Task<Stream> GetOrAddAsync(string key, Func<CancellationToken, Task<Stream>> factory, CancellationToken cancellationToken = default) {
     return await factory(cancellationToken);
   }
