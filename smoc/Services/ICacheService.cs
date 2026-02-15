@@ -16,4 +16,10 @@ public interface ICacheService {
   /// <param name="cancellationToken">The cancellation token to use for the operation.</param>
   /// <returns>The stream.</returns>
   Task<Stream> GetOrAddAsync(string key, Func<CancellationToken, Task<Stream>> factory, CancellationToken cancellationToken = default);
+
+  /// <summary>
+  /// Evicts entities in the cache that exceed some configured thresholds.
+  /// </summary>
+  /// <param name="cancellationToken">The cancellation token to use for the operation.</param>
+  Task Evict(CancellationToken cancellationToken = default);
 }
