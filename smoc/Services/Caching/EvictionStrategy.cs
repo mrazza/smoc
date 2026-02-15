@@ -7,13 +7,13 @@ public enum EvictionStrategy {
   /// <summary>
   /// Least Recently Used
   /// </summary>
-  LRU = 1,
+  LRU,
   /// <summary>
   /// Largest First (by size in bytes)
   /// </summary>
-  LARGEST_FIRST = 2,
+  LARGEST_FIRST,
   /// <summary>
   /// Smallest First (by size in bytes)
   /// </summary>
-  SMALLEST_FIRST = 3
+  SMALLEST_FIRST
 }
