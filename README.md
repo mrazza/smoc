@@ -63,7 +63,39 @@ More recently, additional tokens are often needed. SMoC can generate these for y
 ## Configuration
 The configuration for SMoC shares the same directory as the aforementioned `cookie.txt` file. To override or change default configurations, create `~/.config/smoc/config.json`.
 
-### Themes
+### Settings
+Various settings can be configured in the `config.json` file. A trivial config that overrides defaults follows:
+```
+{
+    "SmocConfiguration.LogLevel": "Warning",
+    "SmocConfiguration.SongCacheSizeBytes": 1073741824,
+    "SmocConfiguration.AlbumCoverCacheSizeBytes": 1073741824,
+    "SmocConfiguration.SongCacheMaxElements": 1000,
+    "SmocConfiguration.AlbumCoverCacheMaxElements": 1000,
+}
+```
+
+The following settings are available:
+
+#### Caching
+- `SmocConfiguration.SongCacheSizeBytes` [`long`]: The maximum size of the song cache in bytes. A value of 0 means no limit.
+- `SmocConfiguration.AlbumCoverCacheSizeBytes` [`long`]: The maximum size of the album cover cache in bytes. A value of 0 means no limit.
+- `SmocConfiguration.SongCacheMaxElements` [`int`]: The maximum number of songs to cache. A value of 0 means no limit.
+- `SmocConfiguration.AlbumCoverCacheMaxElements` [`int`]: The maximum number of album covers to cache. A value of 0 means no limit.
+
+#### Logging
+- `SmocConfiguration.LogLevel` [`LogLevel`]: The minimum log level to log. Valid values are `Trace`, `Debug`, `Information`, `Warning`, `Error`, `Critical`.
+
+#### Listen History
+- `ListenHistory.Enabled` [`bool`]: Whether listen history tracking is enabled.
+- `ListenHistory.MinimumPositionSeconds` [`int`]: The minimum position in seconds for a song to be considered listened to.
+- `ListenHistory.MinimumFraction` [`double`]: The minimum fraction of a song for it to be considered listened to.
+
+#### UI
+- `Theme` [`string`]: The name of the theme to use. This must match one of the themes in the `Themes` array.
+  - The defualt theme is `default`.
+
+##### Custom Themes
 You can change the theming of the SMoC via this `config.json` file. An example `config.json` file containing an example theme, based on the default SMoC theme (which itself is based on gruvbox), is below:
 ```json
 {
