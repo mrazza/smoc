@@ -8,7 +8,7 @@
 ![.NET](https://img.shields.io/badge/.NET-10.0-512bd4?style=flat-square&logo=dotnet)
 ![Status](https://img.shields.io/badge/status-active_development-green?style=flat-square)
 
-A terminal-based music player (TUI) for streaming services, currently supporting **YouTube Music**.
+A terminal-based music player (TUI) for streaming services, currently supporting **YouTube Music**. Spotify and Apple Music are _future features_.
 
 [Features](#-features) • [Installation](#-installation) • [Configuration and Setup](#%EF%B8%8F-configuration-and-setup) • [Usage](#-usage)
 
@@ -67,10 +67,34 @@ A terminal-based music player (TUI) for streaming services, currently supporting
   - [x] Authentication
   - [x] POToken
   - [x] VisitorData
+  - [x] Metadata
+  - [x] Searching
   - [x] Play Audio Stream
   - [x] Album Art
   - [x] Caching
   - [x] History Tracking
+  - [ ] Like
+  - [ ] Dislike
+- [ ] Apple Music ([gamdl](https://github.com/glomatico/gamdl) as a reference)
+  - [ ] Authentication
+  - [ ] Play Audio Stream
+  - [ ] Metadata
+  - [ ] Searching
+  - [ ] Play Audio Stream
+  - [ ] Album Art
+  - [ ] Caching
+  - [ ] History Tracking
+  - [ ] Like
+  - [ ] Dislike
+- [ ] Spotify ([librespot](https://github.com/librespot-org/librespot) as a reference)
+  - [ ] Authentication
+  - [ ] Play Audio Stream
+  - [ ] Metadata
+  - [ ] Searching
+  - [ ] Play Audio Stream
+  - [ ] Album Art
+  - [ ] Caching
+  - [ ] History Tracking
   - [ ] Like
   - [ ] Dislike
 
