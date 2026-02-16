@@ -4,7 +4,7 @@ namespace Smoc.Services.Caching;
 /// An in-memory cache service.
 /// </summary>
 public class InMemoryCacheService : ICacheService {
-  private struct CacheValue(DateTime lastAccessedTimeUtc, byte[] data) {
+  private class CacheValue(DateTime lastAccessedTimeUtc, byte[] data) {
     public DateTime LastAccessedTimeUtc { get; set; } = lastAccessedTimeUtc;
     public byte[] Data { get; init; } = data;
   }
