@@ -76,7 +76,7 @@ A terminal-based music player (TUI) for streaming services, currently supporting
 
 ## 🚀 Installation
 
-Once installed some setup is required to use SMoC. See the [Configuration and Setup](#configuration-and-setup) section for more information.
+Once installed some setup is required to use SMoC. See the [Configuration and Setup](#%EF%B8%8F-configuration-and-setup) section for more information.
 
 ### Binary Release
 TODO: No binary releases yet.
