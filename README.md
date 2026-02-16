@@ -79,7 +79,9 @@ A terminal-based music player (TUI) for streaming services, currently supporting
 Once installed some setup is required to use SMoC. See the [Configuration and Setup](#%EF%B8%8F-configuration-and-setup) section for more information.
 
 ### Binary Release
-TODO: No binary releases yet.
+Current release is [v0.1.0](https://github.com/mrazza/smoc/releases/tag/v0.1.0).
+
+Available for [Windows x64](https://github.com/mrazza/smoc/releases/download/v0.1.0/smoc-v0.1.0-winx64-bin.zip), [Linux x64](https://github.com/mrazza/smoc/releases/download/v0.1.0/smoc-v0.1.0-linux64-bin.tar.gz), and [MacOS ARM64](https://github.com/mrazza/smoc/releases/download/v0.1.0/smoc-v0.1.0-macarm64-bin.zip).
 
 ### Building from Source
 
@@ -137,7 +139,7 @@ SMoC stores configuration and authentication data in `~/.config/smoc/` (on Linux
 > [!NOTE]
 > You need a YouTube Music Premium subscription to play most content.
 
-To access your YouTube Music account, you need to extract your cookies from YouTube Music:
+To access your YouTube Music account, you need to extract your cookies from YouTube Music (these steps are copied from [YouTube.js](https://ytjs.dev/guide/authentication.html)):
 
 1. Open [YouTube Music](https://music.youtube.com) in your browser (Incognito recommended).
 2. Open Developer Tools (`F12`) -> **Network** tab.
