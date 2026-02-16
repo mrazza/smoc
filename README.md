@@ -238,7 +238,7 @@ Commits follow the [Conventional Commits](https://www.conventionalcommits.org/en
   - [x] VisitorData
   - [x] Play Audio Stream
   - [x] Album Art
-  - [ ] Caching
+  - [x] Caching
   - [x] History Tracking
   - [ ] Like
   - [ ] Dislike
