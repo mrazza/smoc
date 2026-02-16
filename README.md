@@ -1,102 +1,211 @@
-# SMoC
-Steaming Music on Console
 
-A TUI music player for streaming services. The currently implemented streaming service is YouTube Music (YTM).
+<div align="center">
+
+# SMoC
+### Steaming Music on Console
+
+![License](https://img.shields.io/github/license/mrazza/smoc?style=flat-square)
+![.NET](https://img.shields.io/badge/.NET-10.0-512bd4?style=flat-square&logo=dotnet)
+![Status](https://img.shields.io/badge/status-active_development-green?style=flat-square)
+
+A terminal-based music player (TUI) for streaming services, currently supporting **YouTube Music**.
+
+[Features](#features) • [Installation](#installation) • [Configuration and Setup](#configuration-and-setup) • [Usage](#usage)
 
 ![screenshot](smoc_example.png)
 
-This project is not supported or endorsed by Google. In fact, it has nothing to do with Google or YouTube; this is purely a hobby project. The same warnings and disclamers for the well-known [yt-dlp](https://github.com/yt-dlp/yt-dlp) project apply here.
+</div>
 
-This project is made possible by:
-- [Terminal.Gui](https://github.com/gui-cs/Terminal.Gui) - TUI Framework
-- [SoundFlow](https://github.com/LSXPrime/SoundFlow) - Cross-platform Audio
-- [YouTubeMusicAPI](https://github.com/IcySnex/YouTubeMusicAPI) - C# YouTube Music API Client
+---
 
-## Commands
-SMoC operates via a vim-style command bar. Switching between views and performing many actions occur via the bottom command bar. Much like vim, hitting the `:` key will activate COMMAND mode. The following commands are supported:
-- `:a`: Switch to the ARTIST mode
-- `:a/<artist name>`: Switch to the ARTIST mode and search for a given artist
-- `:t`: Switch to the TRACK mode
-- `:t/<track name>`: Switch to the TRACK mode and search for a given track
-- `:p`: Switch to the PLAYLIST mode
-- `:p/<playlist name>`: Switch to the PLAYLIST mode and search for a given playlist
-- `:likes`: Switch to PLAYLIST mode and load the list of songs the user has liked
-- `:url`: Switch to PLAYLIST mode
-- `:url/<url>`: Switch to PLAYLIST mode and load the list of songs from the given URL
-- `:pq`: Switch to the QUEUE mode which shows the current playback queue
-- `:np`: Switch to the NOW PLAYING mode which shows the currently playing song and album art
-- `:v/<volume>`: Change volume to the specified value
-- `:q`: Quit
+> [!NOTE]
+> This project is not supported or endorsed by any streaming music service or major company. It is a hobby project and has no affiliation with Spotify, Apple, Google, or YouTube.
+> The same warnings and disclaimers for the well-known [yt-dlp](https://github.com/yt-dlp/yt-dlp) project apply here.
 
-## Playback Hotkeys
-Playback can be controlled via the following hotkeys:
-- `space`: Play/Pause
-- `ctrl+space`: Stop
-- `,` (comma): Previous Track (or restart track if > 10 seconds into song)
-- `.` (period): Next Track
-- `[`: Seek backward 10 seconds
-- `]`: Seek forward 10 seconds
+## 🌟 Features
 
-## Browsing and Tables
-Browsing elements in a table can be done with either directional arrow keys (`up`, `down`, `left`, `right`) or vim bindings (`h`, `j`, `k`, `l`). The current active table can be changed by either navigating left and right or pressing tab. Actions can be performed on the currently selected element by either pressing an action shortcut (below) or pressing `enter` which will bring up a context-specific action pop-over.
+- **TUI Interface**: Built with [Terminal.Gui](https://github.com/gui-cs/Terminal.Gui) for a rich console experience.
+- **Cross-Platform Audio**: Powered by [SoundFlow](https://github.com/LSXPrime/SoundFlow).
+- **YouTube Music Integration**: Powered by [YouTubeMusicAPI](https://github.com/IcySnex/YouTubeMusicAPI). Search, stream, and manage your library.
+- **Visuals**: Displays album art using Sixel graphics (requires a compatible terminal).
 
-### Track Tables
-TODO: List action bindings
+### Feature Progress
 
-### Search Tables
-TODO: List action bindings
+- [ ] UI
+  - [x] Search Support
+  - [x] Command Bar
+  - [x] Song Table
+  - [x] Now Playing Bar
+  - [x] Album Art (Sixel)
+  - [x] Status Bar
+  - [ ] Visualizations
+  - [x] Now Playing Screen
+- [ ] Playback
+  - [x] Play
+  - [x] Pause
+  - [x] Stop
+  - [x] Skip
+  - [x] Previous
+  - [x] Start Over
+  - [ ] Repeat Track
+  - [x] Volume
+  - [ ] Playback Device Selection
+  - [ ] Gapless Playback
+- [ ] Queue
+  - [x] Add to End of Queue
+  - [x] Queue Next (after current song)
+  - [ ] Remove
+  - [x] Advance to Next at End of Song
+  - [ ] Repeat Queue
+  - [ ] Shuffle
+- [x] Search
+  - [x] Artist
+  - [x] Track
+  - [x] Playlist
+  - [x] URL
+- [ ] YouTube Music
+  - [x] Authentication
+  - [x] POToken
+  - [x] VisitorData
+  - [x] Play Audio Stream
+  - [x] Album Art
+  - [x] Caching
+  - [x] History Tracking
+  - [ ] Like
+  - [ ] Dislike
 
-## Cookies
-In order to play most tracks, you will need to authenticate with a Google acocunt that has a valid YouTube Music Subscription.
+## 🚀 Installation
 
-### Browser Auth Setup Steps
-It is recommended to do this in a new incognito/private window and immediately closing the window without logging out.
+Once installed some setup is required to use SMoC. See the [Configuration and Setup](#configuration-and-setup) section for more information.
 
-1. Open YouTube Music in your browser - ensure you are logged in.
-1. Open web developer tools (F12).
-1. Open Network tab and locate a POST request to `music.youtube.com`.
-1. Copy the `Cookie` into a text file named `cookie.txt` into your local smoc config directory. Note you will need to create the directory if it does not exist. This will usually be `~/.config/smoc/cookie.txt`.
+### Binary Release
+TODO: No binary releases yet.
 
-### PO Token and Visitor Data
-More recently, additional tokens are often needed. SMoC can generate these for you if you have provided a valid cookie in the `cookie.txt` file. Run `smoc --gentokens`; this will create a `tokens.json` file in the same config directory.
+### Building from Source
 
-## Configuration
-The configuration for SMoC shares the same directory as the aforementioned `cookie.txt` file. To override or change default configurations, create `~/.config/smoc/config.json`.
+```bash
+# Clone the repository
+git clone https://github.com/mrazza/smoc.git
+cd smoc
 
-### Settings
-Various settings can be configured in the `config.json` file. A trivial config that overrides defaults follows:
+# Build and run
+dotnet run --project smoc/smoc.csproj
 ```
+
+## 🎮 Usage
+
+SMoC operates with a Vim-style command bar. Press `:` to enter command mode.
+
+### Navigation & Commands
+
+| Command         | Description                                             |
+| :-------------- | :------------------------------------------------------ |
+| `:a`            | Switch to **Artist** mode                               |
+| `:a/<artist>`   | Switch to **Artist** mode and search for `<artist>`     |
+| `:t`            | Switch to **Track** mode                                |
+| `:t/<track>`    | Switch to **Track** mode and search for `<track>`       |
+| `:p`            | Switch to **Playlist** mode                             |
+| `:p/<playlist>` | Switch to **Playlist** mode and search for `<playlist>` |
+| `:likes`        | Load your **Liked Songs** playlist                      |
+| `:url`          | Switch to **Playlist** mode from URL                    |
+| `:url/<url>`    | Load songs from a specific YouTube Music URL            |
+| `:pq`           | View the **Playback Queue**                             |
+| `:np`           | View **Now Playing** screen                             |
+| `:v/<0-100>`    | Set volume (e.g., `:v/80`)                              |
+| `:q`            | **Quit** application                                    |
+
+### Playback Controls
+
+| Hotkey               | Action                                   |
+| :------------------- | :--------------------------------------- |
+| `Space`              | Play / Pause                             |
+| `Ctrl+Space`         | Stop                                     |
+| `,` (Comma)          | Previous Track (Restart if > 10s played) |
+| `.` (Period)         | Next Track                               |
+| `[`                  | Seek Backward 10s                        |
+| `]`                  | Seek Forward 10s                         |
+| `Up/Down/Left/Right` | Navigate Tables                          |
+| `h/j/k/l`            | Navigate Tables (Vim style)              |
+| `Tab`                | Switch active pane                       |
+| `Enter`              | Open action menu for selected item       |
+
+## ⚙️ Configuration and Setup
+
+SMoC stores configuration and authentication data in `~/.config/smoc/` (on Linux).
+
+### Authentication
+> [!NOTE]
+> You need a YouTube Music Premium subscription to play most content.
+
+To access your YouTube Music account, you need to extract your cookies from YouTube Music:
+
+1. Open [YouTube Music](https://music.youtube.com) in your browser (Incognito recommended).
+2. Open Developer Tools (`F12`) -> **Network** tab.
+3. Find a `POST` request to `music.youtube.com`.
+4. Copy the value of the `cookie` request header.
+5. Save it to `~/.config/smoc/cookie.txt`.
+
+> [!TIP]
+> It is recommended to open an incognito window or separate browser profile when getting your cookie information to avoid other browser sessions from invalidating the tokens. Once cookies are retrieved, close the session _without_ logging out.
+
+More recently, additional tokens beyond just cookies are often needed. POToken and Visitor Data are required in the `tokens.json` file in the same directory as your `cookie.txt`.
+
+> [!TIP]
+> Run `smoc --gentokens` after setting up the cookie to generate necessary PO Tokens and Visitor Data automatically.
+
+### Config File
+Create or edit `~/.config/smoc/config.json` to customize settings.
+
+<details>
+<summary><strong>Example Configuration</strong> (Click to expand)</summary>
+
+```json
 {
     "SmocConfiguration.LogLevel": "Warning",
     "SmocConfiguration.SongCacheSizeBytes": 1073741824,
     "SmocConfiguration.AlbumCoverCacheSizeBytes": 1073741824,
     "SmocConfiguration.SongCacheMaxElements": 1000,
     "SmocConfiguration.AlbumCoverCacheMaxElements": 1000,
+    "Theme": "gruvbox-custom",
+    "Themes": [
+        {
+            "gruvbox-custom": {
+                "Schemes": [
+                    {
+                        "Runnable": {
+                            "Normal": { "Foreground": "#ebdbb2", "Background": "#00000000" },
+                            "Focus": { "Foreground": "#ebdbb2", "Background": "#639494" },
+                            "Active": { "Foreground": "#ebdbb2", "Background": "#394e4e" }
+                        }
+                    }
+                    // ... (other schemes)
+                ]
+            }
+        }
+    ]
 }
 ```
+</details>
 
-The following settings are available:
+#### Common Settings
+| Category           | Key                                            | Type       | Description                                                         |
+| :----------------- | :--------------------------------------------- | :--------- | :------------------------------------------------------------------ |
+| **Caching**        | `SmocConfiguration.SongCacheSizeBytes`         | `long`     | Max size of song cache in bytes (0 = no limit)                      |
+|                    | `SmocConfiguration.AlbumCoverCacheSizeBytes`   | `long`     | Max size of album cover cache in bytes (0 = no limit)               |
+|                    | `SmocConfiguration.SongCacheMaxElements`       | `int`      | Max number of songs to cache (0 = no limit)                         |
+|                    | `SmocConfiguration.AlbumCoverCacheMaxElements` | `int`      | Max number of album covers to cache (0 = no limit)                  |
+| **Logging**        | `SmocConfiguration.LogLevel`                   | `LogLevel` | Min log level (Trace, Debug, Information, Warning, Error, Critical) |
+| **Listen History** | `ListenHistory.Enabled`                        | `bool`     | Whether listen history tracking is enabled                          |
+|                    | `ListenHistory.MinimumPositionSeconds`         | `int`      | Minimum position (seconds) to consider listened                     |
+|                    | `ListenHistory.MinimumFraction`                | `double`   | Minimum fraction of a song to consider listened                     |
+| **UI**             | `Theme`                                        | `string`   | The name of the theme to use (default: `default`)                   |
 
-#### Caching
-- `SmocConfiguration.SongCacheSizeBytes` [`long`]: The maximum size of the song cache in bytes. A value of 0 means no limit.
-- `SmocConfiguration.AlbumCoverCacheSizeBytes` [`long`]: The maximum size of the album cover cache in bytes. A value of 0 means no limit.
-- `SmocConfiguration.SongCacheMaxElements` [`int`]: The maximum number of songs to cache. A value of 0 means no limit.
-- `SmocConfiguration.AlbumCoverCacheMaxElements` [`int`]: The maximum number of album covers to cache. A value of 0 means no limit.
+#### Custom Themes
+If specifying a custom theme (as in the example config above), you will need to specify styling for all schemes.
 
-#### Logging
-- `SmocConfiguration.LogLevel` [`LogLevel`]: The minimum log level to log. Valid values are `Trace`, `Debug`, `Information`, `Warning`, `Error`, `Critical`.
+<details>
+<summary><strong>Example Theme</strong> (Click to expand)</summary>
 
-#### Listen History
-- `ListenHistory.Enabled` [`bool`]: Whether listen history tracking is enabled.
-- `ListenHistory.MinimumPositionSeconds` [`int`]: The minimum position in seconds for a song to be considered listened to.
-- `ListenHistory.MinimumFraction` [`double`]: The minimum fraction of a song for it to be considered listened to.
-
-#### UI
-- `Theme` [`string`]: The name of the theme to use. This must match one of the themes in the `Themes` array.
-  - The defualt theme is `default`.
-
-##### Custom Themes
-You can change the theming of the SMoC via this `config.json` file. An example `config.json` file containing an example theme, based on the default SMoC theme (which itself is based on gruvbox), is below:
 ```json
 {
     "Theme": "gruvbox-custom",
@@ -223,54 +332,14 @@ You can change the theming of the SMoC via this `config.json` file. An example `
     ]
 }
 ```
+</details>
 
-## Development
-SMoC is currently in active development. Please report any issues you may encounter.
+## 🤝 Contributing
 
-This project is written in C# using the .NET 10 SDK. We're following the [Google C# Style Guide](https://google.github.io/styleguide/csharp-style.html).
+Contributions are welcome!
+- **Code Style**: We follow the [Google C# Style Guide](https://google.github.io/styleguide/csharp-style.html).
+- **Commits**: Please use [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/).
 
-Commits follow the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) specification with branches and PRs following [Conventional Branch](https://conventional-branch.github.io/).
+## 📄 License
 
-### Planned Features
-- [ ] UI
-  - [x] Search Support
-  - [x] Command Bar
-  - [x] Song Table
-  - [x] Now Playing Bar
-  - [x] Album Art (Sixel)
-  - [x] Status Bar
-  - [ ] Visualizations
-  - [x] Now Playing Screen
-- [ ] Playback
-  - [x] Play
-  - [x] Pause
-  - [x] Stop
-  - [x] Skip
-  - [x] Previous
-  - [x] Start Over
-  - [ ] Repeat Track
-  - [x] Volume
-  - [ ] Playback Device Selection
-  - [ ] Gapless Playback
-- [ ] Queue
-  - [x] Add to End of Queue
-  - [x] Queue Next (after current song)
-  - [ ] Remove
-  - [x] Advance to Next at End of Song
-  - [ ] Repeat Queue
-  - [ ] Shuffle
-- [x] Search
-  - [x] Artist
-  - [x] Track
-  - [x] Playlist
-  - [x] URL
-- [ ] YouTube Music
-  - [x] Authentication
-  - [x] POToken
-  - [x] VisitorData
-  - [x] Play Audio Stream
-  - [x] Album Art
-  - [x] Caching
-  - [x] History Tracking
-  - [ ] Like
-  - [ ] Dislike
+Distributed under the Apache-2.0 License. See `LICENSE` for more information.
