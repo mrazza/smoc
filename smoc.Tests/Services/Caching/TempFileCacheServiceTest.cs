@@ -53,10 +53,10 @@ public class TempFileCacheServiceTest : IDisposable {
     string key = "test-key";
     string expectedContent = "hello world";
 
-    using var resultStream = await service.GetOrAddAsync(key, async (ct) => {
-      var stream = new MemoryStream(Encoding.UTF8.GetBytes(expectedContent));
-      return stream;
-    }, TestContext.Current.CancellationToken);
+    using var resultStream = await service.GetOrAddAsync(
+      key,
+      _ => Task.FromResult<Stream>(new MemoryStream(Encoding.UTF8.GetBytes(expectedContent))),
+      TestContext.Current.CancellationToken);
 
     Assert.NotNull(resultStream);
     using var reader = new StreamReader(resultStream);
