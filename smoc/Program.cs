@@ -86,8 +86,12 @@ public static class Program {
   /// </summary>
   /// <returns>An initialized <see cref="YtmStreamingClient"/>.</returns>
   private static YtmStreamingClient CreateStreamingClient() {
-    var songCacheConfig = new CacheConfig(MaxSizeBytes: 1024 * 1024 * 250); // 250MB
-    var artCacheConfig = new CacheConfig(MaxSizeBytes: 1024 * 1024 * 10); // 10MB
+    long? songCacheSize = SmocConfiguration.SongCacheSizeBytes != 0 ? SmocConfiguration.SongCacheSizeBytes : null;
+    long? artCacheSize = SmocConfiguration.AlbumCoverCacheSizeBytes != 0 ? SmocConfiguration.AlbumCoverCacheSizeBytes : null;
+    int? songCacheMaxElements = SmocConfiguration.SongCacheMaxElements != 0 ? SmocConfiguration.SongCacheMaxElements : null;
+    int? artCacheMaxElements = SmocConfiguration.AlbumCoverCacheMaxElements != 0 ? SmocConfiguration.AlbumCoverCacheMaxElements : null;
+    var songCacheConfig = new CacheConfig(MaxSizeBytes: songCacheSize, MaxElements: songCacheMaxElements);
+    var artCacheConfig = new CacheConfig(MaxSizeBytes: artCacheSize, MaxElements: artCacheMaxElements);
     if (!File.Exists(_cookiesPath) || !File.Exists(_tokensPath)) {
       Logging.Information("Cookies or tokens not found. Creating new YTM client without authentication.");
       return YtmStreamingClient.Create(new TempFileCacheService("songs", songCacheConfig), new TempFileCacheService("art", artCacheConfig));

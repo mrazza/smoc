@@ -18,4 +18,36 @@ public static class SmocConfiguration {
   [ConfigurationProperty(Scope = typeof(SettingsScope))]
   [JsonConverter(typeof(JsonStringEnumConverter))]
   public static LogLevel LogLevel { get; set; } = LogLevel.Information;
+
+  /// <summary>
+  /// Gets or sets the maximum size of the song cache in bytes.
+  /// The default value is 512MB.
+  /// A value of 0 means no limit.
+  /// </summary>
+  [ConfigurationProperty(Scope = typeof(SettingsScope))]
+  public static long SongCacheSizeBytes { get; set; } = 1024 * 1024 * 512; // 512MB
+
+  /// <summary>
+  /// Gets or sets the maximum number of songs to cache.
+  /// The default value is 0.
+  /// A value of 0 means no limit.
+  /// </summary>
+  [ConfigurationProperty(Scope = typeof(SettingsScope))]
+  public static int SongCacheMaxElements { get; set; } = 0;
+
+  /// <summary>
+  /// Gets or sets the maximum size of the album cover cache in bytes.
+  /// The default value is 100MB.
+  /// A value of 0 means no limit.
+  /// </summary>
+  [ConfigurationProperty(Scope = typeof(SettingsScope))]
+  public static long AlbumCoverCacheSizeBytes { get; set; } = 1024 * 1024 * 100; // 100MB
+
+  /// <summary>
+  /// Gets or sets the maximum number of album covers to cache.
+  /// The default value is 0.
+  /// A value of 0 means no limit.
+  /// </summary>
+  [ConfigurationProperty(Scope = typeof(SettingsScope))]
+  public static int AlbumCoverCacheMaxElements { get; set; } = 0;
 }
