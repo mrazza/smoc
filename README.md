@@ -30,7 +30,11 @@ A terminal-based music player (TUI) for streaming services, currently supporting
 - **Visuals**: Displays album art using Sixel graphics (requires a compatible terminal).
 
 ### Feature Progress
+While most basic functionality is available and SMoC is totally usable, there's a lot left to do.
 
+<details>
+<summary><strong>Feature Plan</strong> (Click to expand)</summary>
+  
 - [ ] UI
   - [x] Search Support
   - [x] Command Bar
@@ -97,15 +101,24 @@ A terminal-based music player (TUI) for streaming services, currently supporting
   - [ ] History Tracking
   - [ ] Like
   - [ ] Dislike
+  
+</details>
 
 ## 🚀 Installation
 
 Once installed some setup is required to use SMoC. See the [Configuration and Setup](#%EF%B8%8F-configuration-and-setup) section for more information.
 
-### Binary Release
+### Binary Release (Windows/Linux/MacOS)
 Current release is [v0.1.0](https://github.com/mrazza/smoc/releases/tag/v0.1.0).
 
 Available for [Windows x64](https://github.com/mrazza/smoc/releases/download/v0.1.0/smoc-v0.1.0-winx64-bin.zip), [Linux x64](https://github.com/mrazza/smoc/releases/download/v0.1.0/smoc-v0.1.0-linux64-bin.tar.gz), and [MacOS ARM64](https://github.com/mrazza/smoc/releases/download/v0.1.0/smoc-v0.1.0-macarm64-bin.zip).
+
+### Gentoo via Portage
+SMoC is available via [my overlay](https://github.com/mrazza/razza-overlay). To install, add my overlay and emerge it.
+```
+eselect repository add razza git https://github.com/mrazza/razza-overlay.git
+emerge media-sound/smoc
+```
 
 ### Building from Source
 
