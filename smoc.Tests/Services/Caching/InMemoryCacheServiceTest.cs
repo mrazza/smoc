@@ -12,10 +12,10 @@ public class InMemoryCacheServiceTest {
     string key = "test-key";
     string expectedContent = "hello world";
 
-    using var resultStream = await service.GetOrAddAsync(key, async (ct) => {
-      var stream = new MemoryStream(Encoding.UTF8.GetBytes(expectedContent));
-      return stream;
-    }, TestContext.Current.CancellationToken);
+    using var resultStream = await service.GetOrAddAsync(
+        key,
+        _ => Task.FromResult<Stream>(new MemoryStream(Encoding.UTF8.GetBytes(expectedContent))),
+        TestContext.Current.CancellationToken);
 
     Assert.NotNull(resultStream);
     using var reader = new StreamReader(resultStream);
@@ -32,9 +32,10 @@ public class InMemoryCacheServiceTest {
     bool factoryCalled = false;
 
     // Pre-populate cache
-    await service.GetOrAddAsync(key, async (ct) => {
-      return new MemoryStream(Encoding.UTF8.GetBytes(expectedContent));
-    }, TestContext.Current.CancellationToken);
+    await service.GetOrAddAsync(
+        key,
+        _ => Task.FromResult<Stream>(new MemoryStream(Encoding.UTF8.GetBytes(expectedContent))),
+        TestContext.Current.CancellationToken);
 
     using var resultStream = await service.GetOrAddAsync(key, (ct) => {
       factoryCalled = true;
