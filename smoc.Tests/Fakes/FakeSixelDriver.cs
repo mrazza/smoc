@@ -18,6 +18,9 @@ public class FakeSixelDriver : ISixelDriver {
   public Size? Resolution => null;
 
   /// <inheritdoc/>
+  public int MaxPaletteColors => 256;
+
+  /// <inheritdoc/>
   public string EncodeSixel(Terminal.Gui.Drawing.Color[,] colors) {
     return "";
   }

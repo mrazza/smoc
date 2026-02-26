@@ -315,9 +315,9 @@ public class SongContextMenuTest : IDisposable {
     using var context = NewContext();
     var songContextMenu = NewSongContextMenu();
     context.Add(songContextMenu);
-    Assert.Equal(songContextMenu, Assert.Single(context.App?.Popover?.Popovers!));
+    Assert.Equal(songContextMenu, Assert.Single(context.App?.Popovers?.Popovers!));
     context.Then((_) => songContextMenu.Dispose());
-    Assert.Empty(context.App?.Popover?.Popovers!);
+    Assert.Empty(context.App?.Popovers?.Popovers!);
   }
 
   public void Dispose() {

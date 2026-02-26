@@ -1,8 +1,8 @@
 PlaybackQueueViewTest.BecomesVisible_SelectsCurrentSong_0_ansi:
-[38;2;95;158;160m[48;2;54;69;79m┌──────────────────────────────────────────────────────────────────────────────────────────────────┐
+[39m[49m┌──────────────────────────────────────────────────────────────────────────────────────────────────┐
 │Artist                        Album                         Track                         Length  │
 │Radiohead                     OK Computer                   BecomesVisible_SelectsCurrent 5:00    │
-│[38;2;54;69;79m[48;2;95;158;160mRadiohead                     OK Computer                   BecomesVisible_SelectsCurrent 5:00    [38;2;95;158;160m[48;2;54;69;79m│
+│[38;2;0;0;0m[48;2;255;255;255mRadiohead                     OK Computer                   BecomesVisible_SelectsCurrent 5:00    [39m[49m│
 │                                                                                                  │
 │                                                                                                  │
 │                                                                                                  │

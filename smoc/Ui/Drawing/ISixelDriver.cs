@@ -26,6 +26,12 @@ public interface ISixelDriver {
   Size? Resolution { get; }
 
   /// <summary>
+  /// The maximum number of colors that can be included in a sixel image. Defaults
+  /// to 256.
+  /// </summary>
+  int MaxPaletteColors { get; }
+
+  /// <summary>
   /// Initializes the Sixel driver, triggering asynchronous detection of Sixel support
   /// and terminal cell resolution.
   /// </summary>

@@ -12,7 +12,6 @@ using Color = Terminal.Gui.Drawing.Color;
 public sealed class SixelDriver : ISixelDriver {
   private SixelSupportDetector? _sixelSupportDetector;
   private SixelSupportResult? _sixelSupportResult;
-  private readonly SixelEncoder _encoder;
   private readonly IApplication _app;
   private readonly ConcurrentQueue<Action<SixelDriver>> _sixelInitQueue = new();
 
@@ -26,12 +25,14 @@ public sealed class SixelDriver : ISixelDriver {
   /// <inheritdoc/>
   public Size? Resolution => _sixelSupportResult?.Resolution;
 
+  /// <inheritdoc/>
+  public int MaxPaletteColors => _sixelSupportResult?.MaxPaletteColors ?? 256;
+
   /// <summary>
   /// Initializes a new instance of the <see cref="SixelDriver"/> class.
   /// </summary>
   /// <param name="app">The application instance to use when rendering.</param>
   public SixelDriver(IApplication app) {
-    _encoder = new SixelEncoder();
     _app = app;
   }
 
@@ -54,7 +55,9 @@ public sealed class SixelDriver : ISixelDriver {
 
   /// <inheritdoc/>
   public string EncodeSixel(Color[,] colors) {
-    return _encoder.EncodeSixel(colors);
+    var encoder = new SixelEncoder();
+    encoder.Quantizer.MaxColors = Math.Min(encoder.Quantizer.MaxColors, MaxPaletteColors);
+    return encoder.EncodeSixel(colors);
   }
 
   private void EnsureInitialized() {

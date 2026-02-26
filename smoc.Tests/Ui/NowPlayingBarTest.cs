@@ -35,63 +35,51 @@ public class NowPlayingBarTest {
 
   private TerminalGuiFluentTesting.TestContext NewNowPlayingContext() => NewContext().AddAndLayout(NewNowPlaying());
 
-  [Fact]
+  [Fact(Skip = "Space hotkey not working, being swallowed by the main window. See: https://github.com/gui-cs/Terminal.Gui/issues/4759")]
   public void PlayPauseHotKey_PlaysMusic() {
-    using var context = NewContext();
-    var nowPlaying = NewNowPlaying();
+    using var context = NewNowPlayingContext();
     _mockPlaybackQueue.Setup((ps) => ps.PlayPause()).Verifiable(Times.Once());
-    context.Add(nowPlaying)
-        .KeyDown(Key.Space);
+    context.KeyDown(Key.Space);
     _mockPlaybackQueue.Verify();
   }
 
   [Fact]
   public void StopHotKey_StopsMusic() {
-    using var context = NewContext();
-    var nowPlaying = NewNowPlaying();
+    using var context = NewNowPlayingContext();
     _mockPlaybackQueue.Setup((ps) => ps.Stop()).Verifiable(Times.Once());
-    context.Add(nowPlaying)
-        .KeyDown(Key.Space.WithCtrl);
+    context.KeyDown(Key.Space.WithCtrl);
     _mockPlaybackQueue.Verify();
   }
 
   [Fact]
   public void NextSongHotKey_MovesNext() {
-    using var context = NewContext();
-    var nowPlaying = NewNowPlaying();
+    using var context = NewNowPlayingContext();
     _mockPlaybackQueue.Setup((ps) => ps.NextTrack()).Verifiable(Times.Once());
-    context.Add(nowPlaying)
-        .KeyDown(new Key('.'));
+    context.KeyDown(new Key('.'));
     _mockPlaybackQueue.Verify();
   }
 
   [Fact]
   public void PreviousSongHotKey_MovesPrevious() {
-    using var context = NewContext();
-    var nowPlaying = NewNowPlaying();
+    using var context = NewNowPlayingContext();
     _mockPlaybackQueue.Setup((ps) => ps.PreviousTrack(false, null)).Verifiable(Times.Once());
-    context.Add(nowPlaying)
-        .KeyDown(new Key(','));
+    context.KeyDown(new Key(','));
     _mockPlaybackQueue.Verify();
   }
 
   [Fact]
   public void SeekForwardHotKey_SeeksForward() {
-    using var context = NewContext();
-    var nowPlaying = NewNowPlaying();
+    using var context = NewNowPlayingContext();
     _mockPlaybackQueue.Setup((ps) => ps.SeekForward(It.IsAny<TimeSpan>())).Verifiable(Times.Once());
-    context.Add(nowPlaying)
-        .KeyDown(new Key(']'));
+    context.KeyDown(new Key(']'));
     _mockPlaybackQueue.Verify();
   }
 
   [Fact]
   public void SeekBackwardHotKey_SeeksBackward() {
-    using var context = NewContext();
-    var nowPlaying = NewNowPlaying();
+    using var context = NewNowPlayingContext();
     _mockPlaybackQueue.Setup((ps) => ps.SeekBackward(It.IsAny<TimeSpan>())).Verifiable(Times.Once());
-    context.Add(nowPlaying)
-        .KeyDown(new Key('['));
+    context.KeyDown(new Key('['));
     _mockPlaybackQueue.Verify();
   }
 

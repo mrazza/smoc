@@ -43,12 +43,16 @@ public sealed class SongContextMenu : PopoverMenu {
 
     // Map Esc to Quit (Close Popover)
     KeyBindings.ReplaceCommands(Key.Esc, Command.Quit);
+
+    Accepting += (sender, e) => {
+      Visible = false;
+    };
   }
 
   public override void EndInit() {
     base.EndInit();
 
-    App!.Popover?.Register(this);
+    App!.Popovers?.Register(this);
   }
 
   /// <summary>
@@ -103,14 +107,9 @@ public sealed class SongContextMenu : PopoverMenu {
     return menuItems;
   }
 
-  protected override void OnAccepted(CommandEventArgs args) {
-    base.OnAccepted(args);
-    Visible = false;
-  }
-
   protected override void Dispose(bool disposing) {
-    if (disposing && (App?.Popover?.IsRegistered(this) ?? false)) {
-      App?.Popover?.DeRegister(this);
+    if (disposing && (App?.Popovers?.IsRegistered(this) ?? false)) {
+      App?.Popovers?.DeRegister(this);
     }
 
     base.Dispose(disposing);

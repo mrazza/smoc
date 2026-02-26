@@ -11,7 +11,7 @@
                         "Runnable": {
                             "Normal": {
                                 "Foreground": "#ebdbb2",
-                                "Background": "#00000000"
+                                "Background": "None"
                             },
                             "Focus": {
                                 "Foreground": "#ebdbb2",
@@ -27,7 +27,7 @@
                         "Base": {
                             "Normal": {
                                 "Foreground": "#ebdbb2",
-                                "Background": "#00000000"
+                                "Background": "None"
                             }
                         }
                     },
@@ -54,7 +54,7 @@
                         "TableNormalTracks": {
                             "Normal": {
                                 "Foreground": "#ebdbb2",
-                                "Background": "#00000000"
+                                "Background": "None"
                             },
                             "Focus": {
                                 "Foreground": "#ebdbb2",
@@ -103,11 +103,11 @@
                         "CommandLine": {
                             "Normal": {
                                 "Foreground": "#ebdbb2",
-                                "Background": "#00000000"
+                                "Background": "None"
                             },
                             "Editable": {
                                 "Foreground": "#ebdbb2",
-                                "Background": "#00000000"
+                                "Background": "None"
                             }
                         }
                     },

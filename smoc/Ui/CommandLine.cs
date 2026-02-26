@@ -99,7 +99,7 @@ public sealed class CommandLine : View {
   }
 
   private bool? OnCommandAccepted(ICommandContext? ctx) {
-    RaiseAccepted(new CommandLineCommandContext(Command.Accept, this, ctx?.Binding, _commandTextField.Text.TrimStart(':')));
+    RaiseAccepted(new CommandLineCommandContext(Command.Accept, new WeakReference<View>(this), ctx?.Binding, ctx?.Routing ?? CommandRouting.Direct, _commandTextField.Text.TrimStart(':')));
     return true;
   }
 }

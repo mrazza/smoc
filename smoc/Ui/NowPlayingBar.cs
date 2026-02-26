@@ -126,12 +126,12 @@ public sealed class NowPlayingBar : View {
 
     _commandService.RegisterCommand("v", OnSetVolumeCommand);
     AddCommand(Command.HotKey, OnHotKey);
-    HotKeyBindings.Add(Key.Space, this, Command.HotKey);
-    HotKeyBindings.Add(Key.Space.WithCtrl, this, Command.HotKey);
-    HotKeyBindings.Add(_previousKey, this, Command.HotKey);
-    HotKeyBindings.Add(_nextKey, this, Command.HotKey);
-    HotKeyBindings.Add(_seekBackwardKey, this, Command.HotKey);
-    HotKeyBindings.Add(_seekForwardKey, this, Command.HotKey);
+    HotKeyBindings.Add(Key.Space, Command.HotKey);
+    HotKeyBindings.Add(Key.Space.WithCtrl, Command.HotKey);
+    HotKeyBindings.Add(_previousKey, Command.HotKey);
+    HotKeyBindings.Add(_nextKey, Command.HotKey);
+    HotKeyBindings.Add(_seekBackwardKey, Command.HotKey);
+    HotKeyBindings.Add(_seekForwardKey, Command.HotKey);
   }
 
   protected override void Dispose(bool disposing) {

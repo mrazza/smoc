@@ -78,7 +78,7 @@ public sealed class MainWindow : Runnable, IMainWindow {
     });
 
     AddCommand(Command.HotKey, OnCommandLineHotKey);
-    HotKeyBindings.Add(new Key(':'), this, Command.HotKey);
+    HotKeyBindings.Add(new Key(':'), Command.HotKey);
 
     _commandLine.CommandCancelled += (sender, e) => {
       SetMode(_preCommandMode!.Value);
@@ -108,14 +108,10 @@ public sealed class MainWindow : Runnable, IMainWindow {
     }
 
     if (mode != Mode.Command) {
-      switch (mode) {
-        case Mode.NowPlaying:
-          _nowPlayingBar.Visible = false;
-          break;
-        default:
-          _nowPlayingBar.Visible = true;
-          break;
-      }
+      _nowPlayingBar.Visible = mode switch {
+        Mode.NowPlaying => false,
+        _ => true,
+      };
       _mainContent.SetMode(mode);
     } else {
       _commandLine.SetFocus();
