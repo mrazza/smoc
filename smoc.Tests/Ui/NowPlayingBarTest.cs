@@ -35,7 +35,7 @@ public class NowPlayingBarTest {
 
   private TerminalGuiFluentTesting.TestContext NewNowPlayingContext() => NewContext().AddAndLayout(NewNowPlaying());
 
-  [Fact(Skip = "Space hotkey not working, being swallowed by the main window. See: https://github.com/gui-cs/Terminal.Gui/issues/4759")]
+  [Fact]
   public void PlayPauseHotKey_PlaysMusic() {
     using var context = NewNowPlayingContext();
     _mockPlaybackQueue.Setup((ps) => ps.PlayPause()).Verifiable(Times.Once());
