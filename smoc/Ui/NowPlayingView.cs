@@ -93,7 +93,8 @@ public sealed class NowPlayingView : View {
     };
     _progressBar = new ProgressBar() {
       Width = Dim.Fill(),
-      ProgressBarStyle = ProgressBarStyle.Continuous
+      ProgressBarStyle = ProgressBarStyle.Continuous,
+      SchemeName = "ProgressBar"
     };
     _positionLabel = new Label() {
       X = Pos.Absolute(0),

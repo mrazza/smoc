@@ -24,6 +24,14 @@
                         }
                     },
                     {
+                        "ProgressBar": {
+                            "Normal": {
+                                "Foreground": "#ebdbb2",
+                                "Background": "#394e4e"
+                            }
+                        }
+                    },
+                    {
                         "Base": {
                             "Normal": {
                                 "Foreground": "#ebdbb2",
