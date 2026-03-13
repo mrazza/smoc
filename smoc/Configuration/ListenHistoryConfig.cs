@@ -1,4 +1,3 @@
-using System.Text.Json.Serialization;
 using Terminal.Gui.Configuration;
 
 namespace Smoc.Configuration;
