@@ -71,6 +71,14 @@ public static class ContextExtensions {
                             }
                         },
                         {
+                            "ProgressBar": {
+                                "Normal": {
+                                    "Foreground": "#ebdbb2",
+                                    "Background": "#394e4e"
+                                }
+                            }
+                        },
+                        {
                             "StatusBar": {
                                 "Normal": {
                                     "Foreground": "#949494",

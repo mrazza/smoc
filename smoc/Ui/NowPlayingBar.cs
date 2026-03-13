@@ -97,10 +97,10 @@ public sealed class NowPlayingBar : View {
       X = Pos.Right(_positionLabel),
       Y = Pos.Absolute(2),
       Width = Dim.Fill() - Dim.Func((view) => view!.Frame.Width, _durationLabel),
-      ProgressBarStyle = ProgressBarStyle.Continuous
+      ProgressBarStyle = ProgressBarStyle.Continuous,
+      SchemeName = "ProgressBar",
+      Fraction = 0.5f
     };
-
-    _progressBar.Fraction = 0.5f;
     _progressBar.Margin!.Thickness = new Thickness(1, 0, 1, 0);
 
     _volumeLabel = new Label() {
