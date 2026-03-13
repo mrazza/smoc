@@ -1,6 +1,7 @@
 using System.Net;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
+using Smoc.Configuration;
 using Smoc.Services;
 using Smoc.Services.Caching;
 using Terminal.Gui.App;
@@ -245,7 +246,7 @@ public sealed class YtmStreamingClient : IStreamingClient {
   /// <param name="cacheService">Optional cache service to use for caching streams; if not provided, no caching will be used.</param>
   /// <returns>An initialized client.</returns>
   public static YtmStreamingClient Create(List<Cookie> cookies, YtmTokens tokens, ICacheService? songCacheService = null, ICacheService? albumArtCacheService = null) {
-    return new YtmStreamingClient(new(logger: Logging.Logger, cookies: cookies, poToken: tokens.PoToken, visitorData: tokens.VisitorData), songCacheService, albumArtCacheService);
+    return new YtmStreamingClient(new(logger: Logging.Logger, cookies: cookies, poToken: tokens.PoToken, visitorData: tokens.VisitorData, playerId: YouTubeMusicConfig.PlayerId), songCacheService, albumArtCacheService);
   }
 
   /// <summary>
