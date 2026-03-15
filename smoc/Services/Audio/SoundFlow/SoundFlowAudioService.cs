@@ -16,8 +16,8 @@ public sealed class SoundFlowAudioService : IAudioService {
 
   /// <inheritdoc/>
   public float Volume {
-    get => this._playbackDevice.MasterMixer.Volume;
-    set => this._playbackDevice.MasterMixer.Volume = value;
+    get => this._playbackDevice.MasterMixer.Volume / 2.0f;
+    set => this._playbackDevice.MasterMixer.Volume = value * 2.0f;
   }
 
   /// <summary>

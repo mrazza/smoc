@@ -228,6 +228,8 @@ public class PlaylistView : View {
       }
 
       _songTable.SetSongs(songs);
+      _songTable.SelectedRow = 0;
+      _songTable.EnsureSelectedCellIsVisible();
       _songTable.Style.ShowHeaders = true;
       _songsLabel.Visible = false;
     } catch (OperationCanceledException) {
