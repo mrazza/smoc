@@ -53,6 +53,15 @@ public sealed class UniqueResource<T> : IDisposable where T : class, IDisposable
   }
 
   /// <summary>
+  /// Releases ownership of the managed resource and returns it.
+  /// </summary>
+  public T? Release() {
+    var resource = _resource;
+    _resource = null;
+    return resource;
+  }
+
+  /// <summary>
   /// Disposes of the managed resource.
   /// </summary>
   public void Dispose() {
