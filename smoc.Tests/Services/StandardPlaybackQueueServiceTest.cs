@@ -990,7 +990,7 @@ public class StandardPlaybackQueueServiceTest {
   }
 
   [Fact]
-  public async Task Preload_QueueNext_StartsPreloadingNextTrack() {
+  public void Preload_QueueNext_StartsPreloadingNextTrack() {
     var song1 = EntityTestFactory.GenerateSong(id: "1", postfix: "1");
     var song2 = EntityTestFactory.GenerateSong(id: "2", postfix: "2");
     using var sut = NewStandardPlaybackQueue();
@@ -1006,9 +1006,6 @@ public class StandardPlaybackQueueServiceTest {
       .ReturnsAsync(new SongStream(song2.Id, "m4a", new MemoryStream()));
 
     sut.QueueNext([song1, song2]);
-    
-    // Wait a bit for the async preload task to complete
-    await Task.Delay(100);
 
     _mockStreamingClient.Verify(c => c.GetSongStreamAsync(song2.Id, It.IsAny<CancellationToken>()), Times.Once);
     _mockAudioService.Verify(a => a.MakePlaybackService(song2, It.IsAny<Stream>(), "m4a", It.IsAny<CancellationToken>()), Times.Once);
@@ -1031,11 +1028,10 @@ public class StandardPlaybackQueueServiceTest {
       .ReturnsAsync(new SongStream(song2.Id, "m4a", new MemoryStream()));
 
     sut.QueueNext([song1, song2]);
-    await Task.Delay(100);
 
     await sut.ChangeTrack(1);
     await sut.Play();
-    
+
     Assert.Equal(PlaybackState.Playing, fakePlayerService2.PlaybackState);
     _mockStreamingClient.Verify(c => c.GetSongStreamAsync(song2.Id, It.IsAny<CancellationToken>()), Times.Once);
   }
@@ -1058,10 +1054,9 @@ public class StandardPlaybackQueueServiceTest {
 
     sut.QueueNext([song1, song2]);
     await sut.Play();
-    await Task.Delay(100);
 
     fakePlayerService1.EndSong();
-    
+
     Assert.Equal(PlaybackState.Playing, fakePlayerService2.PlaybackState);
   }
 }
