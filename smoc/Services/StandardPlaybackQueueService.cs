@@ -223,11 +223,11 @@ public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
       }
 
       _playbackService.Replace(playback);
-      token.ThrowIfCancellationRequested();
-
       playback.SongEnded += OnSongEnded;
       playback.PositionChanged += OnPositionChanged;
       playback.PlaybackStateChanged += OnPlaybackStateChanged;
+
+      token.ThrowIfCancellationRequested();
       playback.Play();
 
       EnsurePreload();
