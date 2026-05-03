@@ -69,7 +69,7 @@ public sealed class PlaybackQueueView : View {
 
     if (Visible && _playbackQueueService.CurrentSong is { }) {
       _songTable.SelectedRow = _playbackQueueService.CurrentPlaybackIndex;
-      _songTable.EnsureSelectedCellIsVisible();
+      _songTable.EnsureCursorIsVisible();
     }
   }
 

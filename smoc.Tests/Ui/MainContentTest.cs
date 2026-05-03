@@ -6,7 +6,7 @@ using Smoc.Streaming;
 using Smoc.Ui;
 using Smoc.Ui.Models;
 using Terminal.Gui.Views;
-using TerminalGuiFluentTesting;
+using AppTestHelpers;
 
 namespace smoc.Tests.Ui;
 
@@ -27,9 +27,9 @@ public class MainContentTest {
 
   private MainContent NewMainContent() => new(_fakeMainWindow, _commandService, _mockPlaybackQueue.Object, _mockStreamingClient.Object);
 
-  private static TerminalGuiFluentTesting.TestContext NewContext() => With.A<Runnable>(100, 20, TestDriver.ANSI.ToString()).ConfigureDefaultTheme();
+  private static AppTestHelper NewContext() => With.A<Runnable>(100, 20, TestDriver.ANSI.ToString()).ConfigureDefaultTheme();
 
-  private TerminalGuiFluentTesting.TestContext NewMainContentContext() => NewContext().Add(NewMainContent());
+  private AppTestHelper NewMainContentContext() => NewContext().Add(NewMainContent());
 
   [Fact]
   public void InitialState_ShowsEmpty() {

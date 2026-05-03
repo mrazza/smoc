@@ -1,9 +1,9 @@
 PlaylistViewTest.PlaylistSelected_HasTracks_ShowsResults_0:
 ┌────────────────────────────┐┌────────────────────────────────────────────────────────────────────┐
-│Sickest Playlist            ││Artist              Album               Track               Length  │
-│lame ass shit               ││Radiohead           OK Computer         PlaylistSelected_Ha 5:00    │
-│                            ││Radiohead           OK Computer         PlaylistSelected_Ha 5:00    │
-│                            ││Radiohead           OK Computer         PlaylistSelected_Ha 5:00    │
+│Sickest Playlist            ││Artist Album Track Length                                           │
+│lame ass shit               ││Radio… OK C… Play… 5:00                                             │
+│                            ││Radio… OK C… Play… 5:00                                             │
+│                            ││Radio… OK C… Play… 5:00                                             │
 │                            ││                                                                    │
 │                            ││                                                                    │
 │                            ││                                                                    │

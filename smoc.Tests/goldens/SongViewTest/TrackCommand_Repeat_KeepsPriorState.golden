@@ -1,7 +1,7 @@
 SongViewTest.TrackCommand_Repeat_KeepsPriorState_0:
 ┌──────────────────────────────────────────────────────────────────────────────────────────────────┐
-│Artist                        Album                         Track                         Length  │
-│Radiohead                     OK Computer                   TrackCommand_Repeat_KeepsPrio 5:00    │
+│Artist Album Track Length                                                                         │
+│Radio… OK C… Trac… 5:00                                                                           │
 │                                                                                                  │
 │                                                                                                  │
 │                                                                                                  │

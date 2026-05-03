@@ -40,7 +40,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\smoc\smoc.csproj" />
-    <ProjectReference Include="..\Terminal.Gui\Tests\TerminalGuiFluentTesting\TerminalGuiFluentTesting.csproj" />
+    <ProjectReference Include="..\Terminal.Gui\Tests\AppTestHelpers\AppTestHelpers.csproj" />
   </ItemGroup>
 
 </Project>

@@ -7,7 +7,7 @@ using Smoc.Ui;
 using Smoc.Ui.Models;
 using Terminal.Gui.Input;
 using Terminal.Gui.Views;
-using TerminalGuiFluentTesting;
+using AppTestHelpers;
 
 namespace smoc.Tests.Ui;
 
@@ -28,9 +28,9 @@ public class SongViewTest {
 
   private SongView NewSongView() => new(_fakeMainWindow, _commandService, _mockStreamingClient.Object, _mockPlaybackQueue.Object);
 
-  private static TerminalGuiFluentTesting.TestContext NewContext() => With.A<Runnable>(100, 20, TestDriver.ANSI.ToString());
+  private static AppTestHelper NewContext() => With.A<Runnable>(100, 20, TestDriver.ANSI.ToString());
 
-  private TerminalGuiFluentTesting.TestContext NewSongViewContext() => NewContext().Add(NewSongView());
+  private AppTestHelper NewSongViewContext() => NewContext().Add(NewSongView());
 
   [Fact]
   public void InitialState_ShowsEmpty() {

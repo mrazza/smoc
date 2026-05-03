@@ -3,7 +3,7 @@ using Smoc.Ui.Components;
 using Terminal.Gui.Input;
 using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
-using TerminalGuiFluentTesting;
+using AppTestHelpers;
 
 namespace smoc.Tests.Ui.Components;
 
@@ -17,7 +17,7 @@ public class CommandTextFieldTest {
 
   private static CommandTextField NewCommandTextField() => new();
 
-  private static TerminalGuiFluentTesting.TestContext NewContext() => With.A<Runnable>(100, 20, TestDriver.ANSI.ToString());
+  private static AppTestHelper NewContext() => With.A<Runnable>(100, 20, TestDriver.ANSI.ToString());
 
   [Fact]
   public void TabStop_WontFocus() {

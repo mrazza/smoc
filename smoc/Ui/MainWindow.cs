@@ -6,6 +6,7 @@ using Smoc.Services.Streaming;
 using Smoc.Streaming;
 using Smoc.Ui.Drawing;
 using Smoc.Ui.Models;
+using Terminal.Gui.App;
 using Terminal.Gui.Input;
 using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
@@ -78,7 +79,7 @@ public sealed class MainWindow : Runnable, IMainWindow {
     });
 
     AddCommand(Command.HotKey, OnCommandLineHotKey);
-    HotKeyBindings.Add(new Key(':'), Command.HotKey);
+    HotKeyBindings.Add(new Key(':').WithShift, Command.HotKey);
 
     _commandLine.CommandCancelled += (sender, e) => {
       SetMode(_preCommandMode!.Value);

@@ -1,4 +1,5 @@
 using System.Drawing;
+using Microsoft.VisualBasic;
 using Smoc.Services;
 using Terminal.Gui.Input;
 using Terminal.Gui.ViewBase;
@@ -47,6 +48,7 @@ public sealed class SongContextMenu : PopoverMenu {
     Accepting += (sender, e) => {
       Visible = false;
     };
+    Visible = false;
   }
 
   public override void EndInit() {

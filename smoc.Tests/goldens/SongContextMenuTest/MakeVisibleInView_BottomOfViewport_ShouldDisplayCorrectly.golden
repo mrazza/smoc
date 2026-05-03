@@ -1,10 +1,10 @@
 SongContextMenuTest.MakeVisibleInView_BottomOfViewport_ShouldDisplayCorrectly_0:
 ┌──────────────────────────────────────────────────────────────────────────────────────────────────┐
-│ play all from here            Album                      Track                     Length Year   │
-│ play selection only           OK Computer                MakeVisibleInView_BottomO 5:00   1970   │
-│ queue next                    OK Computer                MakeVisibleInView_BottomO 5:00   1970   │
-│ queue last                    OK Computer                MakeVisibleInView_BottomO 5:00   1970   │
-│1   Radiohead                  OK Computer                MakeVisibleInView_BottomO 5:00   1970   │
+│ play all from here  Length Year                                                                  │
+│ play selection only 5:00   1970                                                                  │
+│ queue next          5:00   1970                                                                  │
+│ queue last          5:00   1970                                                                  │
+│1 Radio… OK C… Make… 5:00   1970                                                                  │
 │                                                                                                  │
 └──────────────────────────────────────────────────────────────────────────────────────────────────┘
 

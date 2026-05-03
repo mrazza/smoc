@@ -1,11 +1,11 @@
 ArtistViewTest.SongSelected_ShowsContextWindow_0:
 ┌────────────────────────────┐┌────────────────────────────────────────────────────────────────────┐
-│Radiohead                   ││#   Album                    Track                    Length Year   │
-│                            ││1   OK Computer              Paranoid Android         5:00   1970   │
-│                            ││ play all from here          Climbing Up the Walls    3:00   1970   │
-│                            ││ play selection only                                                │
-│                            ││ queue next                                                         │
-│                            ││ queue last                                                         │
+│Radiohead                   ││# Album Track Length Year                                           │
+│                            ││1 OK C… Para… 5:00   1970                                           │
+│                            ││2 OK C… Clim… 3:00   1970                                           │
+│                            ││                                                                    │
+│                            ││                                                                    │
+│                            ││                                                                    │
 │                            ││                                                                    │
 │                            ││                                                                    │
 │                            ││                                                                    │

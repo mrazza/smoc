@@ -143,7 +143,7 @@ public sealed class ArtistView : View {
 
       _songTable.SetSongs(songs);
       _songTable.SelectedRow = 0;
-      _songTable.EnsureSelectedCellIsVisible();
+      _songTable.EnsureCursorIsVisible();
       _songTable.Style.ShowHeaders = true;
       _songsLabel.Visible = false;
     } catch (OperationCanceledException) {

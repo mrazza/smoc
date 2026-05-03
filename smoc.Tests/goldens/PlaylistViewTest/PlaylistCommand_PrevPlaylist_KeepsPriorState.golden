@@ -1,9 +1,9 @@
 PlaylistViewTest.PlaylistCommand_PrevPlaylist_KeepsPriorState_0:
 ┌────────────────────────────┐┌────────────────────────────────────────────────────────────────────┐
-│Sickest Playlist            ││Artist              Album               Track               Length  │
-│lame ass shit               ││Radiohead           OK Computer         PlaylistCommand_Pre 5:00    │
-│                            ││Radiohead           OK Computer         PlaylistCommand_Pre 5:00    │
-│                            ││Radiohead           OK Computer         PlaylistCommand_Pre 5:00    │
+│Sickest Playlist            ││Artist Album Track Length                                           │
+│lame ass shit               ││Radio… OK C… Play… 5:00                                             │
+│                            ││Radio… OK C… Play… 5:00                                             │
+│                            ││Radio… OK C… Play… 5:00                                             │
 │                            ││                                                                    │
 │                            ││                                                                    │
 │                            ││                                                                    │

@@ -4,7 +4,7 @@ using Smoc.Streaming;
 using Smoc.Ui;
 using Smoc.Ui.Models;
 using Terminal.Gui.Views;
-using TerminalGuiFluentTesting;
+using AppTestHelpers;
 using smoc.Tests.Fakes;
 using Terminal.Gui.Input;
 using smoc.Tests.TestInfra;
@@ -27,7 +27,7 @@ public class ArtistViewTest {
     _screenshotDiffer = new ScreenshotDiffer(output);
   }
 
-  private TerminalGuiFluentTesting.TestContext NewArtistViewContext() {
+  private AppTestHelper NewArtistViewContext() {
     return With.A<Runnable>(100, 20, TestDriver.ANSI.ToString())
           .AddAndLayout(new ArtistView(_fakeMainWindow, _commandService, _mockStreamingClient.Object, _mockPlaybackQueue.Object));
   }

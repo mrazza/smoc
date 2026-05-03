@@ -1,8 +1,8 @@
 SongContextMenuTest.MakeVisibleInView_ShouldDisplayCorrectly_0:
 ┌──────────────────────────────────────────────────────────────────────────────────────────────────┐
-│#   Artist                     Album                      Track                     Length Year   │
-│1   Radiohead                  OK Computer                MakeVisibleInView_ShouldD 5:00   1970   │
-│ play all from here            OK Computer                MakeVisibleInView_ShouldD 5:00   1970   │
+│# Artist Album Track Length Year                                                                  │
+│1 Radio… OK C… Make… 5:00   1970                                                                  │
+│ play all from here  5:00   1970                                                                  │
 │ play selection only                                                                              │
 │ queue next                                                                                       │
 │ queue last                                                                                       │

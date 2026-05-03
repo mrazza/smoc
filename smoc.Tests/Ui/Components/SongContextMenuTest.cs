@@ -7,7 +7,7 @@ using Smoc.Ui.Components;
 using Terminal.Gui.Input;
 using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
-using TerminalGuiFluentTesting;
+using AppTestHelpers;
 using static Smoc.Ui.Components.SongTable;
 
 namespace smoc.Tests.Ui.Components;
@@ -26,7 +26,7 @@ public class SongContextMenuTest : IDisposable {
     _screenshotDiffer = new ScreenshotDiffer(output);
   }
 
-  private static TerminalGuiFluentTesting.TestContext NewContext(int width = 100, int height = 20) => With.A<Runnable>(width, height, TestDriver.ANSI.ToString());
+  private static AppTestHelper NewContext(int width = 100, int height = 20) => With.A<Runnable>(width, height, TestDriver.ANSI.ToString());
 
   private SongContextMenu NewSongContextMenu() => new(_mockPlaybackQueue.Object, _songTable);
 
@@ -129,7 +129,7 @@ public class SongContextMenuTest : IDisposable {
 
     _songTable.SetSongs([paranoidAndroid, climbingUpTheWalls, climbingDownTheWalls]);
     _songTable.SelectedRow = 1;
-    _songTable.MultiSelectedRegions.Push(new TableSelection(new Point(0, 1), new Rectangle(0, 1, 0, 2)));
+    _songTable.MultiSelectedRegions.Push(new TableSelectionRegion(new Point(0, 1), new Rectangle(0, 1, 0, 2)));
     _mockPlaybackQueue.Setup((p) => p.ClearPlaybackQueue()).Verifiable(Times.Once());
     _mockPlaybackQueue.Setup((p) => p.QueueLast(new List<Song> { climbingUpTheWalls, climbingDownTheWalls })).Verifiable(Times.Once());
     _mockPlaybackQueue.Setup((p) => p.ChangeTrack(0)).Returns(Task.CompletedTask).Verifiable(Times.Once());
@@ -178,7 +178,7 @@ public class SongContextMenuTest : IDisposable {
 
     _songTable.SetSongs([paranoidAndroid, climbingUpTheWalls, climbingDownTheWalls]);
     _songTable.SelectedRow = 1;
-    _songTable.MultiSelectedRegions.Push(new TableSelection(new Point(0, 1), new Rectangle(0, 1, 0, 2)));
+    _songTable.MultiSelectedRegions.Push(new TableSelectionRegion(new Point(0, 1), new Rectangle(0, 1, 0, 2)));
     _mockPlaybackQueue.Setup((p) => p.QueueNext(new List<Song> { climbingUpTheWalls, climbingDownTheWalls })).Verifiable(Times.Once());
     context
       .Then((_) => songContextMenu.MakeVisible())
@@ -223,7 +223,7 @@ public class SongContextMenuTest : IDisposable {
 
     _songTable.SetSongs([paranoidAndroid, climbingUpTheWalls, climbingDownTheWalls]);
     _songTable.SelectedRow = 1;
-    _songTable.MultiSelectedRegions.Push(new TableSelection(new Point(0, 1), new Rectangle(0, 1, 0, 2)));
+    _songTable.MultiSelectedRegions.Push(new TableSelectionRegion(new Point(0, 1), new Rectangle(0, 1, 0, 2)));
     _mockPlaybackQueue.Setup((p) => p.QueueLast(new List<Song> { climbingUpTheWalls, climbingDownTheWalls })).Verifiable(Times.Once());
     context
       .Then((_) => songContextMenu.MakeVisible())

@@ -1,7 +1,7 @@
 PlaylistViewTest.LikedSongsCommand_PrevSearchedPlaylist_DisplaysCorrectState_0:
 ┌──────────────────────────────────────────────────────────────────────────────────────────────────┐
 │Artist                        Album                         Track                         Length  │
-│Radiohead                     OK Computer                   LikedSongsCommand_PrevSearche 5:00    │
+│Radiohead                     OK Computer                   LikedSongsCommand_PrevSearch… 5:00    │
 │                                                                                                  │
 │                                                                                                  │
 │                                                                                                  │

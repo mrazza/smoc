@@ -7,6 +7,7 @@ using Smoc.Streaming;
 using Smoc.Streaming.YouTubeMusic;
 using Smoc.Ui;
 using Smoc.Ui.Drawing;
+using Terminal.Gui;
 using Terminal.Gui.App;
 using Terminal.Gui.Configuration;
 
@@ -44,6 +45,9 @@ public static class Program {
       }
 
       ConfigurationManager.Enable(ConfigLocations.AppResources | ConfigLocations.Runtime);
+      Application.SetDefaultKeyBinding(Terminal.Gui.Input.Command.Quit, new PlatformKeyBinding() {
+        All = [new Terminal.Gui.Input.Key(':')]
+      });
 
       using IApplication application = Application.Create().Init();
 

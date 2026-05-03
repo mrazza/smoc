@@ -7,7 +7,7 @@ using Smoc.Ui;
 using Smoc.Ui.Models;
 using Terminal.Gui.Input;
 using Terminal.Gui.Views;
-using TerminalGuiFluentTesting;
+using AppTestHelpers;
 
 namespace smoc.Tests.Ui;
 
@@ -25,11 +25,11 @@ public class PlaybackQueueViewTest {
     _screenshotDiffer = new ScreenshotDiffer(output);
   }
 
-  private static TerminalGuiFluentTesting.TestContext NewContext() => With.A<Runnable>(100, 20, TestDriver.ANSI.ToString());
+  private static AppTestHelper NewContext() => With.A<Runnable>(100, 20, TestDriver.ANSI.ToString());
 
   private PlaybackQueueView PlaybackQueueView() => new PlaybackQueueView(_fakeMainWindow, _commandService, _mockPlaybackQueue.Object);
 
-  private TerminalGuiFluentTesting.TestContext PlaybackQueueViewContext() => NewContext().Add(PlaybackQueueView());
+  private AppTestHelper PlaybackQueueViewContext() => NewContext().Add(PlaybackQueueView());
 
   [Fact]
   public void InitialState_ShowsEmpty() {

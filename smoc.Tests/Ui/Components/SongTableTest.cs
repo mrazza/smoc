@@ -5,7 +5,7 @@ using Smoc.Ui.Components;
 using Terminal.Gui.Input;
 using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
-using TerminalGuiFluentTesting;
+using AppTestHelpers;
 using static Smoc.Ui.Components.SongTable;
 
 namespace smoc.Tests.Ui.Components;
@@ -18,14 +18,14 @@ public class SongTableTest {
     _screenshotDiffer = new ScreenshotDiffer(output);
   }
 
-  private static TerminalGuiFluentTesting.TestContext NewContext() => With.A<Runnable>(100, 20, TestDriver.ANSI.ToString());
+  private static AppTestHelper NewContext() => With.A<Runnable>(100, 20, TestDriver.ANSI.ToString());
 
   private static SongTable NewSongTable(SongTableColumns columns = SongTableColumns.All) => new SongTable(columns) {
     Width = Dim.Fill(),
     Height = Dim.Fill()
   };
 
-  private static TerminalGuiFluentTesting.TestContext NewSongTableContext(SongTableColumns columns = SongTableColumns.All) =>
+  private static AppTestHelper NewSongTableContext(SongTableColumns columns = SongTableColumns.All) =>
     NewContext().Add(NewSongTable(columns));
 
   [Fact]

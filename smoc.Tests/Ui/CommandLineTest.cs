@@ -2,7 +2,7 @@ using smoc.Tests.TestInfra;
 using Smoc.Ui;
 using Terminal.Gui.Input;
 using Terminal.Gui.Views;
-using TerminalGuiFluentTesting;
+using AppTestHelpers;
 
 namespace smoc.Tests.Ui;
 
@@ -16,9 +16,9 @@ public class CommandLineTest {
 
   private static CommandLine NewCommandLine() => new();
 
-  private static TerminalGuiFluentTesting.TestContext NewContext() => With.A<Runnable>(100, 20, TestDriver.ANSI.ToString()).ConfigureDefaultTheme();
+  private static AppTestHelper NewContext() => With.A<Runnable>(100, 20, TestDriver.ANSI.ToString()).ConfigureDefaultTheme();
 
-  private static TerminalGuiFluentTesting.TestContext NewCommandLineContext() => NewContext().Add(NewCommandLine());
+  private static AppTestHelper NewCommandLineContext() => NewContext().Add(NewCommandLine());
 
   [Fact]
   public void DisplayError_ShowsError() {

@@ -1,9 +1,9 @@
 SongViewTest.OnSongSelected_ShowsContextMenu_0:
 ┌──────────────────────────────────────────────────────────────────────────────────────────────────┐
 │Artist                        Album                         Track                         Length  │
-│Radiohead                     OK Computer                   OnSongSelected_ShowsContextMe 5:00    │
-│ play all from here           OK Computer                   OnSongSelected_ShowsContextMe 5:00    │
-│ play selection only          OK Computer                   OnSongSelected_ShowsContextMe 5:00    │
+│Radiohead                     OK Computer                   OnSongSelected_ShowsContextM… 5:00    │
+│ play all from here           OK Computer                   OnSongSelected_ShowsContextM… 5:00    │
+│ play selection only          OK Computer                   OnSongSelected_ShowsContextM… 5:00    │
 │ queue next                                                                                       │
 │ queue last                                                                                       │
 │                                                                                                  │
