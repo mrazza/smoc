@@ -3,6 +3,11 @@ namespace Smoc.Services.Util;
 /// <summary>
 /// This object takes ownership and manages the lifecycle of a single resource.
 /// </summary>
+/// <remarks>
+/// Replace/Release/Read operations against this class are thread-safe; in that, they are atomic.
+/// Disposals of UniqueResource are _not_ thread-safe. This object should be disposed only when no
+/// other accesses to it are expected.
+/// </remarks>
 /// <typeparam name="T">Type of resource to manage. Must implement <see cref="IDisposable"/></typeparam>
 public sealed class UniqueResource<T> : IDisposable where T : class, IDisposable {
   private T? _resource;
@@ -47,34 +52,31 @@ public sealed class UniqueResource<T> : IDisposable where T : class, IDisposable
       throw new ObjectDisposedException(nameof(UniqueResource<T>));
     }
 
-    DisposeResourceIfExists();
-    _resource = resource;
+    var oldResource = Interlocked.Exchange(ref _resource, resource);
+    DisposeResourceIfExists(oldResource);
     return resource;
   }
 
   /// <summary>
   /// Releases ownership of the managed resource and returns it.
   /// </summary>
-  public T? Release() {
-    var resource = _resource;
-    _resource = null;
-    return resource;
-  }
+  public T? Release() => Interlocked.Exchange(ref _resource, null);
 
   /// <summary>
   /// Disposes of the managed resource.
   /// </summary>
   public void Dispose() {
     if (!_disposed) {
-      DisposeResourceIfExists();
+      DisposeResourceIfExists(_resource);
+      _resource = null;
       _disposed = true;
     }
   }
 
-  private void DisposeResourceIfExists() {
-    if (_resource is { }) {
-      _onDispose(_resource);
-      _resource.Dispose();
+  private void DisposeResourceIfExists(T? oldResource) {
+    if (oldResource is { }) {
+      _onDispose(oldResource);
+      oldResource.Dispose();
     }
   }
 }
