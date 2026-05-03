@@ -90,4 +90,34 @@ public class UniqueResourceTest {
     Assert.Equal(newMockDisposable.Object, sut.Replace(newMockDisposable.Object));
   }
 
+  [Fact]
+  public void Release_WithResource_ReturnsResource() {
+    var sut = new UniqueResource<IDisposable>(_mockDisposable.Object, (_) => { });
+    var released = sut.Release();
+    Assert.Equal(_mockDisposable.Object, released);
+  }
+
+  [Fact]
+  public void Release_WithResource_ClearsResource() {
+    var sut = new UniqueResource<IDisposable>(_mockDisposable.Object, (_) => { });
+    sut.Release();
+    Assert.Null(sut.Resource);
+  }
+
+  [Fact]
+  public void Release_WithResource_DoesNotDispose() {
+    bool disposeActionCalled = false;
+    var sut = new UniqueResource<IDisposable>(_mockDisposable.Object, (_) => disposeActionCalled = true);
+    sut.Release();
+    sut.Dispose();
+    Assert.False(disposeActionCalled);
+    _mockDisposable.Verify(d => d.Dispose(), Times.Never());
+  }
+
+  [Fact]
+  public void Release_NoResource_ReturnsNull() {
+    var sut = new UniqueResource<IDisposable>();
+    Assert.Null(sut.Release());
+  }
+
 }
