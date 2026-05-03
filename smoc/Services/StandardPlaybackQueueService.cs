@@ -222,12 +222,12 @@ public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
         playback = _audioService.MakePlaybackService(currentSong, songStream.Stream, codec, token);
       }
 
+      _playbackService.Replace(playback);
       token.ThrowIfCancellationRequested();
 
       playback.SongEnded += OnSongEnded;
       playback.PositionChanged += OnPositionChanged;
       playback.PlaybackStateChanged += OnPlaybackStateChanged;
-      _playbackService.Replace(playback);
       playback.Play();
 
       EnsurePreload();
@@ -306,12 +306,10 @@ public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
         codec = "m4a";
       }
 
-      token.ThrowIfCancellationRequested();
-
       var playback = _audioService.MakePlaybackService(song, songStream.Stream, codec, token);
+      _preloadedPlaybackService.Replace(playback);
       token.ThrowIfCancellationRequested();
 
-      _preloadedPlaybackService.Replace(playback);
       return playback;
     } catch (OperationCanceledException) {
       Logging.Debug($"Preload cancelled for {song.Title}.");
