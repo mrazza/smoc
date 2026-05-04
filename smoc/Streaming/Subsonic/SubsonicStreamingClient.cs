@@ -5,9 +5,13 @@ using SixLabors.ImageSharp.PixelFormats;
 using Smoc.Configuration;
 using Smoc.Services;
 using Smoc.Services.Caching;
+using Smoc.Streaming.Subsonic.Models;
 
 namespace Smoc.Streaming.Subsonic;
 
+/// <summary>
+/// A streaming client implementation for Subsonic-compatible APIs.
+/// </summary>
 public class SubsonicStreamingClient : IStreamingClient {
   private readonly HttpClient _httpClient;
   private readonly ICacheService _songCache;
@@ -27,6 +31,12 @@ public class SubsonicStreamingClient : IStreamingClient {
     _httpClient = new HttpClient();
   }
 
+  /// <summary>
+  /// Creates a new instance of the <see cref="SubsonicStreamingClient"/>.
+  /// </summary>
+  /// <param name="songCache">The song cache service.</param>
+  /// <param name="artCache">The album art cache service.</param>
+  /// <returns>A new <see cref="SubsonicStreamingClient"/>.</returns>
   public static SubsonicStreamingClient Create(ICacheService songCache, ICacheService artCache) {
     return new SubsonicStreamingClient(
       SubsonicConfig.ServerUrl ?? throw new InvalidOperationException("Subsonic Server URL not configured"),
@@ -90,105 +100,118 @@ public class SubsonicStreamingClient : IStreamingClient {
     return responseElement.Clone();
   }
 
-  public async Task<List<Artist>> SearchArtistsAsync(string query, CancellationToken cancellationToken = default) {
+  /// <inheritdoc/>
+  public async Task<List<Smoc.Streaming.Artist>> SearchArtistsAsync(string query, CancellationToken cancellationToken = default) {
     var response = await GetResponseElementAsync("search3.view", new Dictionary<string, string> { { "query", query }, { "artistCount", "20" } }, cancellationToken);
     if (response.TryGetProperty("searchResult3", out var searchResult)) {
       var result = searchResult.Deserialize<SearchResult3>();
-      return result?.Artists?.Select(a => new Artist(a.Id, a.Name)).ToList() ?? new List<Artist>();
+      return result?.Artists?.Select(a => new Smoc.Streaming.Artist(a.Id, a.Name)).ToList() ?? new List<Smoc.Streaming.Artist>();
     }
-    return new List<Artist>();
+    return new List<Smoc.Streaming.Artist>();
   }
 
-  public async Task<List<Song>> SearchSongsAsync(string query, CancellationToken cancellationToken = default) {
+  /// <inheritdoc/>
+  public async Task<List<Smoc.Streaming.Song>> SearchSongsAsync(string query, CancellationToken cancellationToken = default) {
     var response = await GetResponseElementAsync("search3.view", new Dictionary<string, string> { { "query", query }, { "songCount", "50" } }, cancellationToken);
     if (response.TryGetProperty("searchResult3", out var searchResult)) {
       var result = searchResult.Deserialize<SearchResult3>();
-      return result?.Songs?.Select(s => MapSong(s)).ToList() ?? new List<Song>();
+      return result?.Songs?.Select(s => MapSong(s)).ToList() ?? new List<Smoc.Streaming.Song>();
     }
-    return new List<Song>();
+    return new List<Smoc.Streaming.Song>();
   }
 
-  public async Task<Song> GetSongAsync(string songId, CancellationToken cancellationToken = default) {
+  /// <inheritdoc/>
+  public async Task<Smoc.Streaming.Song> GetSongAsync(string songId, CancellationToken cancellationToken = default) {
     var response = await GetResponseElementAsync("getSong.view", new Dictionary<string, string> { { "id", songId } }, cancellationToken);
     if (response.TryGetProperty("song", out var songElement)) {
-      var dto = songElement.Deserialize<SongDto>();
+      var dto = songElement.Deserialize<Smoc.Streaming.Subsonic.Models.Song>();
       return MapSong(dto!);
     }
     throw new Exception("Song not found in response");
   }
 
-  public async Task<Artist> GetArtistAsync(string artistId, CancellationToken cancellationToken = default) {
+  /// <inheritdoc/>
+  public async Task<Smoc.Streaming.Artist> GetArtistAsync(string artistId, CancellationToken cancellationToken = default) {
     var response = await GetResponseElementAsync("getArtist.view", new Dictionary<string, string> { { "id", artistId } }, cancellationToken);
     if (response.TryGetProperty("artist", out var artistElement)) {
-      var result = artistElement.Deserialize<ArtistWithAlbumsDto>();
-      return new Artist(result!.Id, result.Name);
+      var result = artistElement.Deserialize<ArtistWithAlbums>();
+      return new Smoc.Streaming.Artist(result!.Id, result.Name);
     }
     throw new Exception("Artist not found in response");
   }
 
-  public async Task<List<Album>> GetAlbumsByArtistAsync(Artist artist, CancellationToken cancellationToken = default) {
+  /// <inheritdoc/>
+  public async Task<List<Smoc.Streaming.Album>> GetAlbumsByArtistAsync(Smoc.Streaming.Artist artist, CancellationToken cancellationToken = default) {
     var response = await GetResponseElementAsync("getArtist.view", new Dictionary<string, string> { { "id", artist.Id } }, cancellationToken);
     if (response.TryGetProperty("artist", out var artistElement)) {
-      var result = artistElement.Deserialize<ArtistWithAlbumsDto>();
-      return result?.Albums?.Select(a => MapAlbum(a, artist)).ToList() ?? new List<Album>();
+      var result = artistElement.Deserialize<ArtistWithAlbums>();
+      return result?.Albums?.Select(a => MapAlbum(a, artist)).ToList() ?? new List<Smoc.Streaming.Album>();
     }
-    return new List<Album>();
+    return new List<Smoc.Streaming.Album>();
   }
 
-  public async Task<List<Song>> GetSongsByAlbumAsync(Album album, CancellationToken cancellationToken = default) {
+  /// <inheritdoc/>
+  public async Task<List<Smoc.Streaming.Song>> GetSongsByAlbumAsync(Smoc.Streaming.Album album, CancellationToken cancellationToken = default) {
     var response = await GetResponseElementAsync("getAlbum.view", new Dictionary<string, string> { { "id", album.Id } }, cancellationToken);
     if (response.TryGetProperty("album", out var albumElement)) {
-      var result = albumElement.Deserialize<AlbumWithSongsDto>();
-      return result?.Songs?.Select(s => MapSong(s, album)).ToList() ?? new List<Song>();
+      var result = albumElement.Deserialize<AlbumWithSongs>();
+      return result?.Songs?.Select(s => MapSong(s, album)).ToList() ?? new List<Smoc.Streaming.Song>();
     }
-    return new List<Song>();
+    return new List<Smoc.Streaming.Song>();
   }
 
+  /// <inheritdoc/>
   public async Task<SongStream> GetSongStreamAsync(string songId, CancellationToken cancellationToken = default) {
     var url = BuildUrl("stream.view", new Dictionary<string, string> { { "id", songId } });
     var stream = await _httpClient.GetStreamAsync(url, cancellationToken);
-    return new SongStream(songId, "mp3", stream); // Assuming mp3 for now, could be dynamic
+    return new SongStream(songId, "mp3", stream);
   }
 
-  public async Task<List<Song>> GetLikedSongsAsync(CancellationToken cancellationToken = default) {
+  /// <inheritdoc/>
+  public async Task<List<Smoc.Streaming.Song>> GetLikedSongsAsync(CancellationToken cancellationToken = default) {
     var response = await GetResponseElementAsync("getStarred.view", null, cancellationToken);
     if (response.TryGetProperty("starred", out var starredElement)) {
         var result = starredElement.Deserialize<SearchResult3>();
-        return result?.Songs?.Select(s => MapSong(s)).ToList() ?? new List<Song>();
+        return result?.Songs?.Select(s => MapSong(s)).ToList() ?? new List<Smoc.Streaming.Song>();
     }
-    return new List<Song>();
+    return new List<Smoc.Streaming.Song>();
   }
 
-  public async Task<List<Playlist>> SearchPlaylistsAsync(string query, CancellationToken cancellationToken = default) {
+  /// <inheritdoc/>
+  public async Task<List<Smoc.Streaming.Playlist>> SearchPlaylistsAsync(string query, CancellationToken cancellationToken = default) {
     var response = await GetResponseElementAsync("getPlaylists.view", null, cancellationToken);
     if (response.TryGetProperty("playlists", out var playlistsElement)) {
         if (playlistsElement.TryGetProperty("playlist", out var playlistArray)) {
-            var result = playlistArray.Deserialize<List<PlaylistDto>>();
+            var result = playlistArray.Deserialize<List<Smoc.Streaming.Subsonic.Models.Playlist>>();
             return result?.Where(p => p.Name.Contains(query, StringComparison.OrdinalIgnoreCase))
-                         .Select(p => new Playlist(p.Id, p.Name)).ToList() ?? new List<Playlist>();
+                         .Select(p => new Smoc.Streaming.Playlist(p.Id, p.Name)).ToList() ?? new List<Smoc.Streaming.Playlist>();
         }
     }
-    return new List<Playlist>();
+    return new List<Smoc.Streaming.Playlist>();
   }
 
-  public async Task<List<Song>> GetPlaylistSongsAsync(Playlist playlist, CancellationToken cancellationToken = default) {
+  /// <inheritdoc/>
+  public async Task<List<Smoc.Streaming.Song>> GetPlaylistSongsAsync(Smoc.Streaming.Playlist playlist, CancellationToken cancellationToken = default) {
     var response = await GetResponseElementAsync("getPlaylist.view", new Dictionary<string, string> { { "id", playlist.Id } }, cancellationToken);
     if (response.TryGetProperty("playlist", out var playlistElement)) {
-        var result = playlistElement.Deserialize<PlaylistWithSongsDto>();
-        return result?.Songs?.Select(s => MapSong(s)).ToList() ?? new List<Song>();
+        var result = playlistElement.Deserialize<PlaylistWithSongs>();
+        return result?.Songs?.Select(s => MapSong(s)).ToList() ?? new List<Smoc.Streaming.Song>();
     }
-    return new List<Song>();
+    return new List<Smoc.Streaming.Song>();
   }
 
-  public Task<List<Song>> GetPlaylistSongsFromUrlAsync(string url, CancellationToken cancellationToken = default) {
-    return Task.FromResult(new List<Song>());
+  /// <inheritdoc/>
+  public Task<List<Smoc.Streaming.Song>> GetPlaylistSongsFromUrlAsync(string url, CancellationToken cancellationToken = default) {
+    return Task.FromResult(new List<Smoc.Streaming.Song>());
   }
 
-  public async Task AddToListenHistory(Song song, CancellationToken cancellationToken = default) {
+  /// <inheritdoc/>
+  public async Task AddToListenHistory(Smoc.Streaming.Song song, CancellationToken cancellationToken = default) {
     await GetResponseElementAsync("scrobble.view", new Dictionary<string, string> { { "id", song.Id }, { "submission", "true" } }, cancellationToken);
   }
 
-  public async Task<Image<Rgba32>> GetAlbumArtAsync(Album album, Func<IEnumerable<AlbumCover>, AlbumCover>? coverSelector = null, CancellationToken cancellationToken = default) {
+  /// <inheritdoc/>
+  public async Task<Image<Rgba32>> GetAlbumArtAsync(Smoc.Streaming.Album album, Func<IEnumerable<AlbumCover>, AlbumCover>? coverSelector = null, CancellationToken cancellationToken = default) {
     var cover = coverSelector?.Invoke(album.Covers) ?? album.Covers.FirstOrDefault();
     if (cover == null) throw new Exception("No album cover available");
 
@@ -198,23 +221,23 @@ public class SubsonicStreamingClient : IStreamingClient {
     return await Image.LoadAsync<Rgba32>(stream, cancellationToken);
   }
 
-  internal Song MapSong(SongDto dto) {
-    var artist = new Artist(dto.ArtistId ?? "", dto.Artist ?? "Unknown Artist");
-    var album = new Album(
+  internal Smoc.Streaming.Song MapSong(Smoc.Streaming.Subsonic.Models.Song dto) {
+    var artist = new Smoc.Streaming.Artist(dto.ArtistId ?? "", dto.ArtistName ?? "Unknown Artist");
+    var album = new Smoc.Streaming.Album(
       dto.AlbumId ?? "",
       artist,
-      dto.Album ?? "Unknown Album",
+      dto.AlbumName ?? "Unknown Album",
       dto.CoverArt != null ? new[] { new AlbumCover(BuildUrl("getCoverArt.view", new Dictionary<string, string> { { "id", dto.CoverArt } }), 0, 0) } : Enumerable.Empty<AlbumCover>()
     );
     return MapSong(dto, album);
   }
 
-  internal Song MapSong(SongDto dto, Album album) {
-    return new Song(dto.Id, album, dto.Title, TimeSpan.FromSeconds(dto.Duration ?? 0), dto.Track);
+  internal Smoc.Streaming.Song MapSong(Smoc.Streaming.Subsonic.Models.Song dto, Smoc.Streaming.Album album) {
+    return new Smoc.Streaming.Song(dto.Id, album, dto.Title, TimeSpan.FromSeconds(dto.Duration ?? 0), dto.Track);
   }
 
-  internal Album MapAlbum(AlbumDto dto, Artist artist) {
-    return new Album(
+  internal Smoc.Streaming.Album MapAlbum(Smoc.Streaming.Subsonic.Models.Album dto, Smoc.Streaming.Artist artist) {
+    return new Smoc.Streaming.Album(
       dto.Id,
       artist,
       dto.Name,

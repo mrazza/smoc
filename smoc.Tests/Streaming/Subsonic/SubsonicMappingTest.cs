@@ -1,6 +1,6 @@
-
 using Smoc.Streaming;
 using Smoc.Streaming.Subsonic;
+using Smoc.Streaming.Subsonic.Models;
 using Xunit;
 
 namespace smoc.Tests.Streaming.Subsonic;
@@ -14,7 +14,7 @@ public class SubsonicMappingTest {
 
   [Fact]
   public void MapSong_WithMinimalData_ReturnsCorrectSong() {
-    var dto = new SongDto("song-1", "Test Song", "Test Album", "Test Artist", "artist-1", "album-1", 180, 1, "cover-1");
+    var dto = new Smoc.Streaming.Subsonic.Models.Song("song-1", "Test Song", "Test Album", "Test Artist", "artist-1", "album-1", 180, 1, "cover-1");
     var song = _client.MapSong(dto);
 
     Assert.Equal("song-1", song.Id);
@@ -34,8 +34,8 @@ public class SubsonicMappingTest {
 
   [Fact]
   public void MapAlbum_ReturnsCorrectAlbum() {
-    var artist = new Artist("artist-1", "Test Artist");
-    var dto = new AlbumDto("album-1", "Test Album", "Test Artist", "artist-1", 10, 3600, "cover-1");
+    var artist = new Smoc.Streaming.Artist("artist-1", "Test Artist");
+    var dto = new Smoc.Streaming.Subsonic.Models.Album("album-1", "Test Album", "Test Artist", "artist-1", 10, 3600, "cover-1");
     var album = _client.MapAlbum(dto, artist);
 
     Assert.Equal("album-1", album.Id);
