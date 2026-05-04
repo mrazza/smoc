@@ -13,16 +13,16 @@ public static class SubsonicAuthentication {
   /// <param name="password">The user's password.</param>
   /// <returns>A tuple containing the hex-encoded MD5 token (md5(password + salt)) and the random salt string.</returns>
   public static (string token, string salt) GenerateToken(string password) {
-    string salt = Guid.NewGuid().ToString("n").Substring(0, 10);
+    string salt = Guid.NewGuid().ToString("n")[..10];
     string input = password + salt;
     byte[] inputBytes = Encoding.UTF8.GetBytes(input);
     byte[] hashBytes = MD5.HashData(inputBytes);
-    
+
     StringBuilder sb = new();
-    for (int i = 0; i < hashBytes.Length; i++) {
-      sb.Append(hashBytes[i].ToString("x2"));
+    foreach (byte b in hashBytes) {
+      sb.Append(b.ToString("x2"));
     }
-    
+
     return (sb.ToString(), salt);
   }
 }
