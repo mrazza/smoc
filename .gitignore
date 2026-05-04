@@ -130,4 +130,7 @@ $RECYCLE.BIN/
 # Mac desktop service store files
 .DS_Store
 
-_NCrunch*.goosehints
+_NCrunch*
+
+# Goose
+.goosehints
