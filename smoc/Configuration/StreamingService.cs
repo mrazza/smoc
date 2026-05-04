@@ -1,4 +1,3 @@
-
 namespace Smoc.Configuration;
 
 /// <summary>

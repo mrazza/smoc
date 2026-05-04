@@ -1,4 +1,3 @@
-
 using Terminal.Gui.Configuration;
 
 namespace Smoc.Configuration;
