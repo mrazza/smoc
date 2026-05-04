@@ -8,7 +8,7 @@
 ![.NET](https://img.shields.io/badge/.NET-10.0-512bd4?style=flat-square&logo=dotnet)
 ![Status](https://img.shields.io/badge/status-active_development-green?style=flat-square)
 
-A terminal-based music player (TUI) for streaming services, currently supporting **YouTube Music**. Spotify and Apple Music are _future features_.
+A terminal-based music player (TUI) for streaming services, currently supporting **YouTube Music** and **Subsonic** compatible APIs. Spotify and Apple Music are _future features_.
 
 [Features](#-features) • [Installation](#-installation) • [Configuration and Setup](#%EF%B8%8F-configuration-and-setup) • [Usage](#-usage)
 
@@ -27,6 +27,7 @@ A terminal-based music player (TUI) for streaming services, currently supporting
 - **TUI Interface**: Built with [Terminal.Gui](https://github.com/gui-cs/Terminal.Gui) for a rich console experience.
 - **Cross-Platform Audio**: Powered by [SoundFlow](https://github.com/LSXPrime/SoundFlow).
 - **YouTube Music Integration**: Powered by [YouTubeMusicAPI](https://github.com/IcySnex/YouTubeMusicAPI). Search, stream, and manage your library.
+- **Subsonic API Integration**: Streaming client for any Subsonic-compatible server. For instance, [Navidrome](https://www.navidrome.org/), [Airsonic Advanced](https://github.com/airsonic-advanced/airsonic-advanced), [Gonic](https://github.com/sentriz/gonic), or [Madsonic](https://www.madsonic.org/).
 - **Visuals**: Displays album art using Sixel graphics (requires a compatible terminal).
 
 ### Feature Progress
@@ -71,6 +72,16 @@ While most basic functionality is available and SMoC is totally usable, there's 
   - [x] Authentication
   - [x] POToken
   - [x] VisitorData
+  - [x] Metadata
+  - [x] Searching
+  - [x] Play Audio Stream
+  - [x] Album Art
+  - [x] Caching
+  - [x] History Tracking
+  - [ ] Like
+  - [ ] Dislike
+- [ ] Subsonic API-compatible Servers
+  - [x] Authentication
   - [x] Metadata
   - [x] Searching
   - [x] Play Audio Stream
@@ -172,7 +183,19 @@ SMoC operates with a Vim-style command bar. Press `:` to enter command mode.
 
 SMoC stores configuration and authentication data in `~/.config/smoc/` (on Linux).
 
-### Authentication
+### Subsonic
+To use a Subsonic-compatible service (like Navidrome, Gonic, or Airsonic):
+1. Ensure your server has the Subsonic API enabled.
+2. Configure your server hostname, port, scheme, username, and password in `config.json` (see below).
+3. Set `SmocConfiguration.ActiveService` to `Subsonic`.
+
+### YouTube Music
+To use YouTube Music:
+1. Set `SmocConfiguration.ActiveService` to `YouTubeMusic`.
+2. Setup required settings for YouTube Music authentication (see below).
+
+#### Authentication
+
 > [!NOTE]
 > You need a YouTube Music Premium subscription to play most content.
 
@@ -205,13 +228,18 @@ Create or edit `~/.config/smoc/config.json` to customize settings.
     "SmocConfiguration.AlbumCoverCacheSizeBytes": 1073741824,
     "SmocConfiguration.SongCacheMaxElements": 1000,
     "SmocConfiguration.AlbumCoverCacheMaxElements": 1000,
+    "SmocConfiguration.ActiveService": "Subsonic",
+	"SubsonicConfig.ServerHost": "localhost",
+	"SubsonicConfig.ServerPort": 8080,
+	"SubsonicConfig.Username": "username",
+	"SubsonicConfig.Password": "password",
     "Theme": "gruvbox-custom",
     "Themes": [
         {
             "gruvbox-custom": {
                 "Schemes": [
                     {
-                        "Runnable": {
+                        "Accent": {
                             "Normal": { "Foreground": "#ebdbb2", "Background": "#00000000" },
                             "Focus": { "Foreground": "#ebdbb2", "Background": "#639494" },
                             "Active": { "Foreground": "#ebdbb2", "Background": "#394e4e" }
@@ -227,17 +255,24 @@ Create or edit `~/.config/smoc/config.json` to customize settings.
 </details>
 
 #### Common Settings
-| Category           | Key                                            | Type       | Description                                                         |
-| :----------------- | :--------------------------------------------- | :--------- | :------------------------------------------------------------------ |
-| **Caching**        | `SmocConfiguration.SongCacheSizeBytes`         | `long`     | Max size of song cache in bytes (0 = no limit)                      |
-|                    | `SmocConfiguration.AlbumCoverCacheSizeBytes`   | `long`     | Max size of album cover cache in bytes (0 = no limit)               |
-|                    | `SmocConfiguration.SongCacheMaxElements`       | `int`      | Max number of songs to cache (0 = no limit)                         |
-|                    | `SmocConfiguration.AlbumCoverCacheMaxElements` | `int`      | Max number of album covers to cache (0 = no limit)                  |
-| **Logging**        | `SmocConfiguration.LogLevel`                   | `LogLevel` | Min log level (Trace, Debug, Information, Warning, Error, Critical) |
-| **Listen History** | `ListenHistory.Enabled`                        | `bool`     | Whether listen history tracking is enabled                          |
-|                    | `ListenHistory.MinimumPositionSeconds`         | `int`      | Minimum position (seconds) to consider listened                     |
-|                    | `ListenHistory.MinimumFraction`                | `double`   | Minimum fraction of a song to consider listened                     |
-| **UI**             | `Theme`                                        | `string`   | The name of the theme to use (default: `default`)                   |
+| Category           | Key                                            | Type               | Description                                                             |
+| :----------------- | :--------------------------------------------- | :----------------- | :---------------------------------------------------------------------- |
+| **Streaming**      | `SmocConfiguration.ActiveService`              | `StreamingService` | Active service (`YouTubeMusic`, `Subsonic`)                             |
+| **Subsonic**       | `SubsonicConfig.ServerScheme`                  | `string`           | URI Scheme for the Subsonic API (default: http)                         |
+|                    | `SubsonicConfig.ServerHost`                    | `string`           | Hostname of your Subsonic server                                        |
+|                    | `SubsonicConfig.ServerPort`                    | `int`              | Port of your Subsonic server (default: 80)                              |
+|                    | `SubsonicConfig.Username`                      | `string`           | Subsonic username                                                       |
+|                    | `SubsonicConfig.Password`                      | `string`           | Subsonic password                                                       |
+|                    | `SubsonicConfig.UseToken`                      | `bool`             | Whether to use token auth instead of plaintext password (default: true) |
+| **Caching**        | `SmocConfiguration.SongCacheSizeBytes`         | `long`             | Max size of song cache in bytes (0 = no limit)                          |
+|                    | `SmocConfiguration.AlbumCoverCacheSizeBytes`   | `long`             | Max size of album cover cache in bytes (0 = no limit)                   |
+|                    | `SmocConfiguration.SongCacheMaxElements`       | `int`              | Max number of songs to cache (0 = no limit)                             |
+|                    | `SmocConfiguration.AlbumCoverCacheMaxElements` | `int`              | Max number of album covers to cache (0 = no limit)                      |
+| **Logging**        | `SmocConfiguration.LogLevel`                   | `LogLevel`         | Min log level (Trace, Debug, Information, Warning, Error, Critical)     |
+| **Listen History** | `ListenHistory.Enabled`                        | `bool`             | Whether listen history tracking is enabled                              |
+|                    | `ListenHistory.MinimumPositionSeconds`         | `int`              | Minimum position (seconds) to consider listened                         |
+|                    | `ListenHistory.MinimumFraction`                | `double`           | Minimum fraction of a song to consider listened                         |
+| **UI**             | `Theme`                                        | `string`           | The name of the theme to use (default: `default`)                       |
 
 #### Custom Themes
 If specifying a custom theme (as in the example config above), you will need to specify styling for all schemes.
@@ -253,7 +288,7 @@ If specifying a custom theme (as in the example config above), you will need to 
             "gruvbox-custom": {
                 "Schemes": [
                     {
-                        "Runnable": {
+                        "Accent": {
                             "Normal": {
                                 "Foreground": "#ebdbb2",
                                 "Background": "#00000000"
