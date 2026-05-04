@@ -86,24 +86,33 @@ public static class Program {
   }
 
   /// <summary>
-  /// Creates a streaming client, optionally using cookies and tokens if available.
+  /// Creates a streaming client based on the configured active service.
   /// </summary>
-  /// <returns>An initialized <see cref="YtmStreamingClient"/>.</returns>
-  private static YtmStreamingClient CreateStreamingClient() {
+  /// <returns>An initialized <see cref="IStreamingClient"/>.</returns>
+  private static IStreamingClient CreateStreamingClient() {
     long? songCacheSize = SmocConfiguration.SongCacheSizeBytes != 0 ? SmocConfiguration.SongCacheSizeBytes : null;
     long? artCacheSize = SmocConfiguration.AlbumCoverCacheSizeBytes != 0 ? SmocConfiguration.AlbumCoverCacheSizeBytes : null;
     int? songCacheMaxElements = SmocConfiguration.SongCacheMaxElements != 0 ? SmocConfiguration.SongCacheMaxElements : null;
     int? artCacheMaxElements = SmocConfiguration.AlbumCoverCacheMaxElements != 0 ? SmocConfiguration.AlbumCoverCacheMaxElements : null;
     var songCacheConfig = new CacheConfig(MaxSizeBytes: songCacheSize, MaxElements: songCacheMaxElements);
     var artCacheConfig = new CacheConfig(MaxSizeBytes: artCacheSize, MaxElements: artCacheMaxElements);
+
+    var songCache = new TempFileCacheService("songs", songCacheConfig);
+    var artCache = new TempFileCacheService("art", artCacheConfig);
+
+    if (SmocConfiguration.ActiveService == StreamingService.Subsonic) {
+      Logging.Information("Creating Subsonic streaming client.");
+      return Smoc.Streaming.Subsonic.SubsonicStreamingClient.Create(songCache, artCache);
+    }
+
     if (!File.Exists(_cookiesPath) || !File.Exists(_tokensPath)) {
       Logging.Information("Cookies or tokens not found. Creating new YTM client without authentication.");
-      return YtmStreamingClient.Create(new TempFileCacheService("songs", songCacheConfig), new TempFileCacheService("art", artCacheConfig));
+      return YtmStreamingClient.Create(songCache, artCache);
     }
 
     Logging.Information("Cookies and tokens found. Creating new YTM client with authentication.");
     var cookies = YtmStreamingClient.GetCookiesFromFile(_cookiesPath);
     var tokens = JsonSerializer.Deserialize<YtmTokens>(File.ReadAllText(_tokensPath));
-    return YtmStreamingClient.Create(cookies, tokens!, new TempFileCacheService("songs", songCacheConfig), new TempFileCacheService("art", artCacheConfig));
+    return YtmStreamingClient.Create(cookies, tokens!, songCache, artCache);
   }
 }

@@ -20,6 +20,13 @@ public static class SmocConfiguration {
   public static LogLevel LogLevel { get; set; } = LogLevel.Information;
 
   /// <summary>
+  /// Gets or sets the active streaming service.
+  /// </summary>
+  [ConfigurationProperty(Scope = typeof(SettingsScope))]
+  [JsonConverter(typeof(JsonStringEnumConverter))]
+  public static StreamingService ActiveService { get; set; } = StreamingService.YouTubeMusic;
+
+  /// <summary>
   /// Gets or sets the maximum size of the song cache in bytes.
   /// The default value is 512MB.
   /// A value of 0 means no limit.

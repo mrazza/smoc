@@ -1,0 +1,1 @@
+When running dotnet commands, you MUST set the following environment variable: DOTNET_SYSTEM_NET_DISABLEIPV6=1
