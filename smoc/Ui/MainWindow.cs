@@ -78,6 +78,7 @@ public sealed class MainWindow : Runnable, IMainWindow {
     });
 
     AddCommand(Command.HotKey, OnCommandLineHotKey);
+    HotKeyBindings.Add(new Key(':'), Command.HotKey);
     HotKeyBindings.Add(new Key(':').WithShift, Command.HotKey);
 
     _commandLine.CommandCancelled += (sender, e) => {
