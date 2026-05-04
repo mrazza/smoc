@@ -30,6 +30,27 @@ public class SubsonicMappingTest {
   }
 
   [Fact]
+  public void MapSong_WithNoCoverArt_ReturnsEmptyCovers() {
+    var dto = new SubsonicModels.Song("song-1", "Test Song", "Test Album", "Test Artist", "artist-1", "album-1", 180, 1, null);
+    var song = SubsonicMapper.MapSong(dto, MockUrlBuilder);
+
+    Assert.Empty(song.Album.Covers);
+  }
+
+  [Fact]
+  public void MapSong_WithPreMappedAlbum_ReturnsCorrectSong() {
+    var artist = new Smoc.Streaming.Artist("artist-1", "Test Artist");
+    var album = new Smoc.Streaming.Album("album-1", artist, "Test Album", []);
+    var dto = new SubsonicModels.Song("song-1", "Test Song", "Test Album", "Test Artist", "artist-1", "album-1", 180, 1, "cover-1");
+    
+    var song = SubsonicMapper.MapSong(dto, album);
+
+    Assert.Equal("song-1", song.Id);
+    Assert.Equal(album, song.Album);
+    Assert.Equal(TimeSpan.FromSeconds(180), song.Duration);
+  }
+
+  [Fact]
   public void MapAlbum_ReturnsCorrectAlbum() {
     var artist = new Smoc.Streaming.Artist("artist-1", "Test Artist");
     var dto = new SubsonicModels.Album("album-1", "Test Album", "Test Artist", "artist-1", 10, 3600, "cover-1");
@@ -45,8 +66,26 @@ public class SubsonicMappingTest {
   }
 
   [Fact]
+  public void MapAlbum_WithNoCoverArt_ReturnsEmptyCovers() {
+    var artist = new Smoc.Streaming.Artist("artist-1", "Test Artist");
+    var dto = new SubsonicModels.Album("album-1", "Test Album", "Test Artist", "artist-1", 10, 3600, null);
+    var album = SubsonicMapper.MapAlbum(dto, artist, MockUrlBuilder);
+
+    Assert.Empty(album.Covers);
+  }
+
+  [Fact]
   public void MapArtist_ReturnsCorrectArtist() {
     var dto = new SubsonicModels.Artist("artist-1", "Test Artist", 5);
+    var artist = SubsonicMapper.MapArtist(dto);
+
+    Assert.Equal("artist-1", artist.Id);
+    Assert.Equal("Test Artist", artist.Name);
+  }
+
+  [Fact]
+  public void MapArtist_WithAlbums_ReturnsCorrectArtist() {
+    var dto = new SubsonicModels.ArtistWithAlbums("artist-1", "Test Artist", []);
     var artist = SubsonicMapper.MapArtist(dto);
 
     Assert.Equal("artist-1", artist.Id);
