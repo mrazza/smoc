@@ -1,11 +1,7 @@
-using Smoc.Streaming;
-using Smoc.Streaming.Subsonic.Models;
 using Smoc.Streaming.Subsonic.Util;
-using Xunit;
+using SubsonicModels = Smoc.Streaming.Subsonic.Models;
 
 namespace smoc.Tests.Streaming.Subsonic;
-
-using SubsonicModels = Smoc.Streaming.Subsonic.Models;
 
 public class SubsonicMappingTest {
   private string MockUrlBuilder(string id) => $"http://localhost/art?id={id}";
@@ -23,7 +19,7 @@ public class SubsonicMappingTest {
     Assert.Equal("artist-1", song.Artist.Id);
     Assert.Equal("Test Album", song.Album.Name);
     Assert.Equal("album-1", song.Album.Id);
-    
+
     // Verify cover art URL was built
     Assert.Single(song.Album.Covers);
     Assert.Equal("http://localhost/art?id=cover-1", song.Album.Covers.First().Url);
@@ -59,7 +55,7 @@ public class SubsonicMappingTest {
     Assert.Equal("album-1", album.Id);
     Assert.Equal("Test Album", album.Name);
     Assert.Equal(artist, album.Artist);
-    
+
     // Verify cover art URL was built
     Assert.Single(album.Covers);
     Assert.Equal("http://localhost/art?id=cover-1", album.Covers.First().Url);

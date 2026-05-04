@@ -1,6 +1,5 @@
 
 using Smoc.Streaming.Subsonic;
-using Xunit;
 
 namespace smoc.Tests.Streaming.Subsonic;
 
@@ -21,7 +20,7 @@ public class SubsonicAuthenticationTest {
     // This is how a server would verify: md5(password + salt)
     string password = "secret_password";
     var (token, salt) = SubsonicAuthentication.GenerateToken(password);
-    
+
     using var md5 = System.Security.Cryptography.MD5.Create();
     byte[] inputBytes = System.Text.Encoding.UTF8.GetBytes(password + salt);
     byte[] hashBytes = md5.ComputeHash(inputBytes);
