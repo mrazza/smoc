@@ -162,6 +162,7 @@ public class SongTable : TableView {
       }
       _songTableData.Rows.Add(values);
     }
+
     RefreshContentSize();
   }
 
