@@ -47,7 +47,7 @@ public sealed class StatusBar : View {
       Text = Program.ProductName + " v" + Assembly.GetEntryAssembly()!.GetName().Version!.ToString(3)
     };
     _stateLabel = new Label() {
-      X = Pos.Right(_modeLabel) + Pos.Absolute(1),
+      X = Pos.Right(_modeLabel),
       Height = Dim.Absolute(1),
       Width = Dim.Fill(to: _versionLabel),
     };
@@ -57,13 +57,16 @@ public sealed class StatusBar : View {
 
     // HACK: RESOLVES RENDERING ISSUE ASSOCIATED WITH PADDING AND BACKGROUND
     // _modeLabel.Padding!.Thickness = defaultMargin;
-    Add(new View() {
+    var leftSpacer = new View() {
       X = Pos.Absolute(0),
       Width = Dim.Absolute(1)
-    }, new View() {
+    };
+    var rightModeSpacer = new View() {
       X = Pos.Right(_modeLabel),
       Width = Dim.Absolute(1)
-    });
+    };
+    _stateLabel.X = Pos.Right(rightModeSpacer);
+    Add(leftSpacer, rightModeSpacer);
     // END HACK
 
     Add(_versionLabel, _modeLabel, _stateLabel);
@@ -104,7 +107,10 @@ public sealed class StatusBar : View {
     string artistName = _playbackQueueService.CurrentSong?.Artist.Name ?? Messages.NO_ARTIST;
     string songDuration = _playbackQueueService.Duration.ToString("mm\\:ss");
     string songPosition = _playbackQueueService.CurrentTime.ToString("mm\\:ss");
-    _stateLabel.Text = $"{playbackStatePrefix} {artistName} - {songName} [{songPosition}/{songDuration}]";
+    // HACK: RESOLVES RENDERING ISSUE ASSOCIATED WITH PADDING AND BACKGROUND
+    //_stateLabel.Text = $"{playbackStatePrefix} {artistName} - {songName} [{songPosition}/{songDuration}]";
+    _stateLabel.Text = $" {playbackStatePrefix} {artistName} - {songName} [{songPosition}/{songDuration}]";
+    // END HACK
   }
 
   internal string GetMode() {
