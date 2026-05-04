@@ -7,6 +7,34 @@ public class SubsonicMappingTest {
   private string MockUrlBuilder(string id) => $"http://localhost/art?id={id}";
 
   [Fact]
+  public void MapSong_WithNoCoverArt_ReturnsSongWithoutCovers() {
+    var dto = new SubsonicModels.Song("song-2", "Test Song 2", "Test Album", "Test Artist", "artist-1", "album-1", 200, 2, null);
+    var song = SubsonicMapper.MapSong(dto, MockUrlBuilder);
+
+    Assert.Empty(song.Album.Covers);
+  }
+
+  [Fact]
+  public void MapAlbum_WithNoCoverArt_ReturnsAlbumWithoutCovers() {
+    var artist = new Smoc.Streaming.Artist("artist-1", "Test Artist");
+    var dto = new SubsonicModels.Album("album-2", "Test Album 2", "Test Artist", "artist-1", 5, 1800, null);
+    var album = SubsonicMapper.MapAlbum(dto, artist, MockUrlBuilder);
+
+    Assert.Empty(album.Covers);
+  }
+
+  [Fact]
+  public void MapArtist_FromArtistWithAlbums_ReturnsCorrectArtist() {
+    var dto = new SubsonicModels.ArtistWithAlbums("artist-1", "Test Artist", []);
+    var artist = SubsonicMapper.MapArtist(dto);
+
+    Assert.Equal("artist-1", artist.Id);
+    Assert.Equal("Test Artist", artist.Name);
+  }
+
+  private string MockUrlBuilder(string id) => $"http://localhost/art?id={id}";
+
+  [Fact]
   public void MapSong_WithMinimalData_ReturnsCorrectSong() {
     var dto = new SubsonicModels.Song("song-1", "Test Song", "Test Album", "Test Artist", "artist-1", "album-1", 180, 1, "cover-1");
     var song = SubsonicMapper.MapSong(dto, MockUrlBuilder);

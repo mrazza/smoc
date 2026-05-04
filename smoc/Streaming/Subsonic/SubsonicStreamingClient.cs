@@ -180,9 +180,32 @@ public class SubsonicStreamingClient : IStreamingClient {
     return await Image.LoadAsync<Rgba32>(stream, cancellationToken);
   }
 
-  private string BuildUrl(string method, Dictionary<string, string>? parameters = null) {
-    var query = new List<string> {
-      $"u={_username}",
+    private string BuildUrl(string method, Dictionary<string, string>? parameters = null) {
+    var uriBuilder = new UriBuilder($"{_baseUrl}/rest/{method}");
+    var queryParams = new List<string> {
+      $"u={Uri.EscapeDataString(_username)}",
+      "v=1.16.1",
+      "c=smoc",
+      "f=json"
+    };
+
+    if (_useToken) {
+      var (token, salt) = SubsonicAuthentication.GenerateToken(_password);
+      queryParams.Add($"t={Uri.EscapeDataString(token)}");
+      queryParams.Add($"s={Uri.EscapeDataString(salt)}");
+    } else {
+      queryParams.Add($"p={Uri.EscapeDataString(_password)}");
+    }
+
+    if (parameters != null) {
+      foreach (var param in parameters) {
+        queryParams.Add($"{Uri.EscapeDataString(param.Key)}={Uri.EscapeDataString(param.Value)}");
+      }
+    }
+
+    uriBuilder.Query = string.Join("&", queryParams);
+    return uriBuilder.ToString();
+  }",
       "v=1.16.1",
       "c=smoc",
       "f=json"
