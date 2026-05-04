@@ -4,8 +4,11 @@ using SixLabors.ImageSharp.PixelFormats;
 using Smoc.Configuration;
 using Smoc.Services;
 using Smoc.Services.Caching;
+using Smoc.Streaming.Subsonic.Util;
 
 namespace Smoc.Streaming.Subsonic;
+
+using SubsonicModels = Smoc.Streaming.Subsonic.Models;
 
 /// <summary>
 /// A streaming client implementation for Subsonic-compatible APIs.
@@ -102,8 +105,8 @@ public class SubsonicStreamingClient : IStreamingClient {
   public async Task<List<Artist>> SearchArtistsAsync(string query, CancellationToken cancellationToken = default) {
     var response = await GetResponseElementAsync("search3.view", new Dictionary<string, string> { { "query", query }, { "artistCount", "20" } }, cancellationToken);
     if (response.TryGetProperty("searchResult3", out var searchResult)) {
-      var result = searchResult.Deserialize<Models.SearchResult3>();
-      return result?.Artists?.Select(a => new Artist(a.Id, a.Name)).ToList() ?? [];
+      var result = searchResult.Deserialize<SubsonicModels.SearchResult3>();
+      return result?.Artists?.Select(SubsonicMapper.MapArtist).ToList() ?? [];
     }
     return [];
   }
@@ -112,8 +115,8 @@ public class SubsonicStreamingClient : IStreamingClient {
   public async Task<List<Song>> SearchSongsAsync(string query, CancellationToken cancellationToken = default) {
     var response = await GetResponseElementAsync("search3.view", new Dictionary<string, string> { { "query", query }, { "songCount", "50" } }, cancellationToken);
     if (response.TryGetProperty("searchResult3", out var searchResult)) {
-      var result = searchResult.Deserialize<Models.SearchResult3>();
-      return result?.Songs?.Select(s => MapSong(s)).ToList() ?? [];
+      var result = searchResult.Deserialize<SubsonicModels.SearchResult3>();
+      return result?.Songs?.Select(s => SubsonicMapper.MapSong(s, id => BuildUrl("getCoverArt.view", new() { { "id", id } }))).ToList() ?? [];
     }
     return [];
   }
@@ -122,8 +125,8 @@ public class SubsonicStreamingClient : IStreamingClient {
   public async Task<Song> GetSongAsync(string songId, CancellationToken cancellationToken = default) {
     var response = await GetResponseElementAsync("getSong.view", new Dictionary<string, string> { { "id", songId } }, cancellationToken);
     if (response.TryGetProperty("song", out var songElement)) {
-      var dto = songElement.Deserialize<Models.Song>();
-      return MapSong(dto!);
+      var dto = songElement.Deserialize<SubsonicModels.Song>();
+      return SubsonicMapper.MapSong(dto!, id => BuildUrl("getCoverArt.view", new() { { "id", id } }));
     }
     throw new Exception("Song not found in response");
   }
@@ -132,8 +135,8 @@ public class SubsonicStreamingClient : IStreamingClient {
   public async Task<Artist> GetArtistAsync(string artistId, CancellationToken cancellationToken = default) {
     var response = await GetResponseElementAsync("getArtist.view", new Dictionary<string, string> { { "id", artistId } }, cancellationToken);
     if (response.TryGetProperty("artist", out var artistElement)) {
-      var result = artistElement.Deserialize<Models.ArtistWithAlbums>();
-      return new Artist(result!.Id, result.Name);
+      var result = artistElement.Deserialize<SubsonicModels.ArtistWithAlbums>();
+      return SubsonicMapper.MapArtist(result!);
     }
     throw new Exception("Artist not found in response");
   }
@@ -142,8 +145,8 @@ public class SubsonicStreamingClient : IStreamingClient {
   public async Task<List<Album>> GetAlbumsByArtistAsync(Artist artist, CancellationToken cancellationToken = default) {
     var response = await GetResponseElementAsync("getArtist.view", new Dictionary<string, string> { { "id", artist.Id } }, cancellationToken);
     if (response.TryGetProperty("artist", out var artistElement)) {
-      var result = artistElement.Deserialize<Models.ArtistWithAlbums>();
-      return result?.Albums?.Select(a => MapAlbum(a, artist)).ToList() ?? [];
+      var result = artistElement.Deserialize<SubsonicModels.ArtistWithAlbums>();
+      return result?.Albums?.Select(a => SubsonicMapper.MapAlbum(a, artist, id => BuildUrl("getCoverArt.view", new() { { "id", id } }))).ToList() ?? [];
     }
     return [];
   }
@@ -152,8 +155,8 @@ public class SubsonicStreamingClient : IStreamingClient {
   public async Task<List<Song>> GetSongsByAlbumAsync(Album album, CancellationToken cancellationToken = default) {
     var response = await GetResponseElementAsync("getAlbum.view", new Dictionary<string, string> { { "id", album.Id } }, cancellationToken);
     if (response.TryGetProperty("album", out var albumElement)) {
-      var result = albumElement.Deserialize<Models.AlbumWithSongs>();
-      return result?.Songs?.Select(s => MapSong(s, album)).ToList() ?? [];
+      var result = albumElement.Deserialize<SubsonicModels.AlbumWithSongs>();
+      return result?.Songs?.Select(s => SubsonicMapper.MapSong(s, album)).ToList() ?? [];
     }
     return [];
   }
@@ -169,8 +172,8 @@ public class SubsonicStreamingClient : IStreamingClient {
   public async Task<List<Song>> GetLikedSongsAsync(CancellationToken cancellationToken = default) {
     var response = await GetResponseElementAsync("getStarred.view", null, cancellationToken);
     if (response.TryGetProperty("starred", out var starredElement)) {
-      var result = starredElement.Deserialize<Models.SearchResult3>();
-      return result?.Songs?.Select(s => MapSong(s)).ToList() ?? [];
+      var result = starredElement.Deserialize<SubsonicModels.SearchResult3>();
+      return result?.Songs?.Select(s => SubsonicMapper.MapSong(s, id => BuildUrl("getCoverArt.view", new() { { "id", id } }))).ToList() ?? [];
     }
     return [];
   }
@@ -180,9 +183,9 @@ public class SubsonicStreamingClient : IStreamingClient {
     var response = await GetResponseElementAsync("getPlaylists.view", null, cancellationToken);
     if (response.TryGetProperty("playlists", out var playlistsElement)) {
       if (playlistsElement.TryGetProperty("playlist", out var playlistArray)) {
-        var result = playlistArray.Deserialize<List<Models.Playlist>>();
+        var result = playlistArray.Deserialize<List<SubsonicModels.Playlist>>();
         return result?.Where(p => p.Name.Contains(query, StringComparison.OrdinalIgnoreCase))
-                     .Select(p => new Playlist(p.Id, p.Name)).ToList() ?? [];
+                     .Select(SubsonicMapper.MapPlaylist).ToList() ?? [];
       }
     }
     return [];
@@ -192,8 +195,8 @@ public class SubsonicStreamingClient : IStreamingClient {
   public async Task<List<Song>> GetPlaylistSongsAsync(Playlist playlist, CancellationToken cancellationToken = default) {
     var response = await GetResponseElementAsync("getPlaylist.view", new Dictionary<string, string> { { "id", playlist.Id } }, cancellationToken);
     if (response.TryGetProperty("playlist", out var playlistElement)) {
-      var result = playlistElement.Deserialize<Models.PlaylistWithSongs>();
-      return result?.Songs?.Select(s => MapSong(s)).ToList() ?? [];
+      var result = playlistElement.Deserialize<SubsonicModels.PlaylistWithSongs>();
+      return result?.Songs?.Select(s => SubsonicMapper.MapSong(s, id => BuildUrl("getCoverArt.view", new() { { "id", id } }))).ToList() ?? [];
     }
     return [];
   }
@@ -217,27 +220,4 @@ public class SubsonicStreamingClient : IStreamingClient {
     return await Image.LoadAsync<Rgba32>(stream, cancellationToken);
   }
 
-  internal Song MapSong(Models.Song dto) {
-    var artist = new Artist(dto.ArtistId ?? "", dto.ArtistName ?? "Unknown Artist");
-    var album = new Album(
-      dto.AlbumId ?? "",
-      artist,
-      dto.AlbumName ?? "Unknown Album",
-      dto.CoverArt != null ? [new AlbumCover(BuildUrl("getCoverArt.view", new Dictionary<string, string> { { "id", dto.CoverArt } }), 0, 0)] : []
-    );
-    return MapSong(dto, album);
-  }
-
-  internal static Song MapSong(Models.Song dto, Album album) {
-    return new Song(dto.Id, album, dto.Title, TimeSpan.FromSeconds(dto.Duration ?? 0), dto.Track);
-  }
-
-  internal Album MapAlbum(Models.Album dto, Artist artist) {
-    return new Album(
-      dto.Id,
-      artist,
-      dto.Name,
-      dto.CoverArt != null ? [new AlbumCover(BuildUrl("getCoverArt.view", new Dictionary<string, string> { { "id", dto.CoverArt } }), 0, 0)] : []
-    );
-  }
 }

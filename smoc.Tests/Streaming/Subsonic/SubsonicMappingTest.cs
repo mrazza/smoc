@@ -1,21 +1,19 @@
 using Smoc.Streaming;
-using Smoc.Streaming.Subsonic;
 using Smoc.Streaming.Subsonic.Models;
+using Smoc.Streaming.Subsonic.Util;
 using Xunit;
 
 namespace smoc.Tests.Streaming.Subsonic;
 
-public class SubsonicMappingTest {
-  private readonly SubsonicStreamingClient _client;
+using SubsonicModels = Smoc.Streaming.Subsonic.Models;
 
-  public SubsonicMappingTest() {
-    _client = SubsonicStreamingClient.CreateForTesting("http://localhost:8080", "user", "pass", true);
-  }
+public class SubsonicMappingTest {
+  private string MockUrlBuilder(string id) => $"http://localhost/art?id={id}";
 
   [Fact]
   public void MapSong_WithMinimalData_ReturnsCorrectSong() {
-    var dto = new Smoc.Streaming.Subsonic.Models.Song("song-1", "Test Song", "Test Album", "Test Artist", "artist-1", "album-1", 180, 1, "cover-1");
-    var song = _client.MapSong(dto);
+    var dto = new SubsonicModels.Song("song-1", "Test Song", "Test Album", "Test Artist", "artist-1", "album-1", 180, 1, "cover-1");
+    var song = SubsonicMapper.MapSong(dto, MockUrlBuilder);
 
     Assert.Equal("song-1", song.Id);
     Assert.Equal("Test Song", song.Title);
@@ -28,15 +26,14 @@ public class SubsonicMappingTest {
     
     // Verify cover art URL was built
     Assert.Single(song.Album.Covers);
-    Assert.Contains("getCoverArt.view", song.Album.Covers.First().Url);
-    Assert.Contains("id=cover-1", song.Album.Covers.First().Url);
+    Assert.Equal("http://localhost/art?id=cover-1", song.Album.Covers.First().Url);
   }
 
   [Fact]
   public void MapAlbum_ReturnsCorrectAlbum() {
     var artist = new Smoc.Streaming.Artist("artist-1", "Test Artist");
-    var dto = new Smoc.Streaming.Subsonic.Models.Album("album-1", "Test Album", "Test Artist", "artist-1", 10, 3600, "cover-1");
-    var album = _client.MapAlbum(dto, artist);
+    var dto = new SubsonicModels.Album("album-1", "Test Album", "Test Artist", "artist-1", 10, 3600, "cover-1");
+    var album = SubsonicMapper.MapAlbum(dto, artist, MockUrlBuilder);
 
     Assert.Equal("album-1", album.Id);
     Assert.Equal("Test Album", album.Name);
@@ -44,7 +41,24 @@ public class SubsonicMappingTest {
     
     // Verify cover art URL was built
     Assert.Single(album.Covers);
-    Assert.Contains("getCoverArt.view", album.Covers.First().Url);
-    Assert.Contains("id=cover-1", album.Covers.First().Url);
+    Assert.Equal("http://localhost/art?id=cover-1", album.Covers.First().Url);
+  }
+
+  [Fact]
+  public void MapArtist_ReturnsCorrectArtist() {
+    var dto = new SubsonicModels.Artist("artist-1", "Test Artist", 5);
+    var artist = SubsonicMapper.MapArtist(dto);
+
+    Assert.Equal("artist-1", artist.Id);
+    Assert.Equal("Test Artist", artist.Name);
+  }
+
+  [Fact]
+  public void MapPlaylist_ReturnsCorrectPlaylist() {
+    var dto = new SubsonicModels.Playlist("playlist-1", "Test Playlist", "user", 10, 3600);
+    var playlist = SubsonicMapper.MapPlaylist(dto);
+
+    Assert.Equal("playlist-1", playlist.Id);
+    Assert.Equal("Test Playlist", playlist.Name);
   }
 }
