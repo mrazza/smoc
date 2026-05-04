@@ -6,7 +6,6 @@ using Smoc.Services.Streaming;
 using Smoc.Streaming;
 using Smoc.Ui.Drawing;
 using Smoc.Ui.Models;
-using Terminal.Gui.App;
 using Terminal.Gui.Input;
 using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
