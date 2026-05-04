@@ -8,10 +8,22 @@ namespace Smoc.Configuration;
 /// </summary>
 public static class SubsonicConfig {
   /// <summary>
-  /// Gets or sets the Subsonic server URL.
+  /// Gets or sets the Subsonic server host.
   /// </summary>
   [ConfigurationProperty(Scope = typeof(SettingsScope))]
-  public static string? ServerUrl { get; set; } = null;
+  public static string? ServerHost { get; set; } = null;
+
+  /// <summary>
+  /// Gets or sets the Subsonic server port.
+  /// </summary>
+  [ConfigurationProperty(Scope = typeof(SettingsScope))]
+  public static int ServerPort { get; set; } = 80;
+
+  /// <summary>
+  /// Gets or sets the Subsonic server scheme.
+  /// </summary>
+  [ConfigurationProperty(Scope = typeof(SettingsScope))]
+  public static string ServerScheme { get; set; } = "http";
 
   /// <summary>
   /// Gets or sets the Subsonic username.

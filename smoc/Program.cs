@@ -104,11 +104,11 @@ public static class Program {
 
     switch (SmocConfiguration.ActiveService) {
       case StreamingService.Subsonic:
-        Logging.Information("Creating Subsonic streaming client.");
+        Logging.Information("Creating Subsonic streaming client...");
         return SubsonicStreamingClient.Create(songCache, artCache);
 
       case StreamingService.YouTubeMusic:
-
+        Logging.Information("Creating YouTube Music streaming client...");
         if (!File.Exists(_cookiesPath) || !File.Exists(_tokensPath)) {
           Logging.Information("Cookies or tokens not found. Creating new YTM client without authentication.");
           return YtmStreamingClient.Create(songCache, artCache);

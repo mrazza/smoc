@@ -36,7 +36,7 @@ public class SubsonicStreamingClientServiceTest {
       });
 
     var httpClient = new HttpClient(handlerMock.Object);
-    var client = SubsonicStreamingClient.CreateForTesting("http://localhost", "user", "pass", true);
+    var client = SubsonicStreamingClient.CreateForTesting("localhost", "user", "pass", true);
 
     // Inject the mocked httpClient via reflection for testing
     var httpClientField = typeof(SubsonicStreamingClient).GetField("_httpClient", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
@@ -76,7 +76,7 @@ public class SubsonicStreamingClientServiceTest {
       });
 
     var httpClient = new HttpClient(handlerMock.Object);
-    var client = SubsonicStreamingClient.CreateForTesting("http://localhost", "user", "pass", true);
+    var client = SubsonicStreamingClient.CreateForTesting("localhost", "user", "pass", true);
     var httpClientField = typeof(SubsonicStreamingClient).GetField("_httpClient", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
     httpClientField?.SetValue(client, httpClient);
 

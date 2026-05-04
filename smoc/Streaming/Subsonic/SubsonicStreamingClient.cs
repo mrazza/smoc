@@ -17,13 +17,17 @@ public class SubsonicStreamingClient : IStreamingClient {
   private readonly HttpClient _httpClient;
   private readonly ICacheService _songCache;
   private readonly ICacheService _artCache;
-  private readonly string _baseUrl;
+  private readonly string _uriHost;
+  private readonly string _uriScheme;
+  private readonly int _uriPort;
   private readonly string _username;
   private readonly string _password;
   private readonly bool _useToken;
 
-  private SubsonicStreamingClient(string baseUrl, string username, string password, bool useToken, ICacheService songCache, ICacheService artCache) {
-    _baseUrl = baseUrl.TrimEnd('/');
+  private SubsonicStreamingClient(string uriScheme, string uriHost, int uriPort, string username, string password, bool useToken, ICacheService songCache, ICacheService artCache) {
+    _uriHost = uriHost;
+    _uriScheme = uriScheme;
+    _uriPort = uriPort;
     _username = username;
     _password = password;
     _useToken = useToken;
@@ -40,7 +44,9 @@ public class SubsonicStreamingClient : IStreamingClient {
   /// <returns>A new <see cref="SubsonicStreamingClient"/>.</returns>
   public static SubsonicStreamingClient Create(ICacheService songCache, ICacheService artCache) {
     return new SubsonicStreamingClient(
-      SubsonicConfig.ServerUrl ?? throw new InvalidOperationException("Subsonic Server URL not configured"),
+      SubsonicConfig.ServerScheme,
+      SubsonicConfig.ServerHost ?? throw new InvalidOperationException("Subsonic Server Host not configured"),
+      SubsonicConfig.ServerPort,
       SubsonicConfig.Username ?? throw new InvalidOperationException("Subsonic Username not configured"),
       SubsonicConfig.Password ?? throw new InvalidOperationException("Subsonic Password not configured"),
       SubsonicConfig.UseToken,
@@ -53,7 +59,7 @@ public class SubsonicStreamingClient : IStreamingClient {
   /// Internal constructor for testing purposes.
   /// </summary>
   internal static SubsonicStreamingClient CreateForTesting(string baseUrl, string username, string password, bool useToken) {
-    return new SubsonicStreamingClient(baseUrl, username, password, useToken, new NoCachingCacheService(), new NoCachingCacheService());
+    return new SubsonicStreamingClient("http", baseUrl, 80, username, password, useToken, new NoCachingCacheService(), new NoCachingCacheService());
   }
 
   /// <inheritdoc/>
@@ -180,32 +186,9 @@ public class SubsonicStreamingClient : IStreamingClient {
     return await Image.LoadAsync<Rgba32>(stream, cancellationToken);
   }
 
-    private string BuildUrl(string method, Dictionary<string, string>? parameters = null) {
-    var uriBuilder = new UriBuilder($"{_baseUrl}/rest/{method}");
-    var queryParams = new List<string> {
-      $"u={Uri.EscapeDataString(_username)}",
-      "v=1.16.1",
-      "c=smoc",
-      "f=json"
-    };
-
-    if (_useToken) {
-      var (token, salt) = SubsonicAuthentication.GenerateToken(_password);
-      queryParams.Add($"t={Uri.EscapeDataString(token)}");
-      queryParams.Add($"s={Uri.EscapeDataString(salt)}");
-    } else {
-      queryParams.Add($"p={Uri.EscapeDataString(_password)}");
-    }
-
-    if (parameters != null) {
-      foreach (var param in parameters) {
-        queryParams.Add($"{Uri.EscapeDataString(param.Key)}={Uri.EscapeDataString(param.Value)}");
-      }
-    }
-
-    uriBuilder.Query = string.Join("&", queryParams);
-    return uriBuilder.ToString();
-  }",
+  private string BuildUrl(string method, Dictionary<string, string>? parameters = null) {
+    var query = new List<string> {
+      $"u={_username}",
       "v=1.16.1",
       "c=smoc",
       "f=json"
@@ -225,8 +208,9 @@ public class SubsonicStreamingClient : IStreamingClient {
       }
     }
 
-    var url = $"{_baseUrl}/rest/{method}?{string.Join("&", query)}";
-    return url;
+    return new UriBuilder(_uriScheme, _uriHost, _uriPort, $"rest/{method}") {
+      Query = string.Join("&", query)
+    }.ToString();
   }
 
   private async Task<JsonElement> GetResponseElementAsync(string method, Dictionary<string, string>? parameters = null, CancellationToken cancellationToken = default) {

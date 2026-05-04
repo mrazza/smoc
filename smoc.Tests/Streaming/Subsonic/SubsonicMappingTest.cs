@@ -32,8 +32,6 @@ public class SubsonicMappingTest {
     Assert.Equal("Test Artist", artist.Name);
   }
 
-  private string MockUrlBuilder(string id) => $"http://localhost/art?id={id}";
-
   [Fact]
   public void MapSong_WithMinimalData_ReturnsCorrectSong() {
     var dto = new SubsonicModels.Song("song-1", "Test Song", "Test Album", "Test Artist", "artist-1", "album-1", 180, 1, "cover-1");
@@ -66,7 +64,7 @@ public class SubsonicMappingTest {
     var artist = new Smoc.Streaming.Artist("artist-1", "Test Artist");
     var album = new Smoc.Streaming.Album("album-1", artist, "Test Album", []);
     var dto = new SubsonicModels.Song("song-1", "Test Song", "Test Album", "Test Artist", "artist-1", "album-1", 180, 1, "cover-1");
-    
+
     var song = SubsonicMapper.MapSong(dto, album);
 
     Assert.Equal("song-1", song.Id);
