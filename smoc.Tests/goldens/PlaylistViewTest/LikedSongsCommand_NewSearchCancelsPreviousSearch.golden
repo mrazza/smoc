@@ -1,7 +1,7 @@
 PlaylistViewTest.LikedSongsCommand_NewSearchCancelsPreviousSearch_0:
 ┌──────────────────────────────────────────────────────────────────────────────────────────────────┐
-│Artist Album Track Length                                                                         │
-│Radio… OK C… sick… 5:00                                                                           │
+│Artist                        Album                         Track                         Length  │
+│Radiohead                     OK Computer                   sicker song_2                 5:00    │
 │                                                                                                  │
 │                                                                                                  │
 │                                                                                                  │

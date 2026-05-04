@@ -1,7 +1,7 @@
 ArtistViewTest.ArtistSelected_NewSelectionCancelsPreviousSelection_0:
 ┌────────────────────────────┐┌────────────────────────────────────────────────────────────────────┐
-│Radiohead                   ││# Album Track Length Year                                           │
-│Almost Radiohead            ││2 NOKA… Clim… 3:00   1970                                           │
+│Radiohead                   ││#   Album                    Track                    Length Year   │
+│Almost Radiohead            ││2   NOKAY Computer           Climbing Down the Walls  3:00   1970   │
 │                            ││                                                                    │
 │                            ││                                                                    │
 │                            ││                                                                    │

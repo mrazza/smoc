@@ -162,6 +162,7 @@ public class SongTable : TableView {
       }
       _songTableData.Rows.Add(values);
     }
+    RefreshContentSize();
   }
 
   /// <inheritdoc />
@@ -219,13 +220,13 @@ public class SongTable : TableView {
     return new Point(rowToScreen.X - frameOffset.X - adornmentThickness.Left, rowToScreen.Y - frameOffset.Y - adornmentThickness.Top - 1);
   }
 
-  private Point? RowToScreen(int tableRow) {
-    return ContentToScreen(new Point(0, tableRow + 1 + GetAdornmentsThickness().Top));
+  protected override void OnFrameChanged(in Rectangle frame) {
+    ResizeSongTableColumns(frame);
+    base.OnFrameChanged(frame);
   }
 
-  protected override void OnFrameChanged(in Rectangle frame) {
-    base.OnFrameChanged(frame);
-    ResizeSongTableColumns(frame);
+  private Point? RowToScreen(int tableRow) {
+    return ContentToScreen(new Point(0, tableRow + 1 + GetAdornmentsThickness().Top));
   }
 
   private void ResizeSongTableColumns(Rectangle frame) {
@@ -275,9 +276,11 @@ public class SongTable : TableView {
       Style.GetOrCreateColumnStyle(columnIndex).MinWidth = 5;
       Style.GetOrCreateColumnStyle(columnIndex++).MaxWidth = 5;
     }
+
+    RefreshContentSize();
   }
 
-  private DataTable CreateDataTable(SongTableColumns columns) {
+  private static DataTable CreateDataTable(SongTableColumns columns) {
     var dataTable = new DataTable();
     if (columns.HasFlag(SongTableColumns.Number)) {
       dataTable.Columns.Add("#", typeof(int));
