@@ -8,7 +8,7 @@
 ![.NET](https://img.shields.io/badge/.NET-10.0-512bd4?style=flat-square&logo=dotnet)
 ![Status](https://img.shields.io/badge/status-active_development-green?style=flat-square)
 
-A terminal-based music player (TUI) for streaming services, currently supporting **YouTube Music**. Spotify and Apple Music are _future features_.
+A terminal-based music player (TUI) for streaming services, currently supporting **YouTube Music** and **Subsonic** compatible APIs. Spotify and Apple Music are _future features_.
 
 [Features](#-features) • [Installation](#-installation) • [Configuration and Setup](#%EF%B8%8F-configuration-and-setup) • [Usage](#-usage)
 
@@ -67,7 +67,7 @@ While most basic functionality is available and SMoC is totally usable, there's 
   - [x] Track
   - [x] Playlist
   - [x] URL
-- [ ] YouTube Music
+- [x] YouTube Music
   - [x] Authentication
   - [x] POToken
   - [x] VisitorData
@@ -173,6 +173,13 @@ SMoC operates with a Vim-style command bar. Press `:` to enter command mode.
 SMoC stores configuration and authentication data in `~/.config/smoc/` (on Linux).
 
 ### Authentication
+
+### Subsonic
+To use a Subsonic-compatible service (like Navidrome, Gonic, or Airsonic):
+1. Ensure your server has the Subsonic API enabled.
+2. Configure your server URL, username, and password in `config.json` (see below).
+3. Set `SmocConfiguration.ActiveService` to `Subsonic`.
+
 > [!NOTE]
 > You need a YouTube Music Premium subscription to play most content.
 
@@ -229,6 +236,11 @@ Create or edit `~/.config/smoc/config.json` to customize settings.
 #### Common Settings
 | Category           | Key                                            | Type       | Description                                                         |
 | :----------------- | :--------------------------------------------- | :--------- | :------------------------------------------------------------------ |
+| **Streaming**     | `SmocConfiguration.ActiveService`            | `StreamingService` | Active service (`YouTubeMusic`, `Subsonic`)                     |
+| **Subsonic**      | `SubsonicConfig.ServerUrl`                   | `string`   | Base URL of your Subsonic server                                    |
+|                   | `SubsonicConfig.Username`                    | `string`   | Subsonic username                                                   |
+|                   | `SubsonicConfig.Password`                    | `string`   | Subsonic password                                                   |
+|                   | `SubsonicConfig.UseToken`                    | `bool`     | Whether to use token auth instead of plaintext password (default: true) |
 | **Caching**        | `SmocConfiguration.SongCacheSizeBytes`         | `long`     | Max size of song cache in bytes (0 = no limit)                      |
 |                    | `SmocConfiguration.AlbumCoverCacheSizeBytes`   | `long`     | Max size of album cover cache in bytes (0 = no limit)               |
 |                    | `SmocConfiguration.SongCacheMaxElements`       | `int`      | Max number of songs to cache (0 = no limit)                         |
