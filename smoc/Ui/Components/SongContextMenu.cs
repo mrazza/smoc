@@ -40,7 +40,9 @@ public sealed class SongContextMenu : PopoverMenu {
     // Map Down to Next (Forward)
     AddCommand(Command.Down, ctx => AdvanceFocus(NavigationDirection.Forward, TabBehavior.TabStop));
     KeyBindings.Add(Key.CursorDown, Command.Down);
-    VimKeyBindings.AddDirectionalKeyBindings(KeyBindings);
+    VimKeyBindings.AddDirectionalKeyBindings(KeyBindings, bindLeftRight: false);
+    KeyBindings.Remove(Key.CursorLeft);
+    KeyBindings.Remove(Key.CursorRight);
 
     // Map Esc to Quit (Close Popover)
     KeyBindings.ReplaceCommands(Key.Esc, Command.Quit);

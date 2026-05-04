@@ -18,7 +18,8 @@ public sealed class SearchResultsList<T> : ListView {
 
   public SearchResultsList()
       : base() {
-    VimKeyBindings.AddDirectionalKeyBindings(KeyBindings);
+    VimKeyBindings.AddDirectionalKeyBindings(KeyBindings, bindLeftRight: false);
+    VimKeyBindings.AddNavigationKeyBindings(KeyBindings, bindUpDown: false);
 
     Accepting += (_, args) => {
       if (SelectedItem is int itemId

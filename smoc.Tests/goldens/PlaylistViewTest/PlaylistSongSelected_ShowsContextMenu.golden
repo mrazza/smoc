@@ -1,14 +1,14 @@
 PlaylistViewTest.PlaylistSongSelected_ShowsContextMenu_0:
 ┌────────────────────────────┐┌────────────────────────────────────────────────────────────────────┐
-│Sickest Playlist            ││                                                                    │
-│lame ass shit               ││                                                                    │
+│Sickest Playlist            ││Artist              Album               Track               Length  │
+│lame ass shit               ││Radiohead           OK Computer         PlaylistSongSelect… 5:00    │
+│                            ││Radiohead           OK Computer         PlaylistSongSelect… 5:00    │
+│                            ││ play all from here  K Computer         PlaylistSongSelect… 5:00    │
+│                            ││ play selection only                                                │
+│                            ││ queue next                                                         │
+│                            ││ queue last                                                         │
 │                            ││                                                                    │
 │                            ││                                                                    │
-│                            ││                                                                    │
-│                            ││                                                                    │
-│                            ││                                                                    │
-│                            ││                                                                    │
-│                            ││                       error loading tracks                         │
 │                            ││                                                                    │
 │                            ││                                                                    │
 │                            ││                                                                    │
