@@ -15,8 +15,8 @@ using SubsonicModels = Smoc.Streaming.Subsonic.Models;
 /// </summary>
 public class SubsonicStreamingClient : IStreamingClient {
   private readonly HttpClient _httpClient;
-  private readonly ICacheService _songCache;
-  private readonly ICacheService _artCache;
+  private readonly ICacheService _songCacheService;
+  private readonly ICacheService _albumArtCacheService;
   private readonly string _uriHost;
   private readonly string _uriScheme;
   private readonly int _uriPort;
@@ -24,25 +24,25 @@ public class SubsonicStreamingClient : IStreamingClient {
   private readonly string _password;
   private readonly bool _useToken;
 
-  private SubsonicStreamingClient(string uriScheme, string uriHost, int uriPort, string username, string password, bool useToken, ICacheService songCache, ICacheService artCache) {
+  private SubsonicStreamingClient(string uriScheme, string uriHost, int uriPort, string username, string password, bool useToken, ICacheService songCacheService, ICacheService albumArtCacheService) {
     _uriHost = uriHost;
     _uriScheme = uriScheme;
     _uriPort = uriPort;
     _username = username;
     _password = password;
     _useToken = useToken;
-    _songCache = songCache;
-    _artCache = artCache;
+    _songCacheService = songCacheService;
+    _albumArtCacheService = albumArtCacheService;
     _httpClient = new HttpClient();
   }
 
   /// <summary>
   /// Creates a new instance of the <see cref="SubsonicStreamingClient"/>.
   /// </summary>
-  /// <param name="songCache">The song cache service.</param>
-  /// <param name="artCache">The album art cache service.</param>
+  /// <param name="songCacheService">The song cache service.</param>
+  /// <param name="albumArtCacheService">The album art cache service.</param>
   /// <returns>A new <see cref="SubsonicStreamingClient"/>.</returns>
-  public static SubsonicStreamingClient Create(ICacheService songCache, ICacheService artCache) {
+  public static SubsonicStreamingClient Create(ICacheService songCacheService, ICacheService albumArtCacheService) {
     return new SubsonicStreamingClient(
       SubsonicConfig.ServerScheme,
       SubsonicConfig.ServerHost ?? throw new InvalidOperationException("Subsonic Server Host not configured"),
@@ -50,8 +50,8 @@ public class SubsonicStreamingClient : IStreamingClient {
       SubsonicConfig.Username ?? throw new InvalidOperationException("Subsonic Username not configured"),
       SubsonicConfig.Password ?? throw new InvalidOperationException("Subsonic Password not configured"),
       SubsonicConfig.UseToken,
-      songCache,
-      artCache
+      songCacheService,
+      albumArtCacheService
     );
   }
 
@@ -124,14 +124,20 @@ public class SubsonicStreamingClient : IStreamingClient {
 
   /// <inheritdoc/>
   public async Task<SongStream> GetSongStreamAsync(string songId, CancellationToken cancellationToken = default) {
-    var url = BuildUrl("stream.view", new Dictionary<string, string> { { "id", songId } });
-    using var response = await _httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
-    using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-    if (stream is null) throw new Exception("Failed to get song stream");
-    var memoryStream = new MemoryStream();
-    await stream.CopyToAsync(memoryStream, cancellationToken);
-    memoryStream.Position = 0;
-    return new SongStream(songId, "mp3", memoryStream);
+    var stream = await _songCacheService.GetOrAddAsync(
+      string.Concat("subsonic-", songId),
+      async (cancellationToken) => {
+        var url = BuildUrl("stream.view", new Dictionary<string, string> { { "id", songId } });
+        using var response = await _httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+        using var stream = await response.Content.ReadAsStreamAsync(cancellationToken) ?? throw new Exception("Failed to get song stream");
+        var memoryStream = new MemoryStream();
+        await stream.CopyToAsync(memoryStream, cancellationToken);
+        memoryStream.Position = 0;
+        return memoryStream;
+      },
+      cancellationToken);
+
+    return new SongStream(songId, "mp3", stream);
   }
 
   /// <inheritdoc/>
@@ -179,11 +185,15 @@ public class SubsonicStreamingClient : IStreamingClient {
 
   /// <inheritdoc/>
   public async Task<Image<Rgba32>> GetAlbumArtAsync(Album album, Func<IEnumerable<AlbumCover>, AlbumCover>? coverSelector = null, CancellationToken cancellationToken = default) {
-    var cover = (coverSelector?.Invoke(album.Covers) ?? album.Covers.FirstOrDefault()) ?? throw new Exception("No album cover available");
-    var url = cover.Url;
-    var response = await _httpClient.GetAsync(url, cancellationToken);
-    var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-    return await Image.LoadAsync<Rgba32>(stream, cancellationToken);
+    using var albumArt = await _albumArtCacheService.GetOrAddAsync(
+      string.Concat("subsonic-", album.Id),
+      async ct => {
+        var cover = (coverSelector?.Invoke(album.Covers) ?? album.Covers.FirstOrDefault()) ?? throw new Exception("No album cover available");
+        var response = await _httpClient.GetAsync((string?)cover.Url, ct);
+        return await response.Content.ReadAsStreamAsync(ct);
+      },
+      cancellationToken);
+    return await Image.LoadAsync<Rgba32>(albumArt, cancellationToken);
   }
 
   private string BuildUrl(string method, Dictionary<string, string>? parameters = null) {
