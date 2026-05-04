@@ -119,8 +119,13 @@ public class SubsonicStreamingClient : IStreamingClient {
   /// <inheritdoc/>
   public async Task<SongStream> GetSongStreamAsync(string songId, CancellationToken cancellationToken = default) {
     var url = BuildUrl("stream.view", new Dictionary<string, string> { { "id", songId } });
-    var stream = await _httpClient.GetStreamAsync(url, cancellationToken);
-    return new SongStream(songId, "mp3", stream);
+    using var response = await _httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+    using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+    if (stream is null) throw new Exception("Failed to get song stream");
+    var memoryStream = new MemoryStream();
+    await stream.CopyToAsync(memoryStream, cancellationToken);
+    memoryStream.Position = 0;
+    return new SongStream(songId, "mp3", memoryStream);
   }
 
   /// <inheritdoc/>
@@ -197,7 +202,8 @@ public class SubsonicStreamingClient : IStreamingClient {
       }
     }
 
-    return $"{_baseUrl}/rest/{method}?{string.Join("&", query)}";
+    var url = $"{_baseUrl}/rest/{method}?{string.Join("&", query)}";
+    return url;
   }
 
   private async Task<JsonElement> GetResponseElementAsync(string method, Dictionary<string, string>? parameters = null, CancellationToken cancellationToken = default) {
