@@ -79,7 +79,7 @@ public static class ContextExtensions {
                             }
                         },
                         {
-                            "StatusBar": {
+                            "StatusBar_State": {
                                 "Normal": {
                                     "Foreground": "#949494",
                                     "Background": "#3a3a3a"
@@ -87,7 +87,7 @@ public static class ContextExtensions {
                             }
                         },
                         {
-                            "StatusBar_Mode": {
+                            "StatusBar": {
                                 "Normal": {
                                     "Foreground": "#262626",
                                     "Background": "#949494",

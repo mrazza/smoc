@@ -38,6 +38,7 @@ public sealed class StatusBar : View {
     SetScheme(SchemeManager.GetScheme("StatusBar"));
 
     _modeLabel = new Label() {
+      X = Pos.Absolute(1),
       Height = Dim.Absolute(1)
     };
     _versionLabel = new Label() {
@@ -46,16 +47,25 @@ public sealed class StatusBar : View {
       Text = Program.ProductName + " v" + Assembly.GetEntryAssembly()!.GetName().Version!.ToString(3)
     };
     _stateLabel = new Label() {
-      X = Pos.Right(_modeLabel),
+      X = Pos.Right(_modeLabel) + Pos.Absolute(1),
       Height = Dim.Absolute(1),
       Width = Dim.Fill(to: _versionLabel),
     };
-    var majorSectionScheme = SchemeManager.GetScheme("StatusBar_Mode");
-    _versionLabel.SetScheme(majorSectionScheme);
-    _modeLabel.SetScheme(majorSectionScheme);
+    _stateLabel.SetScheme(SchemeManager.GetScheme("StatusBar_State"));
     Thickness defaultMargin = new(1, 0, 1, 0);
     _versionLabel.Padding!.Thickness = defaultMargin;
-    _modeLabel.Padding!.Thickness = defaultMargin;
+
+    // HACK: RESOLVES RENDERING ISSUE ASSOCIATED WITH PADDING AND BACKGROUND
+    // _modeLabel.Padding!.Thickness = defaultMargin;
+    Add(new View() {
+      X = Pos.Absolute(0),
+      Width = Dim.Absolute(1)
+    }, new View() {
+      X = Pos.Right(_modeLabel),
+      Width = Dim.Absolute(1)
+    });
+    // END HACK
+
     Add(_versionLabel, _modeLabel, _stateLabel);
 
     _playbackQueueService.SongChanged += OnSongChanged;

@@ -1,6 +1,6 @@
 PlaybackQueueViewTest.SongChanged_HighlightsSong_0_ansi:
 [39m[49m┌──────────────────────────────────────────────────────────────────────────────────────────────────┐
-│Artist                        Album                         Track                         Length  │
+│[38;2;0;0;0m[48;2;255;255;255mArtist                       [39m[49m [38;2;0;0;0m[48;2;255;255;255mAlbum                        [39m[49m [38;2;0;0;0m[48;2;255;255;255mTrack                        [39m[49m [38;2;0;0;0m[48;2;255;255;255mLength  [39m[49m│
 │Radiohead                     OK Computer                   SongChanged_HighlightsSong1   5:00    │
 │[38;2;0;0;0m[48;2;255;255;255m[1mRadiohead                     OK Computer                   SongChanged_HighlightsSong2   5:00    [39m[49m[22m│
 │                                                                                                  │

@@ -40,9 +40,9 @@ public class SongTable : TableView {
   /// Gets or sets the 0-based index of the currently selected row.
   /// </summary>
   public int SelectedRow {
-    get => Value?.Cursor.Y ?? -1;
+    get => Value?.SelectedCell.Y ?? -1;
     set {
-      if (value != Value?.Cursor.Y) {
+      if (value != Value?.SelectedCell.Y) {
         SetSelection(0, value, false);
       }
     }
@@ -61,7 +61,6 @@ public class SongTable : TableView {
     get => _highlightedRow;
     set {
       if (_highlightedRow != value) {
-
         _highlightedRow = value;
         SetNeedsDraw();
       }
@@ -91,15 +90,19 @@ public class SongTable : TableView {
 
     Scheme? highlightedScheme = null;
     Scheme? normalScheme = null;
+    Scheme? headerScheme = null;
     try {
       highlightedScheme = SchemeManager.GetScheme("TableCurrentTrack");
       normalScheme = SchemeManager.GetScheme("TableNormalTracks");
+      headerScheme = SchemeManager.GetScheme("TableHeaders");
     } catch (KeyNotFoundException) {
       Logging.Error("SchemeManager.GetScheme() failed to find required schemes");
     }
     highlightedScheme ??= new Scheme(new Attribute(Color.White, Color.Black, TextStyle.Bold));
     normalScheme ??= SchemeManager.GetScheme(Schemes.Base);
+    headerScheme ??= normalScheme;
     Style.RowColorGetter = (args) => args.RowIndex == _highlightedRow ? highlightedScheme : normalScheme;
+    Style.HeaderScheme = headerScheme;
 
     _columns = columns;
     _songTableData = CreateDataTable(columns);

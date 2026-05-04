@@ -1,6 +1,6 @@
 PlaybackQueueViewTest.BecomesVisible_SelectsCurrentSong_0_ansi:
 [39m[49m┌──────────────────────────────────────────────────────────────────────────────────────────────────┐
-│Artist                        Album                         Track                         Length  │
+│[38;2;0;0;0m[48;2;255;255;255mArtist                       [39m[49m [38;2;0;0;0m[48;2;255;255;255mAlbum                        [39m[49m [38;2;0;0;0m[48;2;255;255;255mTrack                        [39m[49m [38;2;0;0;0m[48;2;255;255;255mLength  [39m[49m│
 │Radiohead                     OK Computer                   BecomesVisible_SelectsCurren… 5:00    │
 │[38;2;0;0;0m[48;2;255;255;255mRadiohead                     OK Computer                   BecomesVisible_SelectsCurren… 5:00    [39m[49m│
 │                                                                                                  │

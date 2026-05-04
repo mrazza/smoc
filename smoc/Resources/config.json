@@ -58,6 +58,22 @@
                         }
                     },
                     {
+                        "TableHeaders": {
+                            "Normal": {
+                                "Foreground": "#ebdbb2",
+                                "Background": "None"
+                            },
+                            "Focus": {
+                                "Foreground": "#ebdbb2",
+                                "Background": "None"
+                            },
+                            "Active": {
+                                "Foreground": "#ebdbb2",
+                                "Background": "None"
+                            }
+                        }
+                    },
+                    {
                         "TableNormalTracks": {
                             "Normal": {
                                 "Foreground": "#ebdbb2",
@@ -92,17 +108,17 @@
                     {
                         "StatusBar": {
                             "Normal": {
-                                "Foreground": "#949494",
-                                "Background": "#3a3a3a"
+                                "Foreground": "#262626",
+                                "Background": "#949494",
+                                "Style": "Bold"
                             }
                         }
                     },
                     {
-                        "StatusBar_Mode": {
+                        "StatusBar_State": {
                             "Normal": {
-                                "Foreground": "#262626",
-                                "Background": "#949494",
-                                "Style": "Bold"
+                                "Foreground": "#949494",
+                                "Background": "#3a3a3a"
                             }
                         }
                     },
