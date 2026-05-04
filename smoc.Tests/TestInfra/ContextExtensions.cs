@@ -20,7 +20,7 @@ public static class ContextExtensions {
   /// <param name="context">The test context.</param>
   /// <param name="view">The view to add.</param>
   /// <returns>The test context.</returns>
-  public static TerminalGuiFluentTesting.TestContext AddAndLayout(this TerminalGuiFluentTesting.TestContext context, View view) {
+  public static AppTestHelpers.AppTestHelper AddAndLayout(this AppTestHelpers.AppTestHelper context, View view) {
     return context.Add(view).Then((_) => view.SetNeedsLayout());
   }
 
@@ -30,7 +30,7 @@ public static class ContextExtensions {
   /// <param name="context">The test context.</param>
   /// <param name="timeSpan">The time to advance.</param>
   /// <returns>The test context.</returns>
-  public static TerminalGuiFluentTesting.TestContext AdvanceTime(this TerminalGuiFluentTesting.TestContext context, TimeSpan timeSpan) {
+  public static AppTestHelpers.AppTestHelper AdvanceTime(this AppTestHelpers.AppTestHelper context, TimeSpan timeSpan) {
     (context.TimeProvider as VirtualTimeProvider)?.Advance(timeSpan);
     return context.WaitIteration();
   }
@@ -43,7 +43,7 @@ public static class ContextExtensions {
   /// </remarks>
   /// <param name="context">The test context.</param>
   /// <returns>The test context.</returns>
-  public static TerminalGuiFluentTesting.TestContext ConfigureDefaultTheme(this TerminalGuiFluentTesting.TestContext context) {
+  public static AppTestHelpers.AppTestHelper ConfigureDefaultTheme(this AppTestHelpers.AppTestHelper context) {
     if (_isConfigSet) return context;
     lock (_configLock) {
       if (_isConfigSet) return context;

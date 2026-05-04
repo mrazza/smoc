@@ -1,6 +1,6 @@
 SongTableTest.EmptyTable_SomeColumns_ShowsHeaders_0:
 ┌──────────────────────────────────────────────────────────────────────────────────────────────────┐
-│Artist                                           Track                                            │
+│Artist Track                                                                                      │
 │                                                                                                  │
 │                                                                                                  │
 │                                                                                                  │

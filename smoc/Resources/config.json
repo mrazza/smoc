@@ -1,6 +1,5 @@
 {
     "ConfigurationManager.ThrowOnJsonErrors": true,
-    "Application.QuitKey": ":",
     "Theme": "default",
     "SmocConfiguration.LogLevel": "Information",
     "Themes": [
@@ -8,7 +7,7 @@
             "default": {
                 "Schemes": [
                     {
-                        "Runnable": {
+                        "Accent": {
                             "Normal": {
                                 "Foreground": "#ebdbb2",
                                 "Background": "None"

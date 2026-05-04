@@ -34,7 +34,7 @@ public class ScreenshotDiffer {
   /// <param name="ansiShot">If true, takes a screenshot with ansi characters useful if formatting is critical, otherwise basic text only; default false</param>
   /// <param name="callerPath">The caller path.</param>
   /// <param name="callerMember">The caller member.</param>
-  public void AssertEqualsGolden(TerminalGuiFluentTesting.TestContext testContext, int goldenNum = 0, bool ansiShot = false, [CallerFilePath] string? callerPath = null, [CallerMemberName] string? callerMember = null) {
+  public void AssertEqualsGolden(AppTestHelpers.AppTestHelper testContext, int goldenNum = 0, bool ansiShot = false, [CallerFilePath] string? callerPath = null, [CallerMemberName] string? callerMember = null) {
     if (callerPath == null || callerMember == null) throw new ArgumentNullException("callerPath and callerMember were not filled by the compiler");
     var callerFile = Path.GetFileNameWithoutExtension(callerPath);
     using var textWriter = new StringWriter();

@@ -1,7 +1,7 @@
 PlaylistViewTest.PlaylistCommand_PrevLikedSongs_KeepsPriorState_0:
 ┌──────────────────────────────────────────────────────────────────────────────────────────────────┐
 │Artist                        Album                         Track                         Length  │
-│Radiohead                     OK Computer                   PlaylistCommand_PrevLikedSong 5:00    │
+│Radiohead                     OK Computer                   PlaylistCommand_PrevLikedSon… 5:00    │
 │                                                                                                  │
 │                                                                                                  │
 │                                                                                                  │

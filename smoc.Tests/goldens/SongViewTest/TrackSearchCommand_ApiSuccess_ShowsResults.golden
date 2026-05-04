@@ -1,7 +1,7 @@
 SongViewTest.TrackSearchCommand_ApiSuccess_ShowsResults_0:
 ┌──────────────────────────────────────────────────────────────────────────────────────────────────┐
 │Artist                        Album                         Track                         Length  │
-│Radiohead                     OK Computer                   TrackSearchCommand_ApiSuccess 5:00    │
+│Radiohead                     OK Computer                   TrackSearchCommand_ApiSucces… 5:00    │
 │                                                                                                  │
 │                                                                                                  │
 │                                                                                                  │

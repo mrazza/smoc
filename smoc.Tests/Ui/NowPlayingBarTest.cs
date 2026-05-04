@@ -10,7 +10,7 @@ using Smoc.Streaming;
 using Smoc.Ui;
 using Terminal.Gui.Input;
 using Terminal.Gui.Views;
-using TerminalGuiFluentTesting;
+using AppTestHelpers;
 
 namespace smoc.Tests.Ui;
 
@@ -29,11 +29,11 @@ public class NowPlayingBarTest {
     _mockStreamingClient = new Mock<IStreamingClient>();
   }
 
-  private static TerminalGuiFluentTesting.TestContext NewContext() => With.A<Runnable>(100, 20, TestDriver.ANSI.ToString());
+  private static AppTestHelper NewContext() => With.A<Runnable>(100, 20, TestDriver.ANSI.ToString());
 
   private NowPlayingBar NewNowPlaying() => new NowPlayingBar(_fakeMainWindow, _mockPlaybackQueue.Object, _commandService, _mockStreamingClient.Object);
 
-  private TerminalGuiFluentTesting.TestContext NewNowPlayingContext() => NewContext().AddAndLayout(NewNowPlaying());
+  private AppTestHelper NewNowPlayingContext() => NewContext().AddAndLayout(NewNowPlaying());
 
   [Fact]
   public void PlayPauseHotKey_PlaysMusic() {

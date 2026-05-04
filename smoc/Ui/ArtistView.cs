@@ -62,7 +62,7 @@ public sealed class ArtistView : View {
       X = Pos.Absolute(0),
       Y = Pos.Absolute(0),
       Width = Dim.Absolute(30),
-      Height = Dim.Fill(),
+      Height = Dim.Fill()
     };
     _searchResults.SearchResultSelected += OnArtistSelected;
     _searchResults.BorderStyle = LineStyle.Single;
@@ -143,7 +143,7 @@ public sealed class ArtistView : View {
 
       _songTable.SetSongs(songs);
       _songTable.SelectedRow = 0;
-      _songTable.EnsureSelectedCellIsVisible();
+      _songTable.EnsureCursorIsVisible();
       _songTable.Style.ShowHeaders = true;
       _songsLabel.Visible = false;
     } catch (OperationCanceledException) {

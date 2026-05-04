@@ -36,6 +36,12 @@ public record struct CommandLineCommandContext : ICommandContext {
   /// <inheritdoc />
   public CommandRouting Routing { get; set; }
 
+  /// <inheritdoc />
+  public IReadOnlyList<object?> Values => [];
+
+  /// <inheritdoc />
+  public object? Value => null;
+
   /// <summary>
   /// The text that triggered the event.
   /// </summary>

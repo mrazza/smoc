@@ -1,9 +1,9 @@
 SongTableTest.SetHighlightedRow_HighlightsRow_0_ansi:
 [39m[49m┌──────────────────────────────────────────────────────────────────────────────────────────────────┐
 │#   Artist                     Album                      Track                     Length Year   │
-│1   Radiohead                  OK Computer                SetHighlightedRow_Highlig 5:00   1970   │
-│[38;2;255;255;255m[48;2;0;0;0m[1m1   Radiohead                  OK Computer                SetHighlightedRow_Highlig 5:00   1970   [39m[49m[22m│
-│1   Radiohead                  OK Computer                SetHighlightedRow_Highlig 5:00   1970   │
+│1   Radiohead                  OK Computer                SetHighlightedRow_Highli… 5:00   1970   │
+│[38;2;255;255;255m[48;2;0;0;0m[1m1   Radiohead                  OK Computer                SetHighlightedRow_Highli… 5:00   1970   [39m[49m[22m│
+│1   Radiohead                  OK Computer                SetHighlightedRow_Highli… 5:00   1970   │
 │                                                                                                  │
 │                                                                                                  │
 │                                                                                                  │

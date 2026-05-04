@@ -1,7 +1,5 @@
-using System.CommandLine;
 using System.Data;
 using System.Drawing;
-using System.Text.Json.Serialization;
 using Smoc.Streaming;
 using Terminal.Gui.App;
 using Terminal.Gui.Configuration;
@@ -37,6 +35,18 @@ public class SongTable : TableView {
   private readonly SongTableColumns _columns;
   private List<Song> _songs;
   private int _highlightedRow = -1;
+
+  /// <summary>
+  /// Gets or sets the 0-based index of the currently selected row.
+  /// </summary>
+  public int SelectedRow {
+    get => Value?.Cursor.Y ?? -1;
+    set {
+      if (value != Value?.Cursor.Y) {
+        SetSelection(0, value, false);
+      }
+    }
+  }
 
   /// <summary>
   /// Gets or sets the index of the highlighted row.
@@ -88,7 +98,7 @@ public class SongTable : TableView {
       Logging.Error("SchemeManager.GetScheme() failed to find required schemes");
     }
     highlightedScheme ??= new Scheme(new Attribute(Color.White, Color.Black, TextStyle.Bold));
-    normalScheme ??= SchemeManager.GetScheme(Schemes.Runnable);
+    normalScheme ??= SchemeManager.GetScheme(Schemes.Base);
     Style.RowColorGetter = (args) => args.RowIndex == _highlightedRow ? highlightedScheme : normalScheme;
 
     _columns = columns;
@@ -104,6 +114,18 @@ public class SongTable : TableView {
     KeyBindings.Remove(Key.CursorRight);
     KeyBindings.Remove(Key.CursorLeft);
     KeyBindings.Remove(Key.Space);
+  }
+
+  /// <inheritdoc />
+  protected override bool OnAccepting(CommandEventArgs args) {
+    SongSelected?.Invoke(this, GetSelectedSongs());
+    return true;
+  }
+
+  /// <inheritdoc />
+  protected override bool OnKeyDownNotHandled(Key key) {
+    base.OnKeyDownNotHandled(key);
+    return false;
   }
 
   /// <summary>
@@ -137,19 +159,17 @@ public class SongTable : TableView {
       }
       _songTableData.Rows.Add(values);
     }
+
+    RefreshContentSize();
   }
 
+  /// <inheritdoc />
   protected override void OnHasFocusChanged(bool newHasFocus, View? previousFocusedView, View? focusedView) {
     base.OnHasFocusChanged(newHasFocus, previousFocusedView, focusedView);
 
     if (newHasFocus && SelectedRow == -1 && _songTableData.Rows.Count > 0) {
       SelectedRow = 0;
     }
-  }
-
-  protected override bool OnCellActivated(CellActivatedEventArgs args) {
-    SongSelected?.Invoke(this, GetSelectedSongs());
-    return base.OnCellActivated(args);
   }
 
   /// <summary>
@@ -164,7 +184,7 @@ public class SongTable : TableView {
   /// </summary>
   public List<Song> GetSelectedSongs() {
     return MultiSelectedRegions.Where(_ => MultiSelect).Select(region => Enumerable.Range(region.Rectangle.Y, region.Rectangle.Height))
-        .FirstOrDefault()?.Select(index => _songs[index]).ToList() ?? [_songs[SelectedRow]];
+        .FirstOrDefault()?.Select(index => _songs[index]).ToList() ?? (SelectedRow >= 0 ? [_songs[SelectedRow]] : []);
   }
 
   /// <summary>
@@ -178,16 +198,12 @@ public class SongTable : TableView {
   }
 
   /// <summary>
-  /// Gets the position of the selected row relative to the view's frame.
+  /// Gets the screen position of the selected row.
   /// </summary>
-  /// <returns>The point coordinate of the selected row.</returns>
+  /// <returns>The screen coordinate of the selected row.</returns>
   /// <exception cref="InvalidOperationException">Thrown if no row is selected or visible.</exception>
-  public Point GetSelectedRowFramePosition() {
-    if (CellToScreen(0, SelectedRow) is { } cellPoint) {
-      return new Point(cellPoint.X, cellPoint.Y);
-    }
-
-    throw new InvalidOperationException("no row selected or row is not visible");
+  public Point GetSelectedRowScreenPosition() {
+    return RowToScreen(SelectedRow) ?? throw new InvalidOperationException("no row selected or row is not visible");
   }
 
   /// <summary>
@@ -195,22 +211,20 @@ public class SongTable : TableView {
   /// </summary>
   /// <returns>The screen coordinate of the selected row.</returns>
   /// <exception cref="InvalidOperationException">Thrown if no row is selected or visible.</exception>
-  public Point GetSelectedRowScreenPosition() {
-    if (CellToScreen(0, SelectedRow) is { } cellPoint) {
-      var tableScreenPos = FrameToScreen();
-      var offset = GetAdornmentsThickness();
-      return new Point(
-          tableScreenPos.X + offset.Left + cellPoint.X,
-          tableScreenPos.Y + offset.Top + cellPoint.Y + 1 // Add 1 to account for the header row
-      );
-    }
-
-    throw new InvalidOperationException("no row selected or row is not visible");
+  public Point GetSelectedRowFramePosition() {
+    var rowToScreen = RowToScreen(SelectedRow) ?? throw new InvalidOperationException("no row selected or row is not visible");
+    var adornmentThickness = GetAdornmentsThickness();
+    var frameOffset = FrameToScreen().Location;
+    return new Point(rowToScreen.X - frameOffset.X - adornmentThickness.Left, rowToScreen.Y - frameOffset.Y - adornmentThickness.Top - 1);
   }
 
   protected override void OnFrameChanged(in Rectangle frame) {
-    base.OnFrameChanged(frame);
     ResizeSongTableColumns(frame);
+    base.OnFrameChanged(frame);
+  }
+
+  private Point? RowToScreen(int tableRow) {
+    return ContentToScreen(new Point(0, tableRow + 1 + GetAdornmentsThickness().Top));
   }
 
   private void ResizeSongTableColumns(Rectangle frame) {
@@ -260,9 +274,11 @@ public class SongTable : TableView {
       Style.GetOrCreateColumnStyle(columnIndex).MinWidth = 5;
       Style.GetOrCreateColumnStyle(columnIndex++).MaxWidth = 5;
     }
+
+    RefreshContentSize();
   }
 
-  private DataTable CreateDataTable(SongTableColumns columns) {
+  private static DataTable CreateDataTable(SongTableColumns columns) {
     var dataTable = new DataTable();
     if (columns.HasFlag(SongTableColumns.Number)) {
       dataTable.Columns.Add("#", typeof(int));

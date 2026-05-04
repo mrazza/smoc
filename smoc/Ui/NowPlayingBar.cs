@@ -1,11 +1,8 @@
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
 using Smoc.Services;
 using Smoc.Streaming;
 using Smoc.Ui.Components;
 using Terminal.Gui.App;
 using Terminal.Gui.Drawing;
-using Terminal.Gui.Drivers;
 using Terminal.Gui.Input;
 using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;

@@ -1,6 +1,6 @@
 SongTableTest.EmptyTable_AllColumns_ShowsHeaders_0:
 ┌──────────────────────────────────────────────────────────────────────────────────────────────────┐
-│#   Artist                     Album                      Track                     Length Year   │
+│# Artist Album Track Length Year                                                                  │
 │                                                                                                  │
 │                                                                                                  │
 │                                                                                                  │

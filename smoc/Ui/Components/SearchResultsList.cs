@@ -9,7 +9,7 @@ namespace Smoc.Ui.Components;
 /// </summary>
 public sealed class SearchResultsList<T> : ListView {
   // TODO: Extract this so that its shared with the actual command bindings
-  private static readonly Key CommandKey = new Key(':');
+  private static readonly Key[] CommandKeys = [new Key(':'), new Key(':').WithShift];
 
   /// <summary>
   /// Occurs when the user selects a search result.
@@ -18,7 +18,8 @@ public sealed class SearchResultsList<T> : ListView {
 
   public SearchResultsList()
       : base() {
-    VimKeyBindings.AddDirectionalKeyBindings(KeyBindings);
+    VimKeyBindings.AddDirectionalKeyBindings(KeyBindings, bindLeftRight: false);
+    VimKeyBindings.AddNavigationKeyBindings(KeyBindings, bindUpDown: false);
 
     Accepting += (_, args) => {
       if (SelectedItem is int itemId
@@ -32,7 +33,7 @@ public sealed class SearchResultsList<T> : ListView {
   }
 
   protected override bool OnKeyDown(Key key) {
-    if (key == CommandKey) {
+    if (CommandKeys.Contains(key)) {
       return false;
     }
 

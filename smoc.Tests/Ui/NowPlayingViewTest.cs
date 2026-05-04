@@ -10,7 +10,7 @@ using Smoc.Streaming;
 using Smoc.Ui;
 using Smoc.Ui.Models;
 using Terminal.Gui.Views;
-using TerminalGuiFluentTesting;
+using AppTestHelpers;
 
 namespace smoc.Tests.Ui;
 
@@ -29,11 +29,11 @@ public class NowPlayingViewTest {
     _mockStreamingClient = new Mock<IStreamingClient>();
   }
 
-  private static TerminalGuiFluentTesting.TestContext NewContext(int width = 100, int height = 25) => With.A<Runnable>(width, height, TestDriver.ANSI.ToString());
+  private static AppTestHelper NewContext(int width = 100, int height = 25) => With.A<Runnable>(width, height, TestDriver.ANSI.ToString());
 
   private NowPlayingView NewNowPlaying() => new NowPlayingView(_fakeMainWindow, _commandService, _mockPlaybackQueue.Object, _mockStreamingClient.Object);
 
-  private TerminalGuiFluentTesting.TestContext NewNowPlayingContext(int width = 100, int height = 25) => NewContext(width, height).AddAndLayout(NewNowPlaying());
+  private AppTestHelper NewNowPlayingContext(int width = 100, int height = 25) => NewContext(width, height).AddAndLayout(NewNowPlaying());
 
   [Fact]
   public void NowPlayingCommand_ChangesModeToNowPlaying() {

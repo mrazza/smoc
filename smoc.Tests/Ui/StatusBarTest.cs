@@ -3,7 +3,7 @@ using smoc.Tests.TestInfra;
 using Smoc.Services;
 using Smoc.Streaming;
 using Terminal.Gui.Views;
-using TerminalGuiFluentTesting;
+using AppTestHelpers;
 using StatusBar = Smoc.Ui.StatusBar;
 
 namespace smoc.Tests.Ui;
@@ -19,9 +19,9 @@ public class StatusBarTest {
 
   private StatusBar NewStatusBar() => new StatusBar(_mockPlaybackQueue.Object);
 
-  private static TerminalGuiFluentTesting.TestContext NewContext() => With.A<Runnable>(100, 20, TestDriver.ANSI.ToString()).ConfigureDefaultTheme();
+  private static AppTestHelper NewContext() => With.A<Runnable>(100, 20, TestDriver.ANSI.ToString()).ConfigureDefaultTheme();
 
-  private TerminalGuiFluentTesting.TestContext NewStatusBarContext() => NewContext().Add(NewStatusBar());
+  private AppTestHelper NewStatusBarContext() => NewContext().Add(NewStatusBar());
 
   [Fact]
   public void InitialState_ShowsEmpty() {
