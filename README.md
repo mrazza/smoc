@@ -8,7 +8,7 @@
 ![.NET](https://img.shields.io/badge/.NET-10.0-512bd4?style=flat-square&logo=dotnet)
 ![Status](https://img.shields.io/badge/status-active_development-green?style=flat-square)
 
-A terminal-based music player (TUI) for streaming services, currently supporting **YouTube Music** and **Subsonic** compatible APIs. Spotify and Apple Music are _future features_.
+A terminal-based music player (TUI) for streaming services, currently supporting **Subsonic**-compatible APIs and **YouTube Music**. Spotify, Apple Music, and other services are _future features_.
 
 [Features](#-features) • [Installation](#-installation) • [Configuration and Setup](#%EF%B8%8F-configuration-and-setup) • [Usage](#-usage)
 
