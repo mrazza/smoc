@@ -17,5 +17,10 @@ public enum StreamingService {
   /// <summary>
   /// SoundCloud.
   /// </summary>
-  SoundCloud
+  SoundCloud,
+
+  /// <summary>
+  /// Spotify.
+  /// </summary>
+  Spotify
 }
