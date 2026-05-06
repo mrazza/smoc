@@ -7,6 +7,7 @@ using Smoc.Services.Caching;
 using Smoc.Streaming;
 using Smoc.Streaming.Subsonic;
 using Smoc.Streaming.YouTubeMusic;
+using Smoc.Streaming.SoundCloud;
 using Smoc.Ui;
 using Terminal.Gui;
 using Terminal.Gui.App;
@@ -103,6 +104,10 @@ public static class Program {
       case StreamingService.Subsonic:
         Logging.Information("Creating Subsonic streaming client...");
         return SubsonicStreamingClient.Create(songCache, artCache);
+
+      case StreamingService.SoundCloud:
+        Logging.Information("Creating SoundCloud streaming client...");
+        return SoundCloudStreamingClient.Create(songCache, artCache);
 
       case StreamingService.YouTubeMusic:
         Logging.Information("Creating YouTube Music streaming client...");
