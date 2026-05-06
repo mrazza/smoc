@@ -12,5 +12,15 @@ public enum StreamingService {
   /// <summary>
   /// Subsonic compatible API.
   /// </summary>
-  Subsonic
+  Subsonic,
+
+  /// <summary>
+  /// SoundCloud.
+  /// </summary>
+  SoundCloud,
+
+  /// <summary>
+  /// Spotify.
+  /// </summary>
+  Spotify
 }
