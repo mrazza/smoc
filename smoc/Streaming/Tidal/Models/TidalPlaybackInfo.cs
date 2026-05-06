@@ -9,10 +9,3 @@ public record TidalPlaybackInfo(
     [property: JsonPropertyName("manifestMimeType")] string ManifestMimeType,
     [property: JsonPropertyName("manifest")] string Manifest
 );
-
-public record TidalManifest(
-    [property: JsonPropertyName("mimeType")] string MimeType,
-    [property: JsonPropertyName("codecs")] string Codecs,
-    [property: JsonPropertyName("encryptionType")] string EncryptionType,
-    [property: JsonPropertyName("urls")] List<string> Urls
-);

@@ -31,6 +31,12 @@ public static class TidalConfig {
   public static string? RefreshToken { get; set; } = null;
 
   /// <summary>
+  /// Gets or sets the Tidal token expiry time.
+  /// </summary>
+  [ConfigurationProperty(Scope = typeof(SettingsScope))]
+  public static DateTime? TokenExpiry { get; set; } = null;
+
+  /// <summary>
   /// Gets or sets the Tidal country code.
   /// </summary>
   [ConfigurationProperty(Scope = typeof(SettingsScope))]

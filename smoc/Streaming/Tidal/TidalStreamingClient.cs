@@ -42,8 +42,41 @@ public sealed class TidalStreamingClient : IStreamingClient, IDisposable {
   private async Task EnsureAuthenticatedAsync(CancellationToken cancellationToken = default) {
     if (string.IsNullOrEmpty(TidalConfig.AccessToken)) {
       await AuthorizeDeviceAsync(cancellationToken);
+    } else if (TidalConfig.TokenExpiry.HasValue && TidalConfig.TokenExpiry.Value < DateTime.UtcNow.AddMinutes(5)) {
+      await RefreshTokenAsync(cancellationToken);
     }
-    // TODO: Implement token refresh logic if expired
+  }
+
+  private async Task RefreshTokenAsync(CancellationToken cancellationToken = default) {
+    if (string.IsNullOrEmpty(TidalConfig.RefreshToken) || string.IsNullOrEmpty(TidalConfig.ClientId)) {
+      await AuthorizeDeviceAsync(cancellationToken);
+      return;
+    }
+
+    Logging.Information("Refreshing Tidal token...");
+    var refreshRequest = new Dictionary<string, string> {
+      { "client_id", TidalConfig.ClientId },
+      { "refresh_token", TidalConfig.RefreshToken },
+      { "grant_type", "refresh_token" }
+    };
+
+    var response = await _httpClient.PostAsync($"{AuthUrl}/token", new FormUrlEncodedContent(refreshRequest), cancellationToken);
+    if (response.IsSuccessStatusCode) {
+      var tokenData = await response.Content.ReadFromJsonAsync<TidalTokenResponse>(cancellationToken: cancellationToken);
+      if (tokenData != null) {
+        TidalConfig.AccessToken = tokenData.AccessToken;
+        TidalConfig.TokenExpiry = DateTime.UtcNow.AddSeconds(tokenData.ExpiresIn);
+        // Refresh token might also be updated
+        if (!string.IsNullOrEmpty(tokenData.RefreshToken)) {
+          TidalConfig.RefreshToken = tokenData.RefreshToken;
+        }
+        Logging.Information("Tidal token refreshed.");
+        return;
+      }
+    }
+
+    Logging.Warning("Tidal token refresh failed. Re-authorizing device...");
+    await AuthorizeDeviceAsync(cancellationToken);
   }
 
   private async Task AuthorizeDeviceAsync(CancellationToken cancellationToken = default) {
@@ -81,6 +114,7 @@ public sealed class TidalStreamingClient : IStreamingClient, IDisposable {
         if (tokenData != null) {
           TidalConfig.AccessToken = tokenData.AccessToken;
           TidalConfig.RefreshToken = tokenData.RefreshToken;
+          TidalConfig.TokenExpiry = DateTime.UtcNow.AddSeconds(tokenData.ExpiresIn);
           Logging.Information("Tidal authentication successful.");
           return;
         }
@@ -229,7 +263,11 @@ public sealed class TidalStreamingClient : IStreamingClient, IDisposable {
         covers.Add(new AlbumCover($"https://resources.tidal.com/images/{uuid}/640x640.jpg", 640, 640));
         covers.Add(new AlbumCover($"https://resources.tidal.com/images/{uuid}/320x320.jpg", 320, 320));
     }
-    return new Album(album.Id.ToString(), artist, album.Title, covers, album.ReleaseDate);
+    int? releaseYear = null;
+    if (DateTime.TryParse(album.ReleaseDate, out var date)) {
+        releaseYear = date.Year;
+    }
+    return new Album(album.Id.ToString(), artist, album.Title, covers, releaseYear);
   }
 
   public void Dispose() {
