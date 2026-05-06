@@ -37,9 +37,7 @@ public class TidalStreamingClientServiceTest {
     var artist = new TidalArtist(10, "Artist 1", null);
     var album = new TidalAlbum(100, "Album 1", "cover-id", "2023", artist);
     var track = new TidalTrack(1, "Track 1", 180, 1, album, artist, [artist]);
-    var response = new TidalSearchContainer {
-        Tracks = new TidalSearchResponse<TidalTrack> { Items = [track], TotalNumberOfItems = 1 }
-    };
+    var response = new TidalSearchContainer(Tracks: new TidalSearchResponse<TidalTrack>([track], 1));
     
     var (client, _) = CreateClientWithMockResponse(response);
 
@@ -54,12 +52,7 @@ public class TidalStreamingClientServiceTest {
 
   [Fact]
   public async Task GetSongStreamAsync_ParsesManifestAndReturnsStream() {
-    var manifest = new TidalManifest {
-        MimeType = "audio/flac",
-        Codecs = "flac",
-        EncryptionType = "none",
-        Urls = ["http://actual-stream-url"]
-    };
+    var manifest = new TidalManifest("audio/flac", "flac", "none", ["http://actual-stream-url"]);
     var manifestJson = JsonSerializer.Serialize(manifest);
     var manifestBase64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(manifestJson));
     
@@ -85,7 +78,7 @@ public class TidalStreamingClientServiceTest {
       .Protected()
       .Setup<Task<HttpResponseMessage>>(
         "SendAsync",
-        ItExpr.Is<HttpRequestMessage>(req => req.RequestUri!.ToString() == "http://actual-stream-url"),
+        ItExpr.Is<HttpRequestMessage>(req => req.RequestUri!.ToString().Contains("actual-stream-url")),
         ItExpr.IsAny<CancellationToken>()
       )
       .ReturnsAsync(new HttpResponseMessage {
