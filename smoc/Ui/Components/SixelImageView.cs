@@ -46,25 +46,13 @@ public sealed class SixelImageView : ImageView {
     UpdateSixelData();
     SetNeedsDraw();
   }
-
-  private System.Drawing.Rectangle GetRenderableArea() {
-    var frame = FrameToScreen();
-    return new(
-      frame.X + (Margin?.Thickness.Left ?? 0),
-      frame.Y + (Margin?.Thickness.Top ?? 0),
-      frame.Width - (Margin?.Thickness.Horizontal ?? 0),
-      frame.Height - (Margin?.Thickness.Vertical ?? 0));
-  }
-
   private void UpdateSixelData() {
     if (_image is null || App?.Driver?.SixelSupport is not { IsSupported: true }) {
       return;
     }
 
-    var resolution = App!.Driver!.SixelSupport!.Resolution;
-    var boundsRect = GetRenderableArea();
-    var resizedImage = _image.Clone(
-        i => i.Resize(boundsRect.Width * resolution.Width, boundsRect.Height * resolution.Height));
+    var targetSize = FitImageInViewportInPixels(new(_image.Width, _image.Height));
+    var resizedImage = _image.Clone(i => i.Resize(targetSize.Width, targetSize.Height));
     Image = ConvertToColorArray(resizedImage);
   }
 
