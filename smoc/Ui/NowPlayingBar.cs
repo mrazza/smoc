@@ -56,18 +56,22 @@ public sealed class NowPlayingBar : View {
     Padding!.Thickness = new Thickness(0, 0, 1, 0);
     CanFocus = false;
 
-    _albumArtView = new SixelImageView(_mainWindow) {
+    _albumArtView = new SixelImageView() {
       X = Pos.Absolute(1),
       Y = Pos.Absolute(0),
       Height = Dim.Fill(),
       Width = Dim.Func((view) => {
         int height = view!.Frame.Height;
-        return (int)Math.Round(height * _mainWindow.SixelDriver.CellAspectRatio);
+        var resolution = App?.Driver?.SixelSupport?.Resolution ?? new System.Drawing.Size(1, 2);
+        return (int)Math.Round(height * ((double)resolution.Height / resolution.Width));
       }, this) + 1,
+      SixelEncoder = new SixelEncoder(),
       BorderStyle = LineStyle.Dashed,
       TextAlignment = Alignment.Center,
+      VerticalTextAlignment = Alignment.Center,
       Text = "??"
     };
+    _albumArtView.Padding!.Thickness = new Thickness(-1, -1, -1, -1);
     _albumArtView.Margin!.Thickness = new Thickness(0, 0, 1, 0);
 
     _songLabel = new Label() {

@@ -4,11 +4,11 @@ NowPlayingViewTest.OnSongChanged_SongIsNull_UpdatesSongDetails_0:
                                                                                                     
                                                                                                     
                                      ┌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌┐                                       
+                                     ┆                      ┆                                       
+                                     ┆                      ┆                                       
+                                     ┆                      ┆                                       
+                                     ┆                      ┆                                       
                                      ┆          ??          ┆                                       
-                                     ┆                      ┆                                       
-                                     ┆                      ┆                                       
-                                     ┆                      ┆                                       
-                                     ┆                      ┆                                       
                                      ┆                      ┆                                       
                                      ┆                      ┆                                       
                                      ┆                      ┆                                       

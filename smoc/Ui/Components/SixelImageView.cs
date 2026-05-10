@@ -1,8 +1,7 @@
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
-using Terminal.Gui.Drawing;
-using Terminal.Gui.ViewBase;
+using Terminal.Gui.Views;
 using Color = Terminal.Gui.Drawing.Color;
 
 namespace Smoc.Ui.Components;
@@ -10,18 +9,14 @@ namespace Smoc.Ui.Components;
 /// <summary>
 /// A view that renders images using Sixel graphics sequences.
 /// </summary>
-public sealed class SixelImageView : View {
-  private readonly IMainWindow _mainWindow;
+public sealed class SixelImageView : ImageView {
   private Image<Rgba32>? _image;
-  private SixelToRender? _sixelToRender;
 
   /// <summary>
   /// Initializes a new instance of the <see cref="SixelImageView"/> class.
   /// </summary>
-  /// <param name="mainWindow">The main window.</param>
   /// <param name="image">The initial image to display.</param>
-  public SixelImageView(IMainWindow mainWindow, Image<Rgba32>? image = null) {
-    _mainWindow = mainWindow;
+  public SixelImageView(Image<Rgba32>? image = null) {
     _image = image;
   }
 
@@ -34,7 +29,6 @@ public sealed class SixelImageView : View {
     }
 
     _image = null;
-    _sixelToRender = null;
     SetNeedsDraw();
   }
 
@@ -44,27 +38,13 @@ public sealed class SixelImageView : View {
   /// <param name="image">The image to display.</param>
   public void SetImage(Image<Rgba32> image) {
     _image = image;
-    _sixelToRender = null;
     UpdateSixelData();
     SetNeedsDraw();
   }
 
   protected override void OnFrameChanged(in System.Drawing.Rectangle frame) {
-    base.OnFrameChanged(frame);
     UpdateSixelData();
     SetNeedsDraw();
-  }
-
-  protected override bool OnDrawingContent(DrawContext? context) {
-    base.OnDrawingContent(context);
-
-    if (_sixelToRender is not null) {
-      _mainWindow.SixelDriver.EnqueueSixel(_sixelToRender);
-      context?.AddDrawnRectangle(GetRenderableArea());
-      return true;
-    }
-
-    return false;
   }
 
   private System.Drawing.Rectangle GetRenderableArea() {
@@ -77,17 +57,15 @@ public sealed class SixelImageView : View {
   }
 
   private void UpdateSixelData() {
-    if (_image is null || !_mainWindow.SixelDriver.IsSupported) {
+    if (_image is null || App?.Driver?.SixelSupport is not { IsSupported: true }) {
       return;
     }
 
+    var resolution = App!.Driver!.SixelSupport!.Resolution;
     var boundsRect = GetRenderableArea();
     var resizedImage = _image.Clone(
-        i => i.Resize(boundsRect.Width * _mainWindow.SixelDriver.Resolution!.Value.Width, boundsRect.Height * _mainWindow.SixelDriver.Resolution!.Value.Height));
-    _sixelToRender = new SixelToRender() {
-      SixelData = _mainWindow.SixelDriver.EncodeSixel(ConvertToColorArray(resizedImage)),
-      ScreenPosition = new System.Drawing.Point(boundsRect.X, boundsRect.Y)
-    };
+        i => i.Resize(boundsRect.Width * resolution.Width, boundsRect.Height * resolution.Height));
+    Image = ConvertToColorArray(resizedImage);
   }
 
   private static Color[,] ConvertToColorArray(Image<Rgba32> image) {

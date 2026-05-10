@@ -53,24 +53,29 @@ public sealed class NowPlayingView : View {
     _streamingClient = streamingClient;
     Width = Dim.Fill();
     Height = Dim.Fill();
-    _albumArtView = new SixelImageView(_mainWindow) {
+    _albumArtView = new SixelImageView() {
       X = Pos.Center(),
       Y = Pos.Center() - Pos.Percent(10),
+      SixelEncoder = new SixelEncoder(),
       Height = Dim.Func((view) => {
         float maxHeight = view!.Frame.Height * _albumArtMaxViewportPercent;
         float maxWidth = view!.Frame.Width * _albumArtMaxViewportPercent;
-        return (int)Math.Round(Math.Min(maxHeight, maxWidth / _mainWindow.SixelDriver.CellAspectRatio));
+        var resolution = App?.Driver?.SixelSupport?.Resolution ?? new System.Drawing.Size(1, 2);
+        return (int)Math.Round(Math.Min(maxHeight, maxWidth / ((double)resolution.Height / resolution.Width)));
       }, this),
       Width = Dim.Func((view) => {
         float maxHeight = view!.Frame.Height * _albumArtMaxViewportPercent;
         float maxWidth = view!.Frame.Width * _albumArtMaxViewportPercent;
-        double height = Math.Min(maxHeight, maxWidth / _mainWindow.SixelDriver.CellAspectRatio);
-        return (int)Math.Round(height * _mainWindow.SixelDriver.CellAspectRatio);
+        var resolution = App?.Driver?.SixelSupport?.Resolution ?? new System.Drawing.Size(1, 2);
+        double height = Math.Min(maxHeight, maxWidth / ((double)resolution.Height / resolution.Width));
+        return (int)Math.Round(height * ((double)resolution.Height / resolution.Width));
       }, this),
       BorderStyle = LineStyle.Dashed,
       TextAlignment = Alignment.Center,
+      VerticalTextAlignment = Alignment.Center,
       Text = "??"
     };
+    _albumArtView.Padding!.Thickness = new Thickness(-1, -1, -1, -1);
     _albumArtView.Margin!.Thickness = new Thickness(0, 0, 1, 1);
 
     _songLabel = new Label() {

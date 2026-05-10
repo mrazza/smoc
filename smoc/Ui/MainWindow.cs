@@ -4,7 +4,6 @@ using Smoc.Services;
 using Smoc.Services.Audio.SoundFlow;
 using Smoc.Services.Streaming;
 using Smoc.Streaming;
-using Smoc.Ui.Drawing;
 using Smoc.Ui.Models;
 using Terminal.Gui.Input;
 using Terminal.Gui.ViewBase;
@@ -23,25 +22,20 @@ public sealed class MainWindow : Runnable, IMainWindow {
   private readonly IPlaybackQueueService _playbackQueueService;
   private readonly CommandService _commandService;
   private readonly IPlaybackTrackingService _playbackTrackingService;
-  private readonly ISixelDriver _sixelDriver;
 
   private Mode? _currentMode;
   private View? _preCommandFocusedView;
   private Mode? _preCommandMode;
 
-  /// <inheritdoc/>
-  public ISixelDriver SixelDriver => _sixelDriver;
-
   /// <summary>
   /// Initializes a new instance of the <see cref="MainWindow"/> class.
   /// </summary>
   /// <param name="streamingClient">The initialized streaming client.</param>
-  public MainWindow(IStreamingClient streamingClient, ISixelDriver sixelDriver) {
+  public MainWindow(IStreamingClient streamingClient) {
     Width = Dim.Fill();
     Height = Dim.Fill();
     CanFocus = true;
 
-    _sixelDriver = sixelDriver;
     _playbackQueueService = StandardPlaybackQueueService.UsingAudioService<SoundFlowAudioService>(this, streamingClient);
     _playbackTrackingService = new StreamingListenHistoryService(
       streamingClient,
