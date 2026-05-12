@@ -178,9 +178,11 @@ SMoC operates with a Vim-style command bar. Press `:` to enter command mode.
 | `h/j/k/l`            | Navigate Tables (Vim style)              |
 | `Shift + Nav Key`    | Select multiple items                    |
 | `Tab`                | Switch active pane                       |
-| `Enter`              | Open action menu for selected item       |
+| `Enter`              | Open Song Context Menu for selected item |
 
 ### Song Context Menu
+
+The Song Context Menu provides options for playback and queue management. It appears when pressing `Enter` while a song is selected in any song table.
 
 | Hotkey        | Action                   | Details                                                                                                          |
 | :------------ | :----------------------- | :--------------------------------------------------------------------------------------------------------------- |
