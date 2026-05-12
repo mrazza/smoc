@@ -176,6 +176,7 @@ SMoC operates with a Vim-style command bar. Press `:` to enter command mode.
 | `]`                  | Seek Forward 10s                         |
 | `Up/Down/Left/Right` | Navigate Tables                          |
 | `h/j/k/l`            | Navigate Tables (Vim style)              |
+| `Shift + Nav Key`    | Select multiple items                    |
 | `Tab`                | Switch active pane                       |
 | `Enter`              | Open action menu for selected item       |
 
