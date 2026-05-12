@@ -179,6 +179,18 @@ SMoC operates with a Vim-style command bar. Press `:` to enter command mode.
 | `Tab`                | Switch active pane                       |
 | `Enter`              | Open action menu for selected item       |
 
+### Song Context Menu
+
+| Hotkey               | Action                                   |
+| :------------------- | :--------------------------------------- |
+| `p`                  | Play all from here                       |
+| `o`                  | Play selection only                      |
+| `n`                  | Queue next                               |
+| `q`                  | Queue last                               |
+| `Up/Down/j/k`        | Navigate menu                            |
+| `Enter`              | Execute selected action                  |
+| `Esc`                | Close menu                               |
+
 ## ⚙️ Configuration and Setup
 
 SMoC stores configuration and authentication data in `~/.config/smoc/` (on Linux).
