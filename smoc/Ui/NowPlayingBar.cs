@@ -204,6 +204,7 @@ public sealed class NowPlayingBar : View {
     // Only bother downloading the album art if it has changed.
     if (!song.Album.Covers.Any()) {
       _albumArtView.ClearImage();
+      _albumArtView.BorderStyle = LineStyle.Dashed;
     } else if (_currentAlbum != song.Album) {
       _currentAlbum = song.Album;
       _albumArtCancellationTokenSource?.Cancel();
@@ -214,6 +215,7 @@ public sealed class NowPlayingBar : View {
         Logging.Debug($"Album art loaded: {song.Title}");
         token.ThrowIfCancellationRequested();
         _albumArtView.SetImage(image);
+        _albumArtView.BorderStyle = LineStyle.None;
       } catch (OperationCanceledException) {
         Logging.Debug($"Album art load cancelled: {song.Title}");
       } catch (Exception ex) {
@@ -228,6 +230,7 @@ public sealed class NowPlayingBar : View {
     _positionLabel.Text = "--:--";
     _durationLabel.Text = "--:--";
     _albumArtView.ClearImage();
+    _albumArtView.BorderStyle = LineStyle.Dashed;
     _volumeLabel.Text = string.Format(Messages.VOLUME, (int)Math.Round(_playbackQueueService.Volume * 100));
     _progressBar.Fraction = 0.0f;
   }
