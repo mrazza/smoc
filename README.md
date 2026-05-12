@@ -181,15 +181,15 @@ SMoC operates with a Vim-style command bar. Press `:` to enter command mode.
 
 ### Song Context Menu
 
-| Hotkey               | Action                                   |
-| :------------------- | :--------------------------------------- |
-| `p`                  | Play all from here                       |
-| `o`                  | Play selection only                      |
-| `n`                  | Queue next                               |
-| `q`                  | Queue last                               |
-| `Up/Down/j/k`        | Navigate menu                            |
-| `Enter`              | Execute selected action                  |
-| `Esc`                | Close menu                               |
+| Hotkey        | Action                   | Details                                                                                                          |
+| :------------ | :----------------------- | :--------------------------------------------------------------------------------------------------------------- |
+| `p`           | Play all from here       | Clears the playback queue and queues the track listing in its entirety. Then starts playback at the selected track. |
+| `o`           | Play selection only      | Clears the playback queue and queues only the selected tracks. Then starts playback at the first selected track.  |
+| `n`           | Queue next               | Adds the selected tracks to the playback queue after the current track.                                           |
+| `q`           | Queue last               | Adds the selected tracks to the end of the playback queue.                                                       |
+| `Up/Down/j/k` | Navigate menu            | Moves the selection through the menu items.                                                                      |
+| `Enter`       | Execute selected action  | Executes the highlighted action and closes the menu.                                                             |
+| `Esc`         | Close menu               | Dismisses the context menu without taking any action.                                                            |
 
 ## ⚙️ Configuration and Setup
 
