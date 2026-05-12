@@ -1,7 +1,7 @@
 NowPlayingBarTest.OnSongChanged_UpdatesSongDetails_0:
- ┌╌╌╌╌┐ OnSongChangedUpdatesSongDetails                                                             
- ┆ ?? ┆ Radiohead                                                                        volume: 0% 
- └╌╌╌╌┘ --:--                                                                                 --:-- 
+        OnSongChangedUpdatesSongDetails                                                             
+        Radiohead                                                                        volume: 0% 
+        --:--                                                                                 --:-- 
                                                                                                     
                                                                                                     
                                                                                                     
