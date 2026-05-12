@@ -176,8 +176,23 @@ SMoC operates with a Vim-style command bar. Press `:` to enter command mode.
 | `]`                  | Seek Forward 10s                         |
 | `Up/Down/Left/Right` | Navigate Tables                          |
 | `h/j/k/l`            | Navigate Tables (Vim style)              |
+| `Shift + Nav Key`    | Select multiple items                    |
 | `Tab`                | Switch active pane                       |
-| `Enter`              | Open action menu for selected item       |
+| `Enter`              | Open Song Context Menu for selected item |
+
+### Song Context Menu
+
+The Song Context Menu provides options for playback and queue management. It appears when pressing `Enter` while a song is selected in any song table.
+
+| Hotkey        | Action                   | Details                                                                                                          |
+| :------------ | :----------------------- | :--------------------------------------------------------------------------------------------------------------- |
+| `p`           | Play all from here       | Clears the playback queue and queues the track listing in its entirety. Then starts playback at the selected track. |
+| `o`           | Play selection only      | Clears the playback queue and queues only the selected tracks. Then starts playback at the first selected track.  |
+| `n`           | Queue next               | Adds the selected tracks to the playback queue after the current track.                                           |
+| `q`           | Queue last               | Adds the selected tracks to the end of the playback queue.                                                       |
+| `Up/Down/j/k` | Navigate menu            | Moves the selection through the menu items.                                                                      |
+| `Enter`       | Execute selected action  | Executes the highlighted action and closes the menu.                                                             |
+| `Esc`         | Close menu               | Dismisses the context menu without taking any action.                                                            |
 
 ## ⚙️ Configuration and Setup
 
