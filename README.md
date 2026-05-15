@@ -7,6 +7,7 @@
 ![License](https://img.shields.io/github/license/mrazza/smoc?style=flat-square)
 ![.NET](https://img.shields.io/badge/.NET-10.0-512bd4?style=flat-square&logo=dotnet)
 ![Status](https://img.shields.io/badge/status-active_development-green?style=flat-square)
+[![CI](https://github.com/mrazza/smoc/actions/workflows/dotnet.yml/badge.svg)](https://github.com/mrazza/smoc/actions/workflows/dotnet.yml)
 
 A terminal-based music player (TUI) for streaming services, currently supporting **Subsonic**-compatible APIs and **YouTube Music**. Spotify, Apple Music, and other services are _future features_.
 
