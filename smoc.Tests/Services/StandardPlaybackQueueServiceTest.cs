@@ -1037,6 +1037,32 @@ public class StandardPlaybackQueueServiceTest {
   }
 
   [Fact]
+  public async Task SetAudioServiceAsync_SwitchesServiceAndResumes() {
+    var song = EntityTestFactory.GenerateSong();
+    var fakePlayerService1 = new FakePlaybackService(song);
+    var fakePlayerService2 = new FakePlaybackService(song);
+    var mockAudioService2 = new Mock<IAudioService>();
+
+    _mockAudioService.Setup(a => a.MakePlaybackService(song, It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+      .Returns(fakePlayerService1);
+    mockAudioService2.Setup(a => a.MakePlaybackService(song, It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+      .Returns(fakePlayerService2);
+    _mockStreamingClient.Setup(c => c.GetSongStreamAsync(song.Id, It.IsAny<CancellationToken>()))
+      .ReturnsAsync(new SongStream(song.Id, "m4a", new MemoryStream()));
+
+    using var sut = NewStandardPlaybackQueue();
+    sut.QueueNext([song]);
+    await sut.Play();
+    fakePlayerService1.SetCurrentTime(TimeSpan.FromSeconds(30));
+
+    await sut.SetAudioServiceAsync(mockAudioService2.Object);
+
+    Assert.Equal(PlaybackState.Playing, fakePlayerService2.PlaybackState);
+    Assert.Equal(TimeSpan.FromSeconds(30), fakePlayerService2.CurrentTime);
+    _mockAudioService.Verify(a => a.Dispose(), Times.Once);
+  }
+
+  [Fact]
   public async Task OnSongEnded_PreloadedTrackPlaysImmediately() {
     var song1 = EntityTestFactory.GenerateSong(id: "1", postfix: "1");
     var song2 = EntityTestFactory.GenerateSong(id: "2", postfix: "2");

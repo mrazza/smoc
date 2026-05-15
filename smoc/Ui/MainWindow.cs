@@ -2,6 +2,8 @@ using System.Reflection;
 using Smoc.Configuration;
 using Smoc.Services;
 using Smoc.Services.Audio.SoundFlow;
+using Smoc.Services.Audio.Cast;
+using Smoc.Services.Cast;
 using Smoc.Services.Streaming;
 using Smoc.Streaming;
 using Smoc.Ui.Models;
@@ -22,6 +24,8 @@ public sealed class MainWindow : Runnable, IMainWindow {
   private readonly IPlaybackQueueService _playbackQueueService;
   private readonly CommandService _commandService;
   private readonly IPlaybackTrackingService _playbackTrackingService;
+  private readonly ICastDiscoveryService _castDiscoveryService;
+  private readonly IStreamingProxyService _streamingProxyService;
 
   private Mode? _currentMode;
   private View? _preCommandFocusedView;
@@ -41,6 +45,11 @@ public sealed class MainWindow : Runnable, IMainWindow {
       streamingClient,
       TimeSpan.FromSeconds(ListenHistoryConfig.MinimumPositionSeconds),
       ListenHistoryConfig.MinimumFraction);
+    
+    _castDiscoveryService = new CastDiscoveryService();
+    _streamingProxyService = new StreamingProxyService();
+    _castDiscoveryService.StartDiscoveryAsync().ConfigureAwait(false);
+
     if (ListenHistoryConfig.Enabled) {
       _playbackQueueService.PositionChanged += (_, position) => {
         if (_playbackQueueService.CurrentSong is { } song) {
@@ -51,7 +60,7 @@ public sealed class MainWindow : Runnable, IMainWindow {
 
     _commandService = new CommandService();
     _nowPlayingBar = new NowPlayingBar(this, _playbackQueueService, _commandService, streamingClient);
-    _commandLine = new CommandLine() {
+    _commandLine = new CommandLine(_commandService) {
       Y = Pos.AnchorEnd()
     };
     _statusBar = new StatusBar(_playbackQueueService) {
@@ -68,6 +77,39 @@ public sealed class MainWindow : Runnable, IMainWindow {
         _commandLine.DisplayError($"unexpected trailing characters: {args}");
       } else {
         App!.RequestStop();
+      }
+    });
+
+    _commandService.RegisterCompleter("output", (_, args) => {
+      var devices = new List<string> { "local" };
+      devices.AddRange(_castDiscoveryService.DiscoveredDevices.Select(d => d.FriendlyName));
+      return devices.Where(d => d.StartsWith(args, StringComparison.OrdinalIgnoreCase));
+    });
+
+    _commandService.RegisterCommand("output", async (_, args) => {
+      var parts = CommandService.GetArgs(args);
+      if (parts.Length == 0) {
+        var devices = new List<string> { "local" };
+        devices.AddRange(_castDiscoveryService.DiscoveredDevices.Select(d => d.FriendlyName));
+        _commandLine.DisplayError($"Available outputs: {string.Join(", ", devices)}");
+        return;
+      }
+
+      var target = parts[0];
+      if (target.Equals("local", StringComparison.OrdinalIgnoreCase)) {
+        await _playbackQueueService.SetAudioServiceAsync(new SoundFlowAudioService());
+        _commandLine.DisplayError("Switched to local output");
+      } else {
+        var device = _castDiscoveryService.DiscoveredDevices.FirstOrDefault(d => d.FriendlyName.Contains(target, StringComparison.OrdinalIgnoreCase));
+        if (device == null) {
+          _commandLine.DisplayError($"Device not found: {target}");
+          return;
+        }
+
+        var castService = new CastAudioService(device, _streamingProxyService);
+        await castService.ConnectAsync();
+        await _playbackQueueService.SetAudioServiceAsync(castService);
+        _commandLine.DisplayError($"Switched to {device.FriendlyName}");
       }
     });
 
@@ -123,6 +165,9 @@ public sealed class MainWindow : Runnable, IMainWindow {
 
   protected override void Dispose(bool disposing) {
     _commandService.UnregisterCommand("q");
+    _commandService.UnregisterCommand("output");
+    _castDiscoveryService.Dispose();
+    _streamingProxyService.Dispose();
     base.Dispose(disposing);
   }
 
