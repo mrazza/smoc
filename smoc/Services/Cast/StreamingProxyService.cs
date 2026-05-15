@@ -1,7 +1,6 @@
 using Terminal.Gui.App;
 using System.Net;
 using Smoc.Services.Util;
-using Terminal.Gui.App;
 
 namespace Smoc.Services.Cast;
 
@@ -25,6 +24,7 @@ public sealed class StreamingProxyService : IStreamingProxyService {
         var port = GetAvailablePort();
         var ip = GetLocalIPAddress();
         _currentUrl = $"http://{ip}:{port}/stream";
+        Logging.Information($"StreamingProxyService started at {_currentUrl}");
 
         _listener = new HttpListener();
         _listener.Prefixes.Add($"http://*:{port}/");
