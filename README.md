@@ -1,6 +1,8 @@
 
 <div align="center">
 
+![logo](logo.png)
+
 # SMoC
 ### Steaming Music on Console
 
