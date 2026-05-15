@@ -4,11 +4,11 @@ NowPlayingViewTest.OnPositionChanged_UpdatesPosition_MultipleTimes_0:
                                                                                                     
                                                                                                     
                                      ┌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌┐                                       
+                                     ┆                      ┆                                       
+                                     ┆                      ┆                                       
+                                     ┆                      ┆                                       
+                                     ┆                      ┆                                       
                                      ┆          ??          ┆                                       
-                                     ┆                      ┆                                       
-                                     ┆                      ┆                                       
-                                     ┆                      ┆                                       
-                                     ┆                      ┆                                       
                                      ┆                      ┆                                       
                                      ┆                      ┆                                       
                                      ┆                      ┆                                       

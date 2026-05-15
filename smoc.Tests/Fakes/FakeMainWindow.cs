@@ -1,5 +1,4 @@
 using Smoc.Ui;
-using Smoc.Ui.Drawing;
 using Smoc.Ui.Models;
 using Terminal.Gui.App;
 
@@ -12,9 +11,6 @@ public class FakeMainWindow : IMainWindow {
 
   /// <inheritdoc/>
   public IApplication? App { get; } = FakeApplication.New();
-
-  /// <inheritdoc/>
-  public ISixelDriver SixelDriver { get; set; } = new FakeSixelDriver();
 
   /// <inheritdoc/>
   public Mode CurrentMode { get; set; }

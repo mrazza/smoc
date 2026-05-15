@@ -56,16 +56,19 @@ public sealed class NowPlayingBar : View {
     Padding!.Thickness = new Thickness(0, 0, 1, 0);
     CanFocus = false;
 
-    _albumArtView = new SixelImageView(_mainWindow) {
+    _albumArtView = new SixelImageView() {
       X = Pos.Absolute(1),
       Y = Pos.Absolute(0),
       Height = Dim.Fill(),
       Width = Dim.Func((view) => {
         int height = view!.Frame.Height;
-        return (int)Math.Round(height * _mainWindow.SixelDriver.CellAspectRatio);
+        var resolution = App?.Driver?.SixelSupport?.Resolution ?? new System.Drawing.Size(1, 2);
+        return (int)Math.Round(height * ((double)resolution.Height / resolution.Width));
       }, this) + 1,
+      SixelEncoder = new SixelEncoder(),
       BorderStyle = LineStyle.Dashed,
       TextAlignment = Alignment.Center,
+      VerticalTextAlignment = Alignment.Center,
       Text = "??"
     };
     _albumArtView.Margin!.Thickness = new Thickness(0, 0, 1, 0);
@@ -200,6 +203,7 @@ public sealed class NowPlayingBar : View {
     // Only bother downloading the album art if it has changed.
     if (!song.Album.Covers.Any()) {
       _albumArtView.ClearImage();
+      _albumArtView.BorderStyle = LineStyle.Dashed;
     } else if (_currentAlbum != song.Album) {
       _currentAlbum = song.Album;
       _albumArtCancellationTokenSource?.Cancel();
@@ -209,6 +213,7 @@ public sealed class NowPlayingBar : View {
         var image = await _streamingClient.GetAlbumArtAsync(song.Album, (covers) => covers.OrderBy(c => c.Width).First(), token);
         Logging.Debug($"Album art loaded: {song.Title}");
         token.ThrowIfCancellationRequested();
+        _albumArtView.BorderStyle = LineStyle.None;
         _albumArtView.SetImage(image);
       } catch (OperationCanceledException) {
         Logging.Debug($"Album art load cancelled: {song.Title}");
@@ -224,6 +229,7 @@ public sealed class NowPlayingBar : View {
     _positionLabel.Text = "--:--";
     _durationLabel.Text = "--:--";
     _albumArtView.ClearImage();
+    _albumArtView.BorderStyle = LineStyle.Dashed;
     _volumeLabel.Text = string.Format(Messages.VOLUME, (int)Math.Round(_playbackQueueService.Volume * 100));
     _progressBar.Fraction = 0.0f;
   }

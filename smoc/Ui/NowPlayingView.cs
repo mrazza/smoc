@@ -53,22 +53,26 @@ public sealed class NowPlayingView : View {
     _streamingClient = streamingClient;
     Width = Dim.Fill();
     Height = Dim.Fill();
-    _albumArtView = new SixelImageView(_mainWindow) {
+    _albumArtView = new SixelImageView() {
       X = Pos.Center(),
       Y = Pos.Center() - Pos.Percent(10),
+      SixelEncoder = new SixelEncoder(),
       Height = Dim.Func((view) => {
         float maxHeight = view!.Frame.Height * _albumArtMaxViewportPercent;
         float maxWidth = view!.Frame.Width * _albumArtMaxViewportPercent;
-        return (int)Math.Round(Math.Min(maxHeight, maxWidth / _mainWindow.SixelDriver.CellAspectRatio));
+        var resolution = App?.Driver?.SixelSupport?.Resolution ?? new System.Drawing.Size(1, 2);
+        return (int)Math.Round(Math.Min(maxHeight, maxWidth / ((double)resolution.Height / resolution.Width)));
       }, this),
       Width = Dim.Func((view) => {
         float maxHeight = view!.Frame.Height * _albumArtMaxViewportPercent;
         float maxWidth = view!.Frame.Width * _albumArtMaxViewportPercent;
-        double height = Math.Min(maxHeight, maxWidth / _mainWindow.SixelDriver.CellAspectRatio);
-        return (int)Math.Round(height * _mainWindow.SixelDriver.CellAspectRatio);
+        var resolution = App?.Driver?.SixelSupport?.Resolution ?? new System.Drawing.Size(1, 2);
+        double height = Math.Min(maxHeight, maxWidth / ((double)resolution.Height / resolution.Width));
+        return (int)Math.Round(height * ((double)resolution.Height / resolution.Width));
       }, this),
       BorderStyle = LineStyle.Dashed,
       TextAlignment = Alignment.Center,
+      VerticalTextAlignment = Alignment.Center,
       Text = "??"
     };
     _albumArtView.Margin!.Thickness = new Thickness(0, 0, 1, 1);
@@ -140,6 +144,7 @@ public sealed class NowPlayingView : View {
     // Only bother downloading the album art if it has changed.
     if (!song.Album.Covers.Any()) {
       _albumArtView.ClearImage();
+      _albumArtView.BorderStyle = LineStyle.Dashed;
     } else if (_currentAlbum != song.Album) {
       _currentAlbum = song.Album;
       _albumArtCancellationTokenSource?.Cancel();
@@ -149,6 +154,7 @@ public sealed class NowPlayingView : View {
         var image = await _streamingClient.GetAlbumArtAsync(song.Album, (covers) => covers.OrderByDescending(c => c.Width).First(), token);
         Logging.Debug($"Album art loaded: {song.Title}");
         token.ThrowIfCancellationRequested();
+        _albumArtView.BorderStyle = LineStyle.None;
         _albumArtView.SetImage(image);
       } catch (OperationCanceledException) {
         Logging.Debug($"Album art load cancelled: {song.Title}");
@@ -175,6 +181,7 @@ public sealed class NowPlayingView : View {
     _positionLabel.Text = "--:--";
     _durationLabel.Text = "--:--";
     _albumArtView.ClearImage();
+    _albumArtView.BorderStyle = LineStyle.Dashed;
     _progressBar.Fraction = 0.0f;
   }
 }
