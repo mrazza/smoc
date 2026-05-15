@@ -1,6 +1,7 @@
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
+using Terminal.Gui.App;
 using Terminal.Gui.Views;
 using Color = Terminal.Gui.Drawing.Color;
 
@@ -11,6 +12,7 @@ namespace Smoc.Ui.Components;
 /// </summary>
 public sealed class SixelImageView : ImageView {
   private Image<Rgba32>? _image;
+  private CancellationTokenSource? _cancellationTokenSource;
 
   /// <summary>
   /// Initializes a new instance of the <see cref="SixelImageView"/> class.
@@ -29,6 +31,7 @@ public sealed class SixelImageView : ImageView {
     }
 
     _image = null;
+    Image = null;
     SetNeedsDraw();
   }
 
@@ -39,21 +42,44 @@ public sealed class SixelImageView : ImageView {
   public void SetImage(Image<Rgba32> image) {
     _image = image;
     UpdateSixelData();
-    SetNeedsDraw();
   }
 
   protected override void OnFrameChanged(in System.Drawing.Rectangle frame) {
     UpdateSixelData();
-    SetNeedsDraw();
   }
+
   private void UpdateSixelData() {
+    _cancellationTokenSource?.Cancel();
+    _cancellationTokenSource = new CancellationTokenSource();
+
+    var token = _cancellationTokenSource.Token;
+    Task.Run(() => {
+      Color[,]? data = null;
+      try {
+        data = GenerateSixelData();
+      } catch (Exception ex) {
+        Logging.Warning($"Failed to render album art: {ex.Message}");
+        return;
+      }
+
+      App?.Invoke(() => {
+        if (token.IsCancellationRequested) {
+          return;
+        }
+        Image = data;
+        SetNeedsDraw();
+      });
+    }, token);
+  }
+
+  private Color[,] GenerateSixelData() {
     if (_image is null || App?.Driver?.SixelSupport is not { IsSupported: true }) {
-      return;
+      throw new InvalidOperationException("Sixel not supported.");
     }
 
     var targetSize = FitImageInViewportInPixels(new(_image.Width, _image.Height));
     var resizedImage = _image.Clone(i => i.Resize(targetSize.Width, targetSize.Height));
-    Image = ConvertToColorArray(resizedImage);
+    return ConvertToColorArray(resizedImage);
   }
 
   private static Color[,] ConvertToColorArray(Image<Rgba32> image) {

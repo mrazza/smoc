@@ -69,9 +69,8 @@ public sealed class NowPlayingBar : View {
       BorderStyle = LineStyle.Dashed,
       TextAlignment = Alignment.Center,
       VerticalTextAlignment = Alignment.Center,
-      Text = "??⠀"
+      Text = "??"
     };
-    _albumArtView.Padding!.Thickness = new Thickness(0, -1, -2, -2);
     _albumArtView.Margin!.Thickness = new Thickness(0, 0, 1, 0);
 
     _songLabel = new Label() {
@@ -214,8 +213,8 @@ public sealed class NowPlayingBar : View {
         var image = await _streamingClient.GetAlbumArtAsync(song.Album, (covers) => covers.OrderBy(c => c.Width).First(), token);
         Logging.Debug($"Album art loaded: {song.Title}");
         token.ThrowIfCancellationRequested();
-        _albumArtView.SetImage(image);
         _albumArtView.BorderStyle = LineStyle.None;
+        _albumArtView.SetImage(image);
       } catch (OperationCanceledException) {
         Logging.Debug($"Album art load cancelled: {song.Title}");
       } catch (Exception ex) {
