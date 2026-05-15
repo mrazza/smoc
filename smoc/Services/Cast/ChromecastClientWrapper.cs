@@ -1,6 +1,8 @@
 using Sharpcaster;
 using Sharpcaster.Models;
 using Sharpcaster.Models.Media;
+using System;
+using System.Threading.Tasks;
 
 namespace Smoc.Services.Cast;
 
@@ -12,15 +14,24 @@ public sealed class ChromecastClientWrapper : IChromecastClient {
         remove => _client.MediaChannel.StatusChanged -= value;
     }
 
-    public Task ConnectChromecast(ChromecastReceiver receiver) => _client.ConnectChromecast(receiver);
-    public Task DisconnectAsync() => _client.DisconnectAsync();
-    public Task LaunchApplicationAsync(string appId) => _client.LaunchApplicationAsync(appId);
-    public void SetVolume(float volume) => _client.ReceiverChannel.SetVolume(volume);
-    public Task LoadAsync(Media media) => _client.MediaChannel.LoadAsync(media);
-    public Task PlayAsync() => _client.MediaChannel.PlayAsync();
-    public Task PauseAsync() => _client.MediaChannel.PauseAsync();
-    public Task StopAsync() => _client.MediaChannel.StopAsync();
-    public Task SeekAsync(double seconds) => _client.MediaChannel.SeekAsync(seconds);
+    public float Volume {
+        get => (float)(_client.ChromecastStatus?.Volume?.Level ?? 0);
+        set => _client.ReceiverChannel.SetVolume(value);
+    }
+
+    public async Task SetVolumeAsync(float level) {
+        await _client.ReceiverChannel.SetVolume(level);
+    }
+
+    public async Task ConnectChromecast(ChromecastReceiver receiver) => await _client.ConnectChromecast(receiver);
+    public async Task DisconnectAsync() => await _client.DisconnectAsync();
+    public async Task LaunchApplicationAsync(string applicationId) => await _client.LaunchApplicationAsync(applicationId);
+    
+    public async Task LoadAsync(Media media) => await _client.MediaChannel.LoadAsync(media);
+    public async Task PlayAsync() => await _client.MediaChannel.PlayAsync();
+    public async Task PauseAsync() => await _client.MediaChannel.PauseAsync();
+    public async Task StopAsync() => await _client.MediaChannel.StopAsync();
+    public async Task SeekAsync(double seconds) => await _client.MediaChannel.SeekAsync(seconds);
 
     public void Dispose() => _client.Dispose();
 }

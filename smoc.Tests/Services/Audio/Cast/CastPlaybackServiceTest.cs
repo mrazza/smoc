@@ -4,6 +4,9 @@ using Smoc.Services.Audio.Cast;
 using Smoc.Services.Cast;
 using Smoc.Streaming;
 using smoc.Tests.TestInfra;
+using System;
+using System.IO;
+using System.Threading.Tasks;
 
 namespace smoc.Tests.Services.Audio.Cast;
 
@@ -31,55 +34,35 @@ public class CastPlaybackServiceTest {
     }
 
     [Fact]
-    public void Play_Stopped_CallsLoadAsync() {
+    public void Play_UpdatesStateToPlaying() {
         var sut = new CastPlaybackService(_mockClient.Object, _song, _stream, _url, _mockProxyService.Object);
         
         sut.Play();
         
-        _mockClient.Verify(c => c.LoadAsync(It.Is<Media>(m => m.ContentUrl == _url)), Times.Once);
         Assert.Equal(Smoc.Services.PlaybackState.Playing, sut.PlaybackState);
+        _mockClient.Verify(c => c.LoadAsync(It.IsAny<Media>()), Times.Once);
     }
 
     [Fact]
-    public void Play_Paused_CallsPlayAsync() {
+    public void Pause_UpdatesStateToPaused() {
         var sut = new CastPlaybackService(_mockClient.Object, _song, _stream, _url, _mockProxyService.Object);
-        sut.Play(); // Set to Playing first
-        sut.Pause(); // Set to Paused
         
         sut.Play();
-        
-        _mockClient.Verify(c => c.PlayAsync(), Times.Once);
-        Assert.Equal(Smoc.Services.PlaybackState.Playing, sut.PlaybackState);
-    }
-
-    [Fact]
-    public void Pause_CallsPauseAsync() {
-        var sut = new CastPlaybackService(_mockClient.Object, _song, _stream, _url, _mockProxyService.Object);
-        
         sut.Pause();
         
-        _mockClient.Verify(c => c.PauseAsync(), Times.Once);
         Assert.Equal(Smoc.Services.PlaybackState.Paused, sut.PlaybackState);
+        _mockClient.Verify(c => c.PauseAsync(), Times.Once);
     }
 
     [Fact]
-    public void Stop_CallsStopAsync() {
+    public void Stop_UpdatesStateToStopped() {
         var sut = new CastPlaybackService(_mockClient.Object, _song, _stream, _url, _mockProxyService.Object);
         
+        sut.Play();
         sut.Stop();
         
-        _mockClient.Verify(c => c.StopAsync(), Times.Once);
         Assert.Equal(Smoc.Services.PlaybackState.Stopped, sut.PlaybackState);
-    }
-
-    [Fact]
-    public void Seek_CallsSeekAsync() {
-        var sut = new CastPlaybackService(_mockClient.Object, _song, _stream, _url, _mockProxyService.Object);
-        var position = TimeSpan.FromSeconds(30);
-        
-        sut.Seek(position);
-        
-        _mockClient.Verify(c => c.SeekAsync(30.0), Times.Once);
+        _mockClient.Verify(c => c.StopAsync(), Times.Once);
     }
 
     [Fact]

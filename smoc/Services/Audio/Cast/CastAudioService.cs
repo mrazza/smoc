@@ -1,6 +1,11 @@
 using Sharpcaster.Models;
 using Smoc.Services.Cast;
 using Smoc.Streaming;
+using Smoc.Services.Audio;
+using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
+using System;
 
 namespace Smoc.Services.Audio.Cast;
 
@@ -20,7 +25,7 @@ public sealed class CastAudioService : IAudioService {
         get => _volume;
         set {
             _volume = value;
-            _client.SetVolume(_volume);
+            _client.SetVolumeAsync(_volume).ConfigureAwait(false);
         }
     }
 

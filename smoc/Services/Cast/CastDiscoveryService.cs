@@ -1,5 +1,9 @@
 using Sharpcaster;
 using Sharpcaster.Models;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Smoc.Services.Cast;
 
@@ -18,7 +22,7 @@ public sealed class CastDiscoveryService : ICastDiscoveryService {
 
     public async Task StartDiscoveryAsync() {
         _discoveredDevices.Clear();
-        var devices = await _locator.FindReceiversAsync(TimeSpan.FromSeconds(5));
+        var devices = await _locator.FindReceiversAsync();
         foreach (var device in devices) {
             AddDevice(device);
         }
