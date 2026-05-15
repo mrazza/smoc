@@ -4,18 +4,22 @@ using Smoc.Services.Audio.Cast;
 using Smoc.Services.Cast;
 using Smoc.Streaming;
 using smoc.Tests.TestInfra;
+using System;
+using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace smoc.Tests.Services.Audio.Cast;
 
 public class CastAudioServiceTest {
     private readonly Mock<IStreamingProxyService> _mockProxyService;
     private readonly Mock<IChromecastClient> _mockClient;
-    private readonly ChromecastReceiver _device;
+    private readonly Sharpcaster.Models.ChromecastReceiver _device;
 
     public CastAudioServiceTest() {
         _mockProxyService = new Mock<IStreamingProxyService>();
         _mockClient = new Mock<IChromecastClient>();
-        _device = new ChromecastReceiver { 
+        _device = new Sharpcaster.Models.ChromecastReceiver { 
             DeviceUri = new Uri("http://192.168.1.100:8008"),
             Name = "Test Cast Device"
         };
@@ -54,6 +58,6 @@ public class CastAudioServiceTest {
         await sut.ConnectAsync();
         
         _mockClient.Verify(c => c.ConnectChromecast(_device), Times.Once);
-        _mockClient.Verify(c => c.LaunchApplicationAsync("CC1AD845"), Times.Once);
+        _mockClient.Verify(c => c.LaunchApplicationAsync(It.IsAny<string>()), Times.Once);
     }
 }

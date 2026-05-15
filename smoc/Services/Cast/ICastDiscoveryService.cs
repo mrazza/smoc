@@ -1,10 +1,13 @@
-using SharpCaster.Models;
+using Sharpcaster.Models;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace Smoc.Services.Cast;
 
 public interface ICastDiscoveryService : IDisposable {
-    event EventHandler<Chromecast> DeviceFound;
+    event EventHandler<ChromecastReceiver>? DeviceFound;
     Task StartDiscoveryAsync();
     void StopDiscovery();
-    IEnumerable<Chromecast> DiscoveredDevices { get; }
+    IEnumerable<ChromecastReceiver> DiscoveredDevices { get; }
 }

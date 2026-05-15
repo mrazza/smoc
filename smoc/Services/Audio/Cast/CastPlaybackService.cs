@@ -1,6 +1,9 @@
 using Sharpcaster.Models.Media;
 using Smoc.Services.Cast;
 using Smoc.Streaming;
+using Smoc.Services.Audio;
+using System;
+using System.IO;
 
 namespace Smoc.Services.Audio.Cast;
 
@@ -73,8 +76,8 @@ public sealed class CastPlaybackService : IPlaybackService {
 
     private void OnMediaStatusChanged(object? sender, MediaStatus e) {
         _currentTime = TimeSpan.FromSeconds(e.CurrentTime);
-        if (e.Media != null) {
-            _duration = TimeSpan.FromSeconds(e.Media.Duration ?? 0.0);
+        if (e.Media?.Duration != null) {
+            _duration = TimeSpan.FromSeconds(e.Media.Duration.Value);
         }
         
         PositionChanged?.Invoke(this, _currentTime);
@@ -87,7 +90,7 @@ public sealed class CastPlaybackService : IPlaybackService {
             _ => PlaybackState.Stopped
         };
 
-        if (e.IdleReason.ToString() == "FINISHED") {
+        if (e.IdleReason?.ToString() == "FINISHED") {
             SongEnded?.Invoke(this, EventArgs.Empty);
         }
 
