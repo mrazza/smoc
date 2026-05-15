@@ -1,36 +1,32 @@
-using SharpCaster.Models;
-using SharpCaster.Services;
+using Sharpcaster.Models;
 using Smoc.Services.Cast;
 using Smoc.Streaming;
 
 namespace Smoc.Services.Audio.Cast;
 
 public sealed class CastAudioService : IAudioService {
-    private readonly Chromecast _device;
-    private readonly SharpCaster.ChromeCastClient _client;
+    private readonly ChromecastReceiver _device;
+    private readonly IChromecastClient _client;
     private readonly IStreamingProxyService _proxyService;
     private float _volume = 0.5f;
 
-    public CastAudioService(Chromecast device, IStreamingProxyService proxyService) {
+    public CastAudioService(ChromecastReceiver device, IStreamingProxyService proxyService, IChromecastClient? client = null) {
         _device = device;
         _proxyService = proxyService;
-        _client = new SharpCaster.ChromeCastClient();
+        _client = client ?? new ChromecastClientWrapper();
     }
 
     public float Volume {
         get => _volume;
         set {
             _volume = value;
-            // We'll figure out volume later
+            _client.SetVolume(_volume);
         }
     }
 
     public async Task ConnectAsync() {
-        // ChromeCastClient.ConnectChromecast takes a Uri in some versions, or a Chromecast object.
-        // Based on strings, it might be ConnectChromecast(Chromecast device)
-        // But the error said it couldn't convert from Chromecast to Uri.
-        // So it wants a Uri. device.DeviceUri is a Uri.
-        await _client.ConnectChromecast(_device.DeviceUri);
+        await _client.ConnectChromecast(_device);
+        await _client.LaunchApplicationAsync("CC1AD845"); // Default Media Receiver
     }
 
     public IPlaybackService MakePlaybackService(Song song, Stream stream, string codec, CancellationToken cancellationToken = default) {
@@ -46,6 +42,7 @@ public sealed class CastAudioService : IAudioService {
     }
 
     public void Dispose() {
-        _client.DisconnectChromecast();
+        _client.DisconnectAsync().ConfigureAwait(false);
+        _client.Dispose();
     }
 }

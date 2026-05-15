@@ -1,14 +1,11 @@
-using SharpCaster.Models;
-using SharpCaster.Models.ChromecastStatus;
-using SharpCaster.Models.MediaStatus;
-using SharpCaster.Services;
+using Sharpcaster.Models.Media;
 using Smoc.Services.Cast;
 using Smoc.Streaming;
 
 namespace Smoc.Services.Audio.Cast;
 
 public sealed class CastPlaybackService : IPlaybackService {
-    private readonly SharpCaster.ChromeCastClient _client;
+    private readonly IChromecastClient _client;
     private readonly Song _song;
     private readonly Stream _stream;
     private readonly string _url;
@@ -21,7 +18,7 @@ public sealed class CastPlaybackService : IPlaybackService {
     public event EventHandler<TimeSpan>? PositionChanged;
     public event EventHandler<PlaybackState>? PlaybackStateChanged;
 
-    public CastPlaybackService(SharpCaster.ChromeCastClient client, Song song, Stream stream, string url, IStreamingProxyService proxyService) {
+    public CastPlaybackService(IChromecastClient client, Song song, Stream stream, string url, IStreamingProxyService proxyService) {
         _client = client;
         _song = song;
         _stream = stream;
@@ -37,19 +34,34 @@ public sealed class CastPlaybackService : IPlaybackService {
     public PlaybackState PlaybackState => _state;
     public Song Song => _song;
 
-    public void Play() {
+    public async void Play() {
+        if (_state == PlaybackState.Stopped) {
+            await _client.LoadAsync(new Media {
+                ContentUrl = _url,
+                ContentType = "audio/mpeg",
+                Metadata = new MusicTrackMetadata {
+                    Title = _song.Title,
+                    Artist = _song.Artist.Name
+                }
+            });
+        } else {
+            await _client.PlayAsync();
+        }
         UpdateState(PlaybackState.Playing);
     }
 
-    public void Pause() {
+    public async void Pause() {
+        await _client.PauseAsync();
         UpdateState(PlaybackState.Paused);
     }
 
-    public void Stop() {
+    public async void Stop() {
+        await _client.StopAsync();
         UpdateState(PlaybackState.Stopped);
     }
 
-    public void Seek(TimeSpan position) {
+    public async void Seek(TimeSpan position) {
+        await _client.SeekAsync(position.TotalSeconds);
     }
 
     private void UpdateState(PlaybackState newState) {
@@ -61,19 +73,21 @@ public sealed class CastPlaybackService : IPlaybackService {
 
     private void OnMediaStatusChanged(object? sender, MediaStatus e) {
         _currentTime = TimeSpan.FromSeconds(e.CurrentTime);
-        // Try to find duration. It might be on e.Media or e directly.
-        // For now, let's just avoid the error.
+        if (e.Media != null) {
+            _duration = TimeSpan.FromSeconds(e.Media.Duration ?? 0.0);
+        }
+        
         PositionChanged?.Invoke(this, _currentTime);
 
         var playerState = e.PlayerState.ToString();
         var newState = playerState switch {
-            "PLAYING" => PlaybackState.Playing,
-            "PAUSED" => PlaybackState.Paused,
-            "BUFFERING" => PlaybackState.Playing,
+            "Playing" => PlaybackState.Playing,
+            "Paused" => PlaybackState.Paused,
+            "Buffering" => PlaybackState.Playing,
             _ => PlaybackState.Stopped
         };
 
-        if (e.IdleReason.ToString().Equals("FINISHED", StringComparison.OrdinalIgnoreCase)) {
+        if (e.IdleReason.ToString() == "FINISHED") {
             SongEnded?.Invoke(this, EventArgs.Empty);
         }
 

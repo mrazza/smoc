@@ -82,7 +82,7 @@ public sealed class MainWindow : Runnable, IMainWindow {
 
     _commandService.RegisterCompleter("output", (_, args) => {
       var devices = new List<string> { "local" };
-      devices.AddRange(_castDiscoveryService.DiscoveredDevices.Select(d => d.FriendlyName));
+      devices.AddRange(_castDiscoveryService.DiscoveredDevices.Select(d => d.Name));
       return devices.Where(d => d.StartsWith(args, StringComparison.OrdinalIgnoreCase));
     });
 
@@ -90,7 +90,7 @@ public sealed class MainWindow : Runnable, IMainWindow {
       var parts = CommandService.GetArgs(args);
       if (parts.Length == 0) {
         var devices = new List<string> { "local" };
-        devices.AddRange(_castDiscoveryService.DiscoveredDevices.Select(d => d.FriendlyName));
+        devices.AddRange(_castDiscoveryService.DiscoveredDevices.Select(d => d.Name));
         _commandLine.DisplayError($"Available outputs: {string.Join(", ", devices)}");
         return;
       }
@@ -100,7 +100,7 @@ public sealed class MainWindow : Runnable, IMainWindow {
         await _playbackQueueService.SetAudioServiceAsync(new SoundFlowAudioService());
         _commandLine.DisplayError("Switched to local output");
       } else {
-        var device = _castDiscoveryService.DiscoveredDevices.FirstOrDefault(d => d.FriendlyName.Contains(target, StringComparison.OrdinalIgnoreCase));
+        var device = _castDiscoveryService.DiscoveredDevices.FirstOrDefault(d => d.Name.Contains(target, StringComparison.OrdinalIgnoreCase));
         if (device == null) {
           _commandLine.DisplayError($"Device not found: {target}");
           return;
@@ -109,7 +109,7 @@ public sealed class MainWindow : Runnable, IMainWindow {
         var castService = new CastAudioService(device, _streamingProxyService);
         await castService.ConnectAsync();
         await _playbackQueueService.SetAudioServiceAsync(castService);
-        _commandLine.DisplayError($"Switched to {device.FriendlyName}");
+        _commandLine.DisplayError($"Switched to {device.Name}");
       }
     });
 

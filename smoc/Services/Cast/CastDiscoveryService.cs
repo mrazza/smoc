@@ -1,31 +1,37 @@
-using SharpCaster.Models;
-using SharpCaster.Services;
+using Sharpcaster;
+using Sharpcaster.Models;
 
 namespace Smoc.Services.Cast;
 
 public sealed class CastDiscoveryService : ICastDiscoveryService {
-    private readonly List<Chromecast> _discoveredDevices = new();
+    private readonly ChromecastLocator _locator;
+    private readonly List<ChromecastReceiver> _discoveredDevices = new();
 
-    public event EventHandler<Chromecast>? DeviceFound;
+    public event EventHandler<ChromecastReceiver>? DeviceFound;
 
     public CastDiscoveryService() {
+        _locator = new ChromecastLocator();
+        _locator.ChromecastReceiverFound += OnReceiverFound;
     }
 
-    public IEnumerable<Chromecast> DiscoveredDevices => _discoveredDevices.AsReadOnly();
+    public IEnumerable<ChromecastReceiver> DiscoveredDevices => _discoveredDevices.AsReadOnly();
 
     public async Task StartDiscoveryAsync() {
         _discoveredDevices.Clear();
-        try {
-            var locator = new SharpCaster.DeviceLocator();
-            var devices = await locator.LocateDevicesAsync();
-            foreach (var device in devices) {
-                if (!_discoveredDevices.Any(d => d.DeviceUri == device.DeviceUri)) {
-                    _discoveredDevices.Add(device);
-                    DeviceFound?.Invoke(this, device);
-                }
-            }
-        } catch (Exception) {
-            // Ignore discovery errors for now
+        var devices = await _locator.FindReceiversAsync(TimeSpan.FromSeconds(5));
+        foreach (var device in devices) {
+            AddDevice(device);
+        }
+    }
+
+    private void OnReceiverFound(object? sender, ChromecastReceiverEventArgs e) {
+        AddDevice(e.Receiver);
+    }
+
+    private void AddDevice(ChromecastReceiver device) {
+        if (!_discoveredDevices.Any(d => d.DeviceUri == device.DeviceUri)) {
+            _discoveredDevices.Add(device);
+            DeviceFound?.Invoke(this, device);
         }
     }
 
@@ -33,5 +39,6 @@ public sealed class CastDiscoveryService : ICastDiscoveryService {
     }
 
     public void Dispose() {
+        _locator.ChromecastReceiverFound -= OnReceiverFound;
     }
 }
