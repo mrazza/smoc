@@ -24,6 +24,7 @@ public sealed class StreamingProxyService : IStreamingProxyService {
         var port = GetAvailablePort();
         var ip = GetLocalIPAddress();
         _currentUrl = $"http://{ip}:{port}/stream";
+        Logging.Information($"StreamingProxy starting on {_currentUrl}");
         Logging.Information($"StreamingProxyService started at {_currentUrl}");
 
         _listener = new HttpListener();
