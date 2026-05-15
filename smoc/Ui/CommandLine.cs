@@ -1,3 +1,4 @@
+using Terminal.Gui.App;
 using Smoc.Ui.Components;
 using Smoc.Services;
 using Smoc.Ui.Models;

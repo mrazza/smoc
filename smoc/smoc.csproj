@@ -35,7 +35,7 @@
     <PackageReference Include="System.CommandLine" Version="2.0.7" />
     <PackageReference Include="YouTubeMusicAPI" Version="3.0.7" />
     <PackageReference Include="YouTubeSessionGenerator" Version="1.0.3" />
-    <PackageReference Include="SharpCaster" Version="0.4.0" />
+    <PackageReference Include="SharpCaster" Version="3.0.0" />
     <ProjectReference Include="..\Terminal.Gui\Terminal.Gui\Terminal.Gui.csproj" />
   </ItemGroup>
 
