@@ -64,7 +64,7 @@ public class InMemoryCacheServiceTest {
 
     // Access key1 to make it recently used, key2 will be least recently used (if we consider insertion order as usage, but let's be explicit)
     // Wait a bit to ensure timestamps are different if resolution is low, or just rely on order.
-    await Task.Delay(10);
+    await Task.Delay(10, TestContext.Current.CancellationToken);
     await service.GetOrAddAsync(key1, _ => Task.FromResult<Stream>(new MemoryStream()), TestContext.Current.CancellationToken);
 
     await service.Evict(TestContext.Current.CancellationToken);
@@ -132,9 +132,9 @@ public class InMemoryCacheServiceTest {
     string key3 = "key3";
 
     await service.GetOrAddAsync(key1, _ => Task.FromResult<Stream>(new MemoryStream(Encoding.UTF8.GetBytes("a"))), TestContext.Current.CancellationToken);
-    await Task.Delay(10);
+    await Task.Delay(10, TestContext.Current.CancellationToken);
     await service.GetOrAddAsync(key2, _ => Task.FromResult<Stream>(new MemoryStream(Encoding.UTF8.GetBytes("b"))), TestContext.Current.CancellationToken);
-    await Task.Delay(10);
+    await Task.Delay(10, TestContext.Current.CancellationToken);
     await service.GetOrAddAsync(key3, _ => Task.FromResult<Stream>(new MemoryStream(Encoding.UTF8.GetBytes("c"))), TestContext.Current.CancellationToken);
 
     await service.Evict(TestContext.Current.CancellationToken);
@@ -182,7 +182,7 @@ public class InMemoryCacheServiceTest {
     }, TestContext.Current.CancellationToken);
 
     // Give Task 2 a moment to potentially run (it shouldn't)
-    await Task.Delay(50);
+    await Task.Delay(50, TestContext.Current.CancellationToken);
     Assert.False(task2FactoryCalled, "Task 2 should be blocked while Task 1 holds the lock.");
     Assert.False(task2.IsCompleted, "Task 2 should not complete yet.");
 
@@ -213,7 +213,7 @@ public class InMemoryCacheServiceTest {
     // Task 2: Evict (should be blocked)
     var evictTask = service.Evict(TestContext.Current.CancellationToken);
 
-    await Task.Delay(50);
+    await Task.Delay(50, TestContext.Current.CancellationToken);
     Assert.False(evictTask.IsCompleted, "Evict should be blocked while Task 1 holds the lock.");
 
     // Release Task 1
