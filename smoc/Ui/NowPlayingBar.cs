@@ -69,9 +69,9 @@ public sealed class NowPlayingBar : View {
       BorderStyle = LineStyle.Dashed,
       TextAlignment = Alignment.Center,
       VerticalTextAlignment = Alignment.Center,
-      Text = "??"
+      Text = "??⠀"
     };
-    _albumArtView.Padding!.Thickness = new Thickness(-1, -1, -1, -1);
+    _albumArtView.Padding!.Thickness = new Thickness(0, -1, -2, -2);
     _albumArtView.Margin!.Thickness = new Thickness(0, 0, 1, 0);
 
     _songLabel = new Label() {
