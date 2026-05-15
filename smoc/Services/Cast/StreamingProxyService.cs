@@ -1,3 +1,4 @@
+using System.Net.NetworkInformation;
 using Terminal.Gui.App;
 using System.Net;
 using Smoc.Services.Util;
@@ -89,10 +90,18 @@ public sealed class StreamingProxyService : IStreamingProxyService {
     }
 
     private string GetLocalIPAddress() {
-        var host = Dns.GetHostEntry(Dns.GetHostName());
-        foreach (var ip in host.AddressList) {
-            if (ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork) {
-                return ip.ToString();
+        var interfaces = System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces();
+        foreach (var ni in interfaces) {
+            if (ni.OperationalStatus != System.Net.NetworkInformation.OperationalStatus.Up || 
+                ni.NetworkInterfaceType == System.Net.NetworkInformation.NetworkInterfaceType.Loopback) {
+                continue;
+            }
+
+            var props = ni.GetIPProperties();
+            foreach (var ip in props.UnicastAddresses) {
+                if (ip.Address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork) {
+                    return ip.Address.ToString();
+                }
             }
         }
         return "127.0.0.1";
