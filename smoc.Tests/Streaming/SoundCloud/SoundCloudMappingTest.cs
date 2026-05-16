@@ -3,7 +3,13 @@ using Smoc.Streaming.SoundCloud.Util;
 
 namespace smoc.Tests.Streaming.SoundCloud;
 
+/// <summary>
+/// Tests for the <see cref="SoundCloudMapper"/> class.
+/// </summary>
 public class SoundCloudMappingTest {
+  /// <summary>
+  /// Verifies that a SoundCloud track is correctly mapped to a SMoC song.
+  /// </summary>
   [Fact]
   public void MapTrackToSong_ReturnsCorrectSong() {
     var user = new SoundCloudUser(123, "Test Artist", "http://avatar");
@@ -22,6 +28,9 @@ public class SoundCloudMappingTest {
     Assert.Equal("http://artwork-t500x500.jpg", song.Album.Covers.First().Url);
   }
 
+  /// <summary>
+  /// Verifies that a SoundCloud track with no artwork is correctly mapped.
+  /// </summary>
   [Fact]
   public void MapTrackToSong_NoArtwork_ReturnsEmptyCovers() {
     var user = new SoundCloudUser(123, "Test Artist", "http://avatar");
