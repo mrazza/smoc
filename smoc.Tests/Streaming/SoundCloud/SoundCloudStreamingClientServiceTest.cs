@@ -7,12 +7,18 @@ using Smoc.Services.Caching;
 
 namespace smoc.Tests.Streaming.SoundCloud;
 
+/// <summary>
+/// Tests for the <see cref="SoundCloudStreamingClient"/> class.
+/// </summary>
 public class SoundCloudStreamingClientServiceTest {
     private class MockHandler : HttpMessageHandler {
         public Func<HttpRequestMessage, Task<HttpResponseMessage>> Handler { get; set; } = req => Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) => Handler(request);
     }
 
+    /// <summary>
+    /// Verifies that songs can be searched.
+    /// </summary>
     [Fact]
     public async Task SearchSongsAsync_ReturnsSongs() {
         var response = new SoundCloudSearchResponse<SoundCloudTrack>(
@@ -39,6 +45,9 @@ public class SoundCloudStreamingClientServiceTest {
         Assert.Equal("1", results[0].Id);
     }
 
+    /// <summary>
+    /// Verifies that a song stream can be retrieved.
+    /// </summary>
     [Fact]
     public async Task GetSongStreamAsync_ReturnsStream() {
         var track = new SoundCloudTrack(1, "Track 1", 1000, null, new SoundCloudUser(10, "Artist 1", "http://avatar"), new SoundCloudMedia(

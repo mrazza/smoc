@@ -14,6 +14,9 @@ using Smoc.Ui.Drawing;
 
 namespace Smoc.Streaming.SoundCloud;
 
+/// <summary>
+/// A streaming client for SoundCloud.
+/// </summary>
 public sealed class SoundCloudStreamingClient : IStreamingClient {
   private static readonly string SoundCloudUrl = "https://soundcloud.com";
   private static readonly string ApiUrl = "https://api-v2.soundcloud.com";
@@ -30,6 +33,14 @@ public sealed class SoundCloudStreamingClient : IStreamingClient {
     _clientId = SoundCloudConfig.ClientId;
   }
 
+  /// <summary>
+  /// Creates a new instance of <see cref="SoundCloudStreamingClient"/> for testing.
+  /// </summary>
+  /// <param name="httpClient">The HTTP client to use.</param>
+  /// <param name="songCacheService">The song cache service.</param>
+  /// <param name="albumArtCacheService">The album art cache service.</param>
+  /// <param name="clientId">The SoundCloud client ID.</param>
+  /// <returns>A new instance of <see cref="SoundCloudStreamingClient"/>.</returns>
   public static SoundCloudStreamingClient CreateForTesting(HttpClient httpClient, ICacheService? songCacheService = null, ICacheService? albumArtCacheService = null, string? clientId = "test-client-id") {
     var client = new SoundCloudStreamingClient(songCacheService, albumArtCacheService);
     var httpClientField = typeof(SoundCloudStreamingClient).GetField("_httpClient", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
@@ -38,6 +49,12 @@ public sealed class SoundCloudStreamingClient : IStreamingClient {
     return client;
   }
 
+  /// <summary>
+  /// Creates a new instance of <see cref="SoundCloudStreamingClient"/>.
+  /// </summary>
+  /// <param name="songCacheService">The song cache service.</param>
+  /// <param name="albumArtCacheService">The album art cache service.</param>
+  /// <returns>A new instance of <see cref="SoundCloudStreamingClient"/>.</returns>
   public static SoundCloudStreamingClient Create(ICacheService? songCacheService = null, ICacheService? albumArtCacheService = null) {
     return new SoundCloudStreamingClient(songCacheService, albumArtCacheService);
   }
@@ -79,32 +96,38 @@ public sealed class SoundCloudStreamingClient : IStreamingClient {
     return await _httpClient.GetFromJsonAsync<T>(fullUrl, cancellationToken) ?? throw new InvalidOperationException("API returned null.");
   }
 
+  /// <inheritdoc />
   public async Task<List<Artist>> SearchArtistsAsync(string query, CancellationToken cancellationToken = default) {
     var response = await GetAsync<SoundCloudSearchResponse<SoundCloudUser>>("search/users", new Dictionary<string, string> { { "q", query }, { "limit", "20" } }, cancellationToken);
     return response.Collection.Select(u => new Artist(u.Id.ToString(), u.Username)).ToList();
   }
 
+  /// <inheritdoc />
   public async Task<List<Song>> SearchSongsAsync(string query, CancellationToken cancellationToken = default) {
     var response = await GetAsync<SoundCloudSearchResponse<SoundCloudTrack>>("search/tracks", new Dictionary<string, string> { { "q", query }, { "limit", "20" } }, cancellationToken);
     return response.Collection.Select(SoundCloudMapper.MapTrackToSong).ToList();
   }
 
+  /// <inheritdoc />
   public async Task<Song> GetSongAsync(string songId, CancellationToken cancellationToken = default) {
     var track = await GetAsync<SoundCloudTrack>($"/tracks/{songId}", null, cancellationToken);
     return SoundCloudMapper.MapTrackToSong(track);
   }
 
+  /// <inheritdoc />
   public async Task<Artist> GetArtistAsync(string artistId, CancellationToken cancellationToken = default) {
     var user = await GetAsync<SoundCloudUser>($"/users/{artistId}", null, cancellationToken);
     return new Artist(user.Id.ToString(), user.Username);
   }
 
+  /// <inheritdoc />
   public async Task<List<Album>> GetAlbumsByArtistAsync(Artist artist, CancellationToken cancellationToken = default) {
     // SoundCloud doesn't have a direct "albums" for all artists that map 1:1.
     // We'll treat "SoundCloud Uploads" as a default album.
     return [new Album($"sc-uploads-{artist.Id}", artist, "SoundCloud Uploads", [])];
   }
 
+  /// <inheritdoc />
   public async Task<List<Song>> GetSongsByAlbumAsync(Album album, CancellationToken cancellationToken = default) {
     if (album.Id.StartsWith("sc-uploads-")) {
       var userId = album.Id.Replace("sc-uploads-", "");
@@ -114,6 +137,7 @@ public sealed class SoundCloudStreamingClient : IStreamingClient {
     return [];
   }
 
+  /// <inheritdoc />
   public async Task<SongStream> GetSongStreamAsync(string songId, CancellationToken cancellationToken = default) {
     var track = await GetAsync<SoundCloudTrack>($"/tracks/{songId}", null, cancellationToken);
     
@@ -136,21 +160,25 @@ public sealed class SoundCloudStreamingClient : IStreamingClient {
     return new SongStream(songId, codec, stream);
   }
 
+  /// <inheritdoc />
   public async Task<List<Song>> GetLikedSongsAsync(CancellationToken cancellationToken = default) {
     // Guest access doesn't support likes. Phase 2 would require AuthToken.
     return [];
   }
 
+  /// <inheritdoc />
   public async Task<List<Playlist>> SearchPlaylistsAsync(string query, CancellationToken cancellationToken = default) {
     var response = await GetAsync<SoundCloudSearchResponse<SoundCloudPlaylist>>("search/playlists", new Dictionary<string, string> { { "q", query }, { "limit", "20" } }, cancellationToken);
     return response.Collection.Select(p => new Playlist(p.Id.ToString(), p.Title)).ToList();
   }
 
+  /// <inheritdoc />
   public async Task<List<Song>> GetPlaylistSongsAsync(Playlist playlist, CancellationToken cancellationToken = default) {
     var scPlaylist = await GetAsync<SoundCloudPlaylist>($"/playlists/{playlist.Id}", null, cancellationToken);
     return scPlaylist.Tracks.Select(SoundCloudMapper.MapTrackToSong).ToList();
   }
 
+  /// <inheritdoc />
   public async Task<List<Song>> GetPlaylistSongsFromUrlAsync(string url, CancellationToken cancellationToken = default) {
     var result = await GetAsync<System.Text.Json.JsonElement>("resolve", new Dictionary<string, string> { { "url", url } }, cancellationToken);
     
@@ -169,10 +197,12 @@ public sealed class SoundCloudStreamingClient : IStreamingClient {
     return [];
   }
 
+  /// <inheritdoc />
   public async Task AddToListenHistory(Song song, CancellationToken cancellationToken = default) {
      await Task.CompletedTask;
   }
 
+  /// <inheritdoc />
   public async Task<Image<Rgba32>> GetAlbumArtAsync(Album album, Func<IEnumerable<AlbumCover>, AlbumCover>? coverSelector = null, CancellationToken cancellationToken = default) {
     if (!album.Covers.Any())
       throw new ArgumentException("Album has no covers.", nameof(album));
