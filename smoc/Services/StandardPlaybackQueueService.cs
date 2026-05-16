@@ -7,7 +7,7 @@ using Terminal.Gui.App;
 namespace Smoc.Services;
 
 public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
-  private readonly IAudioService _audioService;
+  private IAudioService _audioService;
   private readonly IMainWindow _mainWindow;
   private readonly IStreamingClient _streamingClient;
 
@@ -334,6 +334,28 @@ public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
   public void SeekForward(TimeSpan duration) {
     var targetPosition = CurrentTime + duration;
     SeekTo(targetPosition > Duration ? Duration : targetPosition);
+  }
+
+  /// <inheritdoc/>
+  /// <inheritdoc/>
+  public async Task SetAudioServiceAsync(IAudioService audioService) {
+    var wasPlaying = PlaybackState == PlaybackState.Playing;
+    var currentTime = CurrentTime;
+
+    Stop();
+    _playbackService.Replace(null!);
+    _preloadedPlaybackService.Replace(null!);
+    _preloadingSong = null;
+    _preloadingTask = null;
+
+    var oldAudioService = _audioService;
+    _audioService = audioService;
+    oldAudioService?.Dispose();
+
+    if (wasPlaying) {
+      await Play();
+      SeekTo(currentTime);
+    }
   }
 
   /// <inheritdoc/>

@@ -1,10 +1,14 @@
-using Smoc.Ui.Components;
-using Smoc.Ui.Models;
 using Terminal.Gui.App;
+using Smoc.Ui.Components;
+using Smoc.Services;
+using Smoc.Ui.Models;
 using Terminal.Gui.Configuration;
 using Terminal.Gui.Input;
 using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
+using System;
+using System.Linq;
+using Smoc.Services.Util;
 
 namespace Smoc.Ui;
 
@@ -14,6 +18,7 @@ namespace Smoc.Ui;
 public sealed class CommandLine : View {
   private readonly CommandTextField _commandTextField;
   private readonly Label _errorLabel;
+  private readonly CommandService? _commandService;
   private object? _errorTimeoutTracker;
 
   /// <summary>
@@ -24,7 +29,9 @@ public sealed class CommandLine : View {
   /// <summary>
   /// Initializes a new instance of the <see cref="CommandLine"/> class.
   /// </summary>
-  public CommandLine() {
+  /// <param name="commandService">The command service to use for completions.</param>
+  public CommandLine(CommandService? commandService = null) {
+    _commandService = commandService;
     Width = Dim.Fill();
     Height = Dim.Absolute(1);
     CanFocus = true;
@@ -59,14 +66,30 @@ public sealed class CommandLine : View {
     _errorTimeoutTracker = App!.AddTimeout(TimeSpan.FromSeconds(5), () => { ClearError(); return false; });
   }
 
+  /// <inheritdoc/>
   protected override bool OnKeyDownNotHandled(Key key) {
-    if (key == Key.Tab) {
+    if (key == Key.Tab && _commandService != null) {
+      var text = _commandTextField.Text.TrimStart(':');
+      var completions = _commandService.GetCompletions(text).ToList();
+      if (completions.Count == 1) {
+        var completion = completions[0];
+        var argCutoff = text.IndexOf('/');
+        if (argCutoff > 0) {
+          _commandTextField.Text = $":{text[..(argCutoff + 1)]}{completion}";
+        } else {
+          _commandTextField.Text = $":{completion}/";
+        }
+        _commandTextField.InsertionPoint = _commandTextField.Text.Length;
+      } else if (completions.Count > 1) {
+        DisplayError($"Completions: {string.Join(", ", completions)}");
+      }
       return true;
     }
 
     return base.OnKeyDownNotHandled(key);
   }
 
+  /// <inheritdoc/>
   protected override void OnHasFocusChanged(bool newHasFocus, View? previousFocusedView, View? focusedView) {
     base.OnHasFocusChanged(newHasFocus, previousFocusedView, focusedView);
     if (newHasFocus) {

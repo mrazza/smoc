@@ -1,3 +1,7 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
 namespace Smoc.Services;
 
 /// <summary>
@@ -12,6 +16,15 @@ public sealed class CommandService {
   public delegate void CommandHandler(string command, string args);
 
   private readonly Dictionary<string, CommandHandler> commands = new();
+  private readonly Dictionary<string, CompletionHandler> completers = new();
+
+  /// <summary>
+  /// Delegate for handling command completion.
+  /// </summary>
+  /// <param name="command">The command name.</param>
+  /// <param name="args">The arguments part of the command string.</param>
+  /// <returns>A list of possible completions.</returns>
+  public delegate IEnumerable<string> CompletionHandler(string command, string args);
 
   /// <summary>
   /// Registers a new command handler.
@@ -29,6 +42,7 @@ public sealed class CommandService {
   /// Unregisters a command handler.
   /// </summary>
   /// <param name="command">The command name to unregister.</param>
+  /// <exception cref="ArgumentException">Thrown if the command is not registered.</exception>
   public void UnregisterCommand(string command) {
     if (!commands.Remove(command)) throw new ArgumentException("Command not registered");
   }
@@ -51,6 +65,39 @@ public sealed class CommandService {
       return true;
     }
     return false;
+  }
+
+  /// <summary>
+  /// Registers a new completion handler.
+  /// </summary>
+  /// <param name="command">The command name.</param>
+  /// <param name="handler">The handler to callback when completions are requested.</param>
+  public void RegisterCompleter(string command, CompletionHandler handler) {
+    completers[command] = handler;
+  }
+
+  /// <summary>
+  /// Gets completions for a given command line.
+  /// </summary>
+  /// <param name="command">The full command line string.</param>
+  /// <returns>A list of possible completions.</returns>
+  public IEnumerable<string> GetCompletions(string command) {
+    var argCutoff = command.IndexOf('/');
+    var commandName = command;
+    if (argCutoff > 0) {
+      commandName = command[..argCutoff];
+    }
+    var args = argCutoff > 0 ? command[(argCutoff + 1)..] : string.Empty;
+
+    if (completers.TryGetValue(commandName, out var handler)) {
+      return handler(commandName, args);
+    }
+
+    if (argCutoff <= 0) {
+      return commands.Keys.Where(c => c.StartsWith(commandName, StringComparison.OrdinalIgnoreCase));
+    }
+
+    return [];
   }
 
   /// <summary>
