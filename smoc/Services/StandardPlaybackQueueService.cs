@@ -337,6 +337,7 @@ public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
   }
 
   /// <inheritdoc/>
+  /// <inheritdoc/>
   public async Task SetAudioServiceAsync(IAudioService audioService) {
     var wasPlaying = PlaybackState == PlaybackState.Playing;
     var currentTime = CurrentTime;

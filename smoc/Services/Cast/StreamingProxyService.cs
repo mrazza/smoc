@@ -1,10 +1,17 @@
-using System.Net.NetworkInformation;
 using Terminal.Gui.App;
+using System.Net.NetworkInformation;
 using System.Net;
 using Smoc.Services.Util;
+using System;
+using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Smoc.Services.Cast;
 
+/// <summary>
+/// Service that proxies media streams over HTTP for Chromecast playback.
+/// </summary>
 public sealed class StreamingProxyService : IStreamingProxyService {
     private HttpListener? _listener;
     private Stream? _currentStream;
@@ -13,8 +20,10 @@ public sealed class StreamingProxyService : IStreamingProxyService {
     private Task? _listenTask;
     private CancellationTokenSource? _cts;
 
+    /// <inheritdoc/>
     public string? CurrentProxyUrl => _currentUrl;
 
+    /// <inheritdoc/>
     public string StartProxy(Stream stream, string contentType) {
         StopProxy();
 
@@ -25,7 +34,6 @@ public sealed class StreamingProxyService : IStreamingProxyService {
         var port = GetAvailablePort();
         var ip = GetLocalIPAddress();
         _currentUrl = $"http://{ip}:{port}/stream";
-        Logging.Information($"StreamingProxy starting on {_currentUrl}");
         Logging.Information($"StreamingProxyService started at {_currentUrl}");
 
         _listener = new HttpListener();
@@ -38,6 +46,7 @@ public sealed class StreamingProxyService : IStreamingProxyService {
         return _currentUrl;
     }
 
+    /// <inheritdoc/>
     public void StopProxy() {
         _cts?.Cancel();
         _listener?.Stop();
@@ -107,6 +116,7 @@ public sealed class StreamingProxyService : IStreamingProxyService {
         return "127.0.0.1";
     }
 
+    /// <inheritdoc/>
     public void Dispose() {
         StopProxy();
     }
