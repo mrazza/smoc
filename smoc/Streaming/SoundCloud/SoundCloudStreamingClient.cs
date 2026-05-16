@@ -1,7 +1,4 @@
 using System.Net.Http.Json;
-using System.Text.Json.Serialization;
-using System.Text.RegularExpressions;
-using Microsoft.Extensions.Logging;
 using Terminal.Gui.App;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
@@ -10,7 +7,6 @@ using Smoc.Services;
 using Smoc.Services.Caching;
 using Smoc.Streaming.SoundCloud.Models;
 using Smoc.Streaming.SoundCloud.Util;
-using Smoc.Ui.Drawing;
 
 namespace Smoc.Streaming.SoundCloud;
 
@@ -18,8 +14,8 @@ namespace Smoc.Streaming.SoundCloud;
 /// A streaming client for SoundCloud.
 /// </summary>
 public sealed class SoundCloudStreamingClient : IStreamingClient {
-  private static readonly string SoundCloudUrl = "https://soundcloud.com";
-  private static readonly string ApiUrl = "https://api-v2.soundcloud.com";
+  private static readonly string _soundCloudUrl = "https://soundcloud.com";
+  private static readonly string _apiUrl = "https://api-v2.soundcloud.com";
   private readonly HttpClient _httpClient;
   private readonly ICacheService _songCacheService;
   private readonly ICacheService _albumArtCacheService;
@@ -59,53 +55,16 @@ public sealed class SoundCloudStreamingClient : IStreamingClient {
     return new SoundCloudStreamingClient(songCacheService, albumArtCacheService);
   }
 
-  private async Task<string> GetClientIdAsync(CancellationToken cancellationToken = default) {
-    if (!string.IsNullOrEmpty(_clientId)) {
-      return _clientId;
-    }
-
-    Logging.Information("Discovering SoundCloud Client ID...");
-    var response = await _httpClient.GetStringAsync(SoundCloudUrl, cancellationToken);
-    
-    foreach (var scriptUrl in SoundCloudDiscovery.ExtractScriptUrls(response)) {
-      if (!scriptUrl.StartsWith("http")) {
-        continue;
-      }
-
-      var scriptContent = await _httpClient.GetStringAsync(scriptUrl, cancellationToken);
-      var clientId = SoundCloudDiscovery.ExtractClientId(scriptContent);
-      if (clientId != null) {
-        _clientId = clientId;
-        Logging.Information($"Discovered SoundCloud Client ID: {_clientId}");
-        return _clientId;
-      }
-    }
-
-    throw new InvalidOperationException("Could not discover SoundCloud Client ID.");
-  }
-
-  private async Task<T> GetAsync<T>(string endpoint, Dictionary<string, string>? parameters = null, CancellationToken cancellationToken = default) {
-    var clientId = await GetClientIdAsync(cancellationToken);
-    var url = endpoint.StartsWith("http") ? endpoint : $"{ApiUrl}/{endpoint.TrimStart('/')}";
-    var queryParams = parameters ?? new Dictionary<string, string>();
-    queryParams["client_id"] = clientId;
-    
-    var queryString = string.Join("&", queryParams.Select(p => $"{Uri.EscapeDataString(p.Key)}={Uri.EscapeDataString(p.Value)}"));
-    var fullUrl = url.Contains('?') ? $"{url}&{queryString}" : $"{url}?{queryString}";
-
-    return await _httpClient.GetFromJsonAsync<T>(fullUrl, cancellationToken) ?? throw new InvalidOperationException("API returned null.");
-  }
-
   /// <inheritdoc />
   public async Task<List<Artist>> SearchArtistsAsync(string query, CancellationToken cancellationToken = default) {
     var response = await GetAsync<SoundCloudSearchResponse<SoundCloudUser>>("search/users", new Dictionary<string, string> { { "q", query }, { "limit", "20" } }, cancellationToken);
-    return response.Collection.Select(u => new Artist(u.Id.ToString(), u.Username)).ToList();
+    return [.. response.Collection.Select(u => new Artist(u.Id.ToString(), u.Username))];
   }
 
   /// <inheritdoc />
   public async Task<List<Song>> SearchSongsAsync(string query, CancellationToken cancellationToken = default) {
     var response = await GetAsync<SoundCloudSearchResponse<SoundCloudTrack>>("search/tracks", new Dictionary<string, string> { { "q", query }, { "limit", "20" } }, cancellationToken);
-    return response.Collection.Select(SoundCloudMapper.MapTrackToSong).ToList();
+    return [.. response.Collection.Select(SoundCloudMapper.MapTrackToSong)];
   }
 
   /// <inheritdoc />
@@ -121,18 +80,18 @@ public sealed class SoundCloudStreamingClient : IStreamingClient {
   }
 
   /// <inheritdoc />
-  public async Task<List<Album>> GetAlbumsByArtistAsync(Artist artist, CancellationToken cancellationToken = default) {
+  public Task<List<Album>> GetAlbumsByArtistAsync(Artist artist, CancellationToken cancellationToken = default) {
     // SoundCloud doesn't have a direct "albums" for all artists that map 1:1.
     // We'll treat "SoundCloud Uploads" as a default album.
-    return [new Album($"sc-uploads-{artist.Id}", artist, "SoundCloud Uploads", [])];
+    return Task.FromResult<List<Album>>([new Album($"sc-uploads-{artist.Id}", artist, "SoundCloud Uploads", [])]);
   }
 
   /// <inheritdoc />
   public async Task<List<Song>> GetSongsByAlbumAsync(Album album, CancellationToken cancellationToken = default) {
     if (album.Id.StartsWith("sc-uploads-")) {
       var userId = album.Id.Replace("sc-uploads-", "");
-      var response = await GetAsync<SoundCloudSearchResponse<SoundCloudTrack>>($"/users/{userId}/tracks", new Dictionary<string, string> { { "limit", "50" } }, cancellationToken);
-      return response.Collection.Select(SoundCloudMapper.MapTrackToSong).ToList();
+      var response = await GetAsync<SoundCloudSearchResponse<SoundCloudTrack>>($"/users/{userId}/tracks", new Dictionary<string, string> { { "limit", "50" }, { "access", "[playable]" } }, cancellationToken);
+      return [.. response.Collection.Select(SoundCloudMapper.MapTrackToSong)];
     }
     return [];
   }
@@ -140,20 +99,15 @@ public sealed class SoundCloudStreamingClient : IStreamingClient {
   /// <inheritdoc />
   public async Task<SongStream> GetSongStreamAsync(string songId, CancellationToken cancellationToken = default) {
     var track = await GetAsync<SoundCloudTrack>($"/tracks/{songId}", null, cancellationToken);
-    
-    var transcoding = track.Media.Transcodings.FirstOrDefault(t => t.Format.Protocol == "progressive" && t.Format.MimeType == "audio/mpeg")
+    var transcoding = (track.Media.Transcodings.FirstOrDefault(t => t.Format.Protocol == "progressive" && t.Format.MimeType == "audio/mpeg")
                       ?? track.Media.Transcodings.FirstOrDefault(t => t.Format.Protocol == "hls" && t.Format.MimeType == "audio/mpeg")
-                      ?? track.Media.Transcodings.FirstOrDefault();
-
-    if (transcoding == null) {
-      throw new InvalidOperationException("No playable transcoding found.");
-    }
-
-    var streamResponse = await GetAsync<SoundCloudStreamResponse>(transcoding.Url, null, cancellationToken);
-    
+                      ?? track.Media.Transcodings.FirstOrDefault()) ?? throw new InvalidOperationException("No playable transcoding found.");
     var stream = await _songCacheService.GetOrAddAsync(
-      $"{songId}-{transcoding.Preset}",
-      async ct => await _httpClient.GetStreamAsync(streamResponse.Url, ct),
+      $"soundcloud-{songId}-{transcoding.Preset}",
+      async ct => {
+        var streamResponse = await GetAsync<SoundCloudStreamResponse>(transcoding.Url, null, cancellationToken);
+        return await _httpClient.GetStreamAsync(streamResponse.Url, ct);
+      },
       cancellationToken);
 
     var codec = transcoding.Format.Protocol == "hls" ? "hls" : "mp3";
@@ -161,9 +115,9 @@ public sealed class SoundCloudStreamingClient : IStreamingClient {
   }
 
   /// <inheritdoc />
-  public async Task<List<Song>> GetLikedSongsAsync(CancellationToken cancellationToken = default) {
+  public Task<List<Song>> GetLikedSongsAsync(CancellationToken cancellationToken = default) {
     // Guest access doesn't support likes. Phase 2 would require AuthToken.
-    return [];
+    return Task.FromResult<List<Song>>([]);
   }
 
   /// <inheritdoc />
@@ -181,25 +135,25 @@ public sealed class SoundCloudStreamingClient : IStreamingClient {
   /// <inheritdoc />
   public async Task<List<Song>> GetPlaylistSongsFromUrlAsync(string url, CancellationToken cancellationToken = default) {
     var result = await GetAsync<System.Text.Json.JsonElement>("resolve", new Dictionary<string, string> { { "url", url } }, cancellationToken);
-    
+
     if (result.TryGetProperty("kind", out var kind)) {
-        var kindStr = kind.GetString();
-        var json = result.GetRawText();
-        if (kindStr == "playlist") {
-            var playlist = System.Text.Json.JsonSerializer.Deserialize<SoundCloudPlaylist>(json);
-            return playlist?.Tracks.Select(SoundCloudMapper.MapTrackToSong).ToList() ?? [];
-        } else if (kindStr == "track") {
-            var track = System.Text.Json.JsonSerializer.Deserialize<SoundCloudTrack>(json);
-            return track != null ? [SoundCloudMapper.MapTrackToSong(track)] : [];
-        }
+      var kindStr = kind.GetString();
+      var json = result.GetRawText();
+      if (kindStr == "playlist") {
+        var playlist = System.Text.Json.JsonSerializer.Deserialize<SoundCloudPlaylist>(json);
+        return playlist?.Tracks.Select(SoundCloudMapper.MapTrackToSong).ToList() ?? [];
+      } else if (kindStr == "track") {
+        var track = System.Text.Json.JsonSerializer.Deserialize<SoundCloudTrack>(json);
+        return track != null ? [SoundCloudMapper.MapTrackToSong(track)] : [];
+      }
     }
-    
+
     return [];
   }
 
   /// <inheritdoc />
   public async Task AddToListenHistory(Song song, CancellationToken cancellationToken = default) {
-     await Task.CompletedTask;
+    await Task.CompletedTask;
   }
 
   /// <inheritdoc />
@@ -219,4 +173,40 @@ public sealed class SoundCloudStreamingClient : IStreamingClient {
     return await Image.LoadAsync<Rgba32>(albumArt, cancellationToken);
   }
 
+  private async Task<string> GetClientIdAsync(CancellationToken cancellationToken = default) {
+    if (!string.IsNullOrEmpty(_clientId)) {
+      return _clientId;
+    }
+
+    Logging.Information("Discovering SoundCloud Client ID...");
+    var response = await _httpClient.GetStringAsync(_soundCloudUrl, cancellationToken);
+
+    foreach (var scriptUrl in SoundCloudDiscovery.ExtractScriptUrls(response)) {
+      if (!scriptUrl.StartsWith("http")) {
+        continue;
+      }
+
+      var scriptContent = await _httpClient.GetStringAsync(scriptUrl, cancellationToken);
+      var clientId = SoundCloudDiscovery.ExtractClientId(scriptContent);
+      if (clientId != null) {
+        _clientId = clientId;
+        Logging.Information($"Discovered SoundCloud Client ID: {_clientId}");
+        return _clientId;
+      }
+    }
+
+    throw new InvalidOperationException("Could not discover SoundCloud Client ID.");
   }
+
+  private async Task<T> GetAsync<T>(string endpoint, Dictionary<string, string>? parameters = null, CancellationToken cancellationToken = default) {
+    var clientId = await GetClientIdAsync(cancellationToken);
+    var url = endpoint.StartsWith("http") ? endpoint : $"{_apiUrl}/{endpoint.TrimStart('/')}";
+    var queryParams = parameters ?? new Dictionary<string, string>();
+    queryParams["client_id"] = clientId;
+
+    var queryString = string.Join("&", queryParams.Select(p => $"{Uri.EscapeDataString(p.Key)}={Uri.EscapeDataString(p.Value)}"));
+    var fullUrl = url.Contains('?') ? $"{url}&{queryString}" : $"{url}?{queryString}";
+
+    return await _httpClient.GetFromJsonAsync<T>(fullUrl, cancellationToken) ?? throw new InvalidOperationException("API returned null.");
+  }
+}
