@@ -1,3 +1,7 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
 namespace Smoc.Services;
 
 /// <summary>
@@ -19,6 +23,7 @@ public sealed class CommandService {
   /// </summary>
   /// <param name="command">The command name.</param>
   /// <param name="args">The arguments part of the command string.</param>
+  /// <returns>A list of possible completions.</returns>
   public delegate IEnumerable<string> CompletionHandler(string command, string args);
 
   /// <summary>
@@ -37,6 +42,7 @@ public sealed class CommandService {
   /// Unregisters a command handler.
   /// </summary>
   /// <param name="command">The command name to unregister.</param>
+  /// <exception cref="ArgumentException">Thrown if the command is not registered.</exception>
   public void UnregisterCommand(string command) {
     if (!commands.Remove(command)) throw new ArgumentException("Command not registered");
   }

@@ -7,6 +7,9 @@ using System.IO;
 
 namespace Smoc.Services.Audio.Cast;
 
+/// <summary>
+/// Playback service for a single song on a Google Cast device.
+/// </summary>
 public sealed class CastPlaybackService : IPlaybackService {
     private readonly IChromecastClient _client;
     private readonly Song _song;
@@ -17,10 +20,23 @@ public sealed class CastPlaybackService : IPlaybackService {
     private TimeSpan _currentTime = TimeSpan.Zero;
     private TimeSpan _duration = TimeSpan.Zero;
 
+    /// <inheritdoc/>
     public event EventHandler? SongEnded;
+
+    /// <inheritdoc/>
     public event EventHandler<TimeSpan>? PositionChanged;
+
+    /// <inheritdoc/>
     public event EventHandler<PlaybackState>? PlaybackStateChanged;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CastPlaybackService"/> class.
+    /// </summary>
+    /// <param name="client">The Cast client.</param>
+    /// <param name="song">The song to play.</param>
+    /// <param name="stream">The stream of the song.</param>
+    /// <param name="url">The URL where the stream is proxied.</param>
+    /// <param name="proxyService">The proxy service.</param>
     public CastPlaybackService(IChromecastClient client, Song song, Stream stream, string url, IStreamingProxyService proxyService) {
         _client = client;
         _song = song;
@@ -31,12 +47,22 @@ public sealed class CastPlaybackService : IPlaybackService {
         _client.MediaStatusChanged += OnMediaStatusChanged;
     }
 
+    /// <inheritdoc/>
     public TimeSpan CurrentTime => _currentTime;
+
+    /// <inheritdoc/>
     public TimeSpan Duration => _duration;
+
+    /// <inheritdoc/>
     public float Progress => _duration.TotalSeconds > 0 ? (float)(_currentTime.TotalSeconds / _duration.TotalSeconds) : 0;
+
+    /// <inheritdoc/>
     public PlaybackState PlaybackState => _state;
+
+    /// <inheritdoc/>
     public Song Song => _song;
 
+    /// <inheritdoc/>
     public async void Play() {
         if (_state == PlaybackState.Stopped) {
             await _client.LoadAsync(new Media {
@@ -53,16 +79,19 @@ public sealed class CastPlaybackService : IPlaybackService {
         UpdateState(PlaybackState.Playing);
     }
 
+    /// <inheritdoc/>
     public async void Pause() {
         await _client.PauseAsync();
         UpdateState(PlaybackState.Paused);
     }
 
+    /// <inheritdoc/>
     public async void Stop() {
         await _client.StopAsync();
         UpdateState(PlaybackState.Stopped);
     }
 
+    /// <inheritdoc/>
     public async void Seek(TimeSpan position) {
         await _client.SeekAsync(position.TotalSeconds);
     }
@@ -97,6 +126,7 @@ public sealed class CastPlaybackService : IPlaybackService {
         UpdateState(newState);
     }
 
+    /// <inheritdoc/>
     public void Dispose() {
         _client.MediaStatusChanged -= OnMediaStatusChanged;
         _stream.Dispose();

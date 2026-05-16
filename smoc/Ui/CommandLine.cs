@@ -2,11 +2,13 @@ using Terminal.Gui.App;
 using Smoc.Ui.Components;
 using Smoc.Services;
 using Smoc.Ui.Models;
-using Terminal.Gui.App;
 using Terminal.Gui.Configuration;
 using Terminal.Gui.Input;
 using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
+using System;
+using System.Linq;
+using Smoc.Services.Util;
 
 namespace Smoc.Ui;
 
@@ -64,6 +66,7 @@ public sealed class CommandLine : View {
     _errorTimeoutTracker = App!.AddTimeout(TimeSpan.FromSeconds(5), () => { ClearError(); return false; });
   }
 
+  /// <inheritdoc/>
   protected override bool OnKeyDownNotHandled(Key key) {
     if (key == Key.Tab && _commandService != null) {
       var text = _commandTextField.Text.TrimStart(':');
@@ -86,6 +89,7 @@ public sealed class CommandLine : View {
     return base.OnKeyDownNotHandled(key);
   }
 
+  /// <inheritdoc/>
   protected override void OnHasFocusChanged(bool newHasFocus, View? previousFocusedView, View? focusedView) {
     base.OnHasFocusChanged(newHasFocus, previousFocusedView, focusedView);
     if (newHasFocus) {
