@@ -60,7 +60,9 @@ jobs:
         cp LICENSE ./publish/
         cp README.md ./publish/
         
-        if [[ "${{ matrix.ext }}" == "zip" ]]; then
+        if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+          powershell -Command "Compress-Archive -Path 'publish\*' -DestinationPath 'dist/${PACKAGE_NAME}.zip'"
+        elif [[ "${{ matrix.ext }}" == "zip" ]]; then
           cd publish && zip -r ../dist/${PACKAGE_NAME}.zip .
         else
           cd publish && tar -czvf ../dist/${PACKAGE_NAME}.tar.gz .
