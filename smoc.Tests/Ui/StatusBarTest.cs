@@ -3,7 +3,6 @@ using smoc.Tests.TestInfra;
 using Smoc.Services;
 using Smoc.Streaming;
 using Terminal.Gui.Views;
-using AppTestHelpers;
 using StatusBar = Smoc.Ui.StatusBar;
 
 namespace smoc.Tests.Ui;

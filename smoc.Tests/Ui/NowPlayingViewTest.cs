@@ -1,6 +1,4 @@
-using System.Net;
 using Moq;
-using Moq.Protected;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using smoc.Tests.Fakes;
@@ -10,7 +8,6 @@ using Smoc.Streaming;
 using Smoc.Ui;
 using Smoc.Ui.Models;
 using Terminal.Gui.Views;
-using AppTestHelpers;
 
 namespace smoc.Tests.Ui;
 

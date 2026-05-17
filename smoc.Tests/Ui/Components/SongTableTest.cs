@@ -5,7 +5,6 @@ using Smoc.Ui.Components;
 using Terminal.Gui.Input;
 using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
-using AppTestHelpers;
 using static Smoc.Ui.Components.SongTable;
 
 namespace smoc.Tests.Ui.Components;

@@ -2,7 +2,6 @@ using smoc.Tests.TestInfra;
 using Smoc.Ui;
 using Terminal.Gui.Input;
 using Terminal.Gui.Views;
-using AppTestHelpers;
 
 namespace smoc.Tests.Ui;
 
