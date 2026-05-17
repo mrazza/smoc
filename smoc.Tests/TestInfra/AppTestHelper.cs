@@ -20,7 +20,7 @@ namespace smoc.Tests.TestInfra;
 /// </remarks>
 public partial class AppTestHelper : IDisposable {
   private readonly CancellationTokenSource _runCancellationTokenSource = new();
-  private readonly CancellationTokenSource? _timeoutCts;
+  private CancellationTokenSource? _timeoutCts;
   private readonly Task? _runTask;
   private readonly SemaphoreSlim _booting;
   private readonly object _cancellationLock = new();
@@ -65,7 +65,6 @@ public partial class AppTestHelper : IDisposable {
     _logWriter = logWriter;
     _runApplication = false;
     _booting = new SemaphoreSlim(0, 1);
-    _timeoutCts = new CancellationTokenSource(timeout ?? TimeSpan.FromSeconds(10));
 
     // Don't force a size - let the driver determine it
     CommonInit(0, 0, timeout);
@@ -183,8 +182,9 @@ public partial class AppTestHelper : IDisposable {
 
     // ✅ Link _runCancellationTokenSource with a timeout
     // This creates a token that responds to EITHER the run cancellation OR timeout
+    _timeoutCts = new CancellationTokenSource(_timeout);
     _ansiInput.ExternalCancellationTokenSource =
-        CancellationTokenSource.CreateLinkedTokenSource(_runCancellationTokenSource.Token, new CancellationTokenSource(_timeout).Token);
+        CancellationTokenSource.CreateLinkedTokenSource(_runCancellationTokenSource.Token, _timeoutCts.Token);
 
     // Now when InputImpl.Run receives this ExternalCancellationTokenSource,
     // it will create ANOTHER linked token internally that combines:
@@ -276,10 +276,14 @@ public partial class AppTestHelper : IDisposable {
       }
     });
 
-    // Blocks until either the token or the hardStopToken is cancelled.
-    // With linked tokens, we only need to wait on _runCancellationTokenSource and ctsLocal
-    // ExternalCancellationTokenSource is redundant because it's linked to _runCancellationTokenSource
-    WaitHandle.WaitAny([_runCancellationTokenSource.Token.WaitHandle, ctsActionCompleted.Token.WaitHandle]);
+    // Blocks until any of these are cancelled:
+    // - _runCancellationTokenSource: normal stop
+    // - ExternalCancellationTokenSource: timeout or error (may fire independently)
+    // - ctsActionCompleted: the action finished successfully
+    WaitHandle.WaitAny([
+        _runCancellationTokenSource.Token.WaitHandle,
+        _ansiInput.ExternalCancellationTokenSource!.Token.WaitHandle,
+        ctsActionCompleted.Token.WaitHandle]);
 
     // Logging.Trace ($"Return from WaitIteration");
     return this;
@@ -443,7 +447,6 @@ public partial class AppTestHelper : IDisposable {
 
   private void CleanupApplication() {
     Logging.Trace("CleanupApplication");
-    _ansiInput.ExternalCancellationTokenSource = null;
 
     App?.RequestStop();
     App?.Dispose();
@@ -464,21 +467,23 @@ public partial class AppTestHelper : IDisposable {
     var shouldThrow = false;
     Exception? exToThrow = null;
 
-    lock (_cancellationLock) // NEW: Thread-safe check
+    lock (_cancellationLock)
     {
-      if (_ansiInput.ExternalCancellationTokenSource is { IsCancellationRequested: true }) {
-        shouldThrow = true;
-
-        lock (_backgroundExceptionLock) {
+      // Only throw if there was an actual background exception (error-based hard stop).
+      // Normal shutdown also cancels ExternalCancellationTokenSource via the linked token chain,
+      // so checking IsCancellationRequested alone would false-positive on normal teardown.
+      lock (_backgroundExceptionLock) {
+        if (_backgroundException != null) {
+          shouldThrow = true;
           exToThrow = _backgroundException;
         }
       }
 
-      // ✅ Dispose the linked token source
+      // Dispose the linked token source
       _ansiInput.ExternalCancellationTokenSource?.Dispose();
     }
 
-    _timeoutCts?.Dispose(); // NEW: Dispose timeout CTS
+    _timeoutCts?.Dispose();
     _runCancellationTokenSource?.Dispose();
     _ansiInput.Dispose();
     _output?.Dispose();
