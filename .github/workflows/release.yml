@@ -8,25 +8,19 @@ on:
 
 jobs:
   build:
-    name: Build and Package
+    name: Build
     strategy:
       matrix:
         include:
           - os: windows-latest
             rid: win-x64
             artifact_name: win-x64
-            binary_name: smoc.exe
-            ext: zip
           - os: ubuntu-latest
             rid: linux-x64
             artifact_name: linux-x64
-            binary_name: smoc
-            ext: tar.gz
           - os: macos-latest
             rid: osx-arm64
             artifact_name: mac-arm64
-            binary_name: smoc
-            ext: zip
 
     runs-on: ${{ matrix.os }}
 
@@ -44,35 +38,17 @@ jobs:
       run: |
         dotnet publish smoc/smoc.csproj -c Release -r ${{ matrix.rid }} -p:PublishSingleFile=true -p:SelfContained=true --output ./publish
 
-    - name: Package
+    - name: Prepare Artifact
       shell: bash
       run: |
-        # Use tag name or 'manual' if triggered by dispatch
-        VERSION=${GITHUB_REF_NAME#v}
-        if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-          VERSION="manual"
-        fi
-        
-        PACKAGE_NAME="smoc-v${VERSION}-${{ matrix.artifact_name }}-bin"
-        mkdir -p dist
-        
-        # Include license and readme in the package
         cp LICENSE ./publish/
         cp README.md ./publish/
-        
-        if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
-          powershell -Command "Compress-Archive -Path 'publish\*' -DestinationPath 'dist/${PACKAGE_NAME}.zip'"
-        elif [[ "${{ matrix.ext }}" == "zip" ]]; then
-          cd publish && zip -r ../dist/${PACKAGE_NAME}.zip .
-        else
-          cd publish && tar -czvf ../dist/${PACKAGE_NAME}.tar.gz .
-        fi
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.artifact_name }}
-        path: dist/*
+        path: ./publish/*
 
   release:
     needs: build
@@ -83,12 +59,28 @@ jobs:
       uses: actions/download-artifact@v4
       with:
         path: ./artifacts
-        merge-multiple: true
+
+    - name: Package for Release
+      run: |
+        VERSION=${GITHUB_REF_NAME#v}
+        if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+          VERSION="manual"
+        fi
+        mkdir dist
+        
+        # Package Linux (tar.gz)
+        cd artifacts/linux-x64 && tar -czvf ../../dist/smoc-v${VERSION}-linux-x64-bin.tar.gz . && cd ../..
+        
+        # Package Windows (zip)
+        cd artifacts/win-x64 && zip -r ../../dist/smoc-v${VERSION}-win-x64-bin.zip . && cd ../..
+        
+        # Package MacOS (zip)
+        cd artifacts/mac-arm64 && zip -r ../../dist/smoc-v${VERSION}-mac-arm64-bin.zip . && cd ../..
 
     - name: Create Release
       uses: softprops/action-gh-release@v2
       with:
-        files: ./artifacts/*
+        files: dist/*
         generate_release_notes: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
