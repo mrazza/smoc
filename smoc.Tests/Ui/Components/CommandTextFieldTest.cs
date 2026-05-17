@@ -3,7 +3,6 @@ using Smoc.Ui.Components;
 using Terminal.Gui.Input;
 using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
-using AppTestHelpers;
 
 namespace smoc.Tests.Ui.Components;
 

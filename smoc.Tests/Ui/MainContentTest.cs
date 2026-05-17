@@ -6,7 +6,6 @@ using Smoc.Streaming;
 using Smoc.Ui;
 using Smoc.Ui.Models;
 using Terminal.Gui.Views;
-using AppTestHelpers;
 
 namespace smoc.Tests.Ui;
 
