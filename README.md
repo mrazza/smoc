@@ -273,24 +273,24 @@ Create or edit `~/.config/smoc/config.json` to customize settings.
 </details>
 
 #### Common Settings
-| Key                                            | Type               | Default Value      | Description                                                         |
-| :--------------------------------------------- | :----------------- | :----------------- | :------------------------------------------------------------------ |
-| `SmocConfiguration.ActiveService`              | `StreamingService` | `YouTubeMusic`     | Active service (`YouTubeMusic`, `Subsonic`)                         |
-| `SubsonicConfig.ServerScheme`                  | `string`           | `http`             | URI Scheme for the Subsonic API                                     |
-| `SubsonicConfig.ServerHost`                    | `string`           | `null`             | Hostname of your Subsonic server                                    |
-| `SubsonicConfig.ServerPort`                    | `int`              | `80`               | Port of your Subsonic server                                        |
-| `SubsonicConfig.Username`                      | `string`           | `null`             | Subsonic username                                                   |
-| `SubsonicConfig.Password`                      | `string`           | `null`             | Subsonic password                                                   |
-| `SubsonicConfig.UseToken`                      | `bool`             | `true`             | Whether to use token auth instead of plaintext password             |
-| `SmocConfiguration.SongCacheSizeBytes`         | `long`             | `536870912`        | Max size of song cache in bytes (512MB, 0 = no limit)               |
-| `SmocConfiguration.AlbumCoverCacheSizeBytes`   | `long`             | `104857600`        | Max size of album cover cache in bytes (100MB, 0 = no limit)        |
-| `SmocConfiguration.SongCacheMaxElements`       | `int`              | `0`                | Max number of songs to cache (0 = no limit)                         |
-| `SmocConfiguration.AlbumCoverCacheMaxElements` | `int`              | `0`                | Max number of album covers to cache (0 = no limit)                  |
-| `SmocConfiguration.LogLevel`                   | `LogLevel`         | `Information`      | Min log level (Trace, Debug, Information, Warning, Error, Critical) |
-| `ListenHistory.Enabled`                        | `bool`             | `true`             | Whether listen history tracking is enabled                          |
-| `ListenHistory.MinimumPositionSeconds`         | `int`              | `30`               | Minimum position (seconds) to consider listened                     |
-| `ListenHistory.MinimumFraction`                | `double`           | `0.5`              | Minimum fraction of a song to consider listened                     |
-| `Theme`                                        | `string`           | `default`          | The name of the theme to use                                        |
+| Key                                            | Type | Default | Description |
+| :--------------------------------------------- | :--- | :------ | :---------- |
+| `SmocConfiguration.ActiveService`              | `StreamingService` | `YouTubeMusic` | Active service (`YouTubeMusic`, `Subsonic`) |
+| `SubsonicConfig.ServerScheme`                  | `string` | `http` | Subsonic API URI scheme |
+| `SubsonicConfig.ServerHost`                    | `string` | `null` | Subsonic server hostname |
+| `SubsonicConfig.ServerPort`                    | `int` | `80` | Subsonic server port |
+| `SubsonicConfig.Username`                      | `string` | `null` | Subsonic username |
+| `SubsonicConfig.Password`                      | `string` | `null` | Subsonic password |
+| `SubsonicConfig.UseToken`                      | `bool` | `true` | Use token auth instead of password |
+| `SmocConfiguration.SongCacheSizeBytes`         | `long` | `536870912` | Max song cache size in bytes |
+| `SmocConfiguration.AlbumCoverCacheSizeBytes`   | `long` | `104857600` | Max album cover cache size in bytes |
+| `SmocConfiguration.SongCacheMaxElements`       | `int` | `0` | Max songs to cache (0 = no limit) |
+| `SmocConfiguration.AlbumCoverCacheMaxElements` | `int` | `0` | Max album covers to cache (0 = no limit) |
+| `SmocConfiguration.LogLevel`                   | `LogLevel` | `Information` | Minimum log level |
+| `ListenHistory.Enabled`                        | `bool` | `true` | Enable listen history tracking |
+| `ListenHistory.MinimumPositionSeconds`         | `int` | `30` | Min seconds for 'listened' status |
+| `ListenHistory.MinimumFraction`                | `double` | `0.5` | Min fraction for 'listened' status |
+| `Theme`                                        | `string` | `default` | Name of the theme to use |
 
 #### Custom Themes
 If specifying a custom theme (as in the example config above), you will need to specify styling for all schemes.
