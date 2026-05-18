@@ -273,24 +273,24 @@ Create or edit `~/.config/smoc/config.json` to customize settings.
 </details>
 
 #### Common Settings
-| Category           | Key                                            | Type               | Description                                                             |
-| :----------------- | :--------------------------------------------- | :----------------- | :---------------------------------------------------------------------- |
-| **Streaming**      | `SmocConfiguration.ActiveService`              | `StreamingService` | Active service (`YouTubeMusic`, `Subsonic`)                             |
-| **Subsonic**       | `SubsonicConfig.ServerScheme`                  | `string`           | URI Scheme for the Subsonic API (default: http)                         |
-|                    | `SubsonicConfig.ServerHost`                    | `string`           | Hostname of your Subsonic server                                        |
-|                    | `SubsonicConfig.ServerPort`                    | `int`              | Port of your Subsonic server (default: 80)                              |
-|                    | `SubsonicConfig.Username`                      | `string`           | Subsonic username                                                       |
-|                    | `SubsonicConfig.Password`                      | `string`           | Subsonic password                                                       |
-|                    | `SubsonicConfig.UseToken`                      | `bool`             | Whether to use token auth instead of plaintext password (default: true) |
-| **Caching**        | `SmocConfiguration.SongCacheSizeBytes`         | `long`             | Max size of song cache in bytes (0 = no limit)                          |
-|                    | `SmocConfiguration.AlbumCoverCacheSizeBytes`   | `long`             | Max size of album cover cache in bytes (0 = no limit)                   |
-|                    | `SmocConfiguration.SongCacheMaxElements`       | `int`              | Max number of songs to cache (0 = no limit)                             |
-|                    | `SmocConfiguration.AlbumCoverCacheMaxElements` | `int`              | Max number of album covers to cache (0 = no limit)                      |
-| **Logging**        | `SmocConfiguration.LogLevel`                   | `LogLevel`         | Min log level (Trace, Debug, Information, Warning, Error, Critical)     |
-| **Listen History** | `ListenHistory.Enabled`                        | `bool`             | Whether listen history tracking is enabled                              |
-|                    | `ListenHistory.MinimumPositionSeconds`         | `int`              | Minimum position (seconds) to consider listened                         |
-|                    | `ListenHistory.MinimumFraction`                | `double`           | Minimum fraction of a song to consider listened                         |
-| **UI**             | `Theme`                                        | `string`           | The name of the theme to use (default: `default`)                       |
+| Category           | Key                                            | Type               | Default Value      | Description                                                         |
+| :----------------- | :--------------------------------------------- | :----------------- | :----------------- | :------------------------------------------------------------------ |
+| **Streaming**      | `SmocConfiguration.ActiveService`              | `StreamingService` | `YouTubeMusic`     | Active service (`YouTubeMusic`, `Subsonic`)                         |
+| **Subsonic**       | `SubsonicConfig.ServerScheme`                  | `string`           | `http`             | URI Scheme for the Subsonic API                                     |
+|                    | `SubsonicConfig.ServerHost`                    | `string`           | `null`             | Hostname of your Subsonic server                                    |
+|                    | `SubsonicConfig.ServerPort`                    | `int`              | `80`               | Port of your Subsonic server                                        |
+|                    | `SubsonicConfig.Username`                      | `string`           | `null`             | Subsonic username                                                   |
+|                    | `SubsonicConfig.Password`                      | `string`           | `null`             | Subsonic password                                                   |
+|                    | `SubsonicConfig.UseToken`                      | `bool`             | `true`             | Whether to use token auth instead of plaintext password             |
+| **Caching**        | `SmocConfiguration.SongCacheSizeBytes`         | `long`             | `536870912`        | Max size of song cache in bytes (512MB, 0 = no limit)               |
+|                    | `SmocConfiguration.AlbumCoverCacheSizeBytes`   | `long`             | `104857600`        | Max size of album cover cache in bytes (100MB, 0 = no limit)        |
+|                    | `SmocConfiguration.SongCacheMaxElements`       | `int`              | `0`                | Max number of songs to cache (0 = no limit)                         |
+|                    | `SmocConfiguration.AlbumCoverCacheMaxElements` | `int`              | `0`                | Max number of album covers to cache (0 = no limit)                  |
+| **Logging**        | `SmocConfiguration.LogLevel`                   | `LogLevel`         | `Information`      | Min log level (Trace, Debug, Information, Warning, Error, Critical) |
+| **Listen History** | `ListenHistory.Enabled`                        | `bool`             | `true`             | Whether listen history tracking is enabled                          |
+|                    | `ListenHistory.MinimumPositionSeconds`         | `int`              | `30`               | Minimum position (seconds) to consider listened                     |
+|                    | `ListenHistory.MinimumFraction`                | `double`           | `0.5`              | Minimum fraction of a song to consider listened                         |
+| **UI**             | `Theme`                                        | `string`           | `default`          | The name of the theme to use                                        |
 
 #### Custom Themes
 If specifying a custom theme (as in the example config above), you will need to specify styling for all schemes.
