@@ -123,9 +123,9 @@ While most basic functionality is available and SMoC is totally usable, there's 
 Once installed some setup is required to use SMoC. See the [Configuration and Setup](#%EF%B8%8F-configuration-and-setup) section for more information.
 
 ### Binary Release (Windows/Linux/MacOS)
-Current release is [v0.4.0-pre](https://github.com/mrazza/smoc/releases/tag/v0.4.0-pre).
+Current release is [v0.4.0](https://github.com/mrazza/smoc/releases/tag/v0.4.0).
 
-Available for [Windows x64](https://github.com/mrazza/smoc/releases/download/v0.4.0-pre/smoc-v0.4.0-pre-win-x64-bin.zip), [Linux x64](https://github.com/mrazza/smoc/releases/download/v0.4.0-pre/smoc-v0.4.0-pre-linux-x64-bin.tar.gz), and [MacOS ARM64](https://github.com/mrazza/smoc/releases/download/v0.4.0-pre/smoc-v0.4.0-pre-mac-arm64-bin.zip).
+Available for [Windows x64](https://github.com/mrazza/smoc/releases/download/v0.4.0/smoc-v0.4.0-win-x64-bin.zip), [Linux x64](https://github.com/mrazza/smoc/releases/download/v0.4.0/smoc-v0.4.0-linux-x64-bin.tar.gz), and [MacOS ARM64](https://github.com/mrazza/smoc/releases/download/v0.4.0/smoc-v0.4.0-mac-arm64-bin.zip).
 
 ### Gentoo via Portage
 SMoC is available via [my overlay](https://github.com/mrazza/razza-overlay). To install, add my overlay and emerge it.
