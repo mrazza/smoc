@@ -36,6 +36,25 @@ public class StreamingProxyServiceTest : IDisposable {
         Assert.Equal(data, responseData);
     }
 
+    [Fact]
+    public async Task Proxy_ServesStreamContent_MultipleTimes() {
+        var data = new byte[] { 1, 2, 3, 4, 5 };
+        var stream = new MemoryStream(data);
+        var url = _sut.StartProxy(stream, "audio/mpeg");
+
+        // First request
+        var response1 = await _httpClient.GetAsync(url);
+        Assert.True(response1.IsSuccessStatusCode);
+        var responseData1 = await response1.Content.ReadAsByteArrayAsync();
+        Assert.Equal(data, responseData1);
+
+        // Second request (should succeed and seek back to beginning)
+        var response2 = await _httpClient.GetAsync(url);
+        Assert.True(response2.IsSuccessStatusCode);
+        var responseData2 = await response2.Content.ReadAsByteArrayAsync();
+        Assert.Equal(data, responseData2);
+    }
+
     public void Dispose() {
         _sut.Dispose();
         _httpClient.Dispose();
