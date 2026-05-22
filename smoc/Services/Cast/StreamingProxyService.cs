@@ -37,7 +37,7 @@ public sealed class StreamingProxyService : IStreamingProxyService {
         Logging.Information($"StreamingProxyService started at {_currentUrl}");
 
         _listener = new HttpListener();
-        _listener.Prefixes.Add($"http://*:{port}/");
+        _listener.Prefixes.Add($"http://{ip}:{port}/");
         _listener.Start();
 
         _cts = new CancellationTokenSource();
@@ -78,6 +78,10 @@ public sealed class StreamingProxyService : IStreamingProxyService {
 
             response.ContentType = _contentType;
             response.SendChunked = true;
+
+            if (_currentStream.CanSeek) {
+                _currentStream.Seek(0, SeekOrigin.Begin);
+            }
 
             // Simple proxying of the stream
             // Note: Chromecast might request ranges, but we'll start with simple streaming
