@@ -64,8 +64,12 @@ public class TempFileCacheService : ICacheService {
         bufferSize: 4096, useAsync: true)) {
       await cachedEntity.CopyToAsync(fileStream, cancellationToken);
     }
-    cachedEntity.Seek(0, SeekOrigin.Begin);
-    return cachedEntity;
+    if (cachedEntity.CanSeek) {
+      cachedEntity.Seek(0, SeekOrigin.Begin);
+      return cachedEntity;
+    }
+    cachedEntity.Dispose();
+    return new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize: 4096, useAsync: true);
   }
 
   /// <inheritdoc/>

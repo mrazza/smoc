@@ -210,4 +210,54 @@ public class TempFileCacheServiceTest : IDisposable {
 
     Assert.True(File.Exists(file1));
   }
+
+  private class NonSeekableStream : Stream {
+    private readonly MemoryStream _inner;
+    public NonSeekableStream(byte[] data) {
+      _inner = new MemoryStream(data);
+    }
+    public override bool CanRead => true;
+    public override bool CanSeek => false;
+    public override bool CanWrite => false;
+    public override long Length => _inner.Length;
+    public override long Position {
+      get => throw new NotSupportedException();
+      set => throw new NotSupportedException();
+    }
+    public override void Flush() => _inner.Flush();
+    public override int Read(byte[] buffer, int offset, int count) => _inner.Read(buffer, offset, count);
+    public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+    public override void SetLength(long value) => throw new NotSupportedException();
+    public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+    protected override void Dispose(bool disposing) {
+      if (disposing) {
+        _inner.Dispose();
+      }
+      base.Dispose(disposing);
+    }
+  }
+
+  [Theory]
+  [CombinatorialData]
+  public async Task GetOrAddAsync_WithNonSeekableStream_Succeeds(CachePersistence cachePersistence) {
+    var testDirectory = InitDirectory(cachePersistence);
+    var config = new CacheConfig();
+    var service = new TempFileCacheService(_subDirectory, config, cachePersistence);
+    string key = "non-seekable-key";
+    string expectedContent = "non-seekable stream content";
+
+    using var resultStream = await service.GetOrAddAsync(
+      key,
+      _ => Task.FromResult<Stream>(new NonSeekableStream(Encoding.UTF8.GetBytes(expectedContent))),
+      TestContext.Current.CancellationToken);
+
+    Assert.NotNull(resultStream);
+    Assert.True(resultStream.CanSeek, "Returned stream must be seekable");
+    using var reader = new StreamReader(resultStream);
+    string content = await reader.ReadToEndAsync(TestContext.Current.CancellationToken);
+    Assert.Equal(expectedContent, content);
+
+    string expectedFilePath = Path.Combine(testDirectory, key);
+    Assert.True(File.Exists(expectedFilePath), $"Expected file not found: {expectedFilePath}");
+  }
 }
