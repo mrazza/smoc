@@ -249,7 +249,7 @@ public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
     } catch (OperationCanceledException) {
       Logging.Debug($"Playback setup for {currentSong.Title} cancelled.");
     } catch (Exception e) {
-      Logging.Error($"Playback setup for {currentSong.Title} failed: {e.Message}");
+      Logging.Error($"Playback setup for {currentSong.Title} failed: {e}");
     }
   }
 
