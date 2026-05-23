@@ -15,7 +15,7 @@ A terminal-based music player (TUI) for streaming services, currently supporting
 
 [Features](#-features) • [Installation](#-installation) • [Configuration and Setup](#%EF%B8%8F-configuration-and-setup) • [Usage](#-usage)
 
-![screenshot](smoc_example.png)
+![screenshot animated](smoc.gif)
 
 </div>
 
