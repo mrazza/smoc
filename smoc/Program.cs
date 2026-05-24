@@ -47,7 +47,7 @@ public static class Program {
       }
 
       ConfigurationManager.Enable(ConfigLocations.AppResources | ConfigLocations.Runtime);
-      Application.SetDefaultKeyBinding(Terminal.Gui.Input.Command.Quit, new PlatformKeyBinding() {
+      Application.SetDefaultKeyBinding(Terminal.Gui.Input.Command.Quit, new Terminal.Gui.Input.PlatformKeyBinding() {
         All = [new Terminal.Gui.Input.Key(':')]
       });
 
