@@ -13,7 +13,20 @@ public class FakePlaybackService(Song song) : IPlaybackService {
 
   public PlaybackState PlaybackState { get; private set; } = PlaybackState.Stopped;
 
+  /// <summary>
+  /// Gets the simulated frequency spectrum data.
+  /// </summary>
   public Song Song { get; } = song;
+
+  /// <summary>
+  /// Gets or sets the simulated frequency spectrum data array.
+  /// </summary>
+  public float[] SpectrumData { get; set; } = Array.Empty<float>();
+
+  /// <summary>
+  /// Gets or sets a value indicating whether simulated frequency spectrum analysis is active.
+  /// </summary>
+  public bool IsSpectrumActive { get; set; } = false;
 
   public event EventHandler? SongEnded;
   public event EventHandler<TimeSpan>? PositionChanged;

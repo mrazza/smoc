@@ -51,6 +51,19 @@ public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
   public float Progress => _playbackService.Resource?.Progress ?? 0;
 
   /// <inheritdoc/>
+  public float[] SpectrumData => _playbackService.Resource?.SpectrumData ?? Array.Empty<float>();
+
+  /// <inheritdoc/>
+  public bool IsSpectrumActive {
+    get => _playbackService.Resource?.IsSpectrumActive ?? false;
+    set {
+      if (_playbackService.Resource != null) {
+        _playbackService.Resource.IsSpectrumActive = value;
+      }
+    }
+  }
+
+  /// <inheritdoc/>
   public IEnumerable<Song> GetCurrentPlaybackQueue() => _playbackQueue.ToList();
 
   /// <inheritdoc/>

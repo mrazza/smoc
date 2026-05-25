@@ -22,6 +22,16 @@ public interface IPlaybackQueueService : IDisposable {
   event EventHandler<PlaybackState>? PlaybackStateChanged;
 
   /// <summary>
+  /// Gets the current frequency spectrum data from the active song.
+  /// </summary>
+  float[] SpectrumData { get; }
+
+  /// <summary>
+  /// Gets or sets a value indicating whether frequency spectrum analysis is active.
+  /// </summary>
+  bool IsSpectrumActive { get; set; }
+
+  /// <summary>
   /// Occurs when the playback position changes (e.g. during playback).
   /// </summary>
   event EventHandler<TimeSpan>? PositionChanged;

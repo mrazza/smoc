@@ -8,6 +8,7 @@ using Smoc.Streaming;
 using Smoc.Ui;
 using Smoc.Ui.Models;
 using Terminal.Gui.Views;
+using View = Terminal.Gui.ViewBase.View;
 
 namespace smoc.Tests.Ui;
 
@@ -81,7 +82,6 @@ public class NowPlayingViewTest {
         .Then((_) => handler?.Invoke(null, null));
     _screenshotDiffer.AssertEqualsGolden(context);
   }
-
   [Fact]
   public void OnSongChanged_LoadsAlbumArt() {
     var song = EntityTestFactory.GenerateSong();
@@ -142,6 +142,74 @@ public class NowPlayingViewTest {
         .Then((_) => handler?.Invoke(null, TimeSpan.Zero))
         .Then((_) => handler?.Invoke(null, TimeSpan.FromMinutes(2)));
     _screenshotDiffer.AssertEqualsGolden(context);
+  }
+
+  /// <summary>
+  /// Verifies that pressing the 'v' hotkey successfully toggles the visualizer component.
+  /// </summary>
+  [Fact]
+  public void ToggleVisualization_Hotkey_TogglesVisibility() {
+    using var context = NewNowPlayingContext();
+    var view = (NowPlayingView)context.App!.TopRunnableView!.SubViews.First();
+    
+    // Find internal fields via reflection to verify visibility
+    var albumArtField = typeof(NowPlayingView).GetField("_albumArtView", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+    var histogramField = typeof(NowPlayingView).GetField("_histogramView", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+    
+    var albumArt = (View?)albumArtField?.GetValue(view);
+    var histogram = (View?)histogramField?.GetValue(view);
+    
+    Assert.NotNull(albumArt);
+    Assert.NotNull(histogram);
+    
+    // Initial state: album art visible, histogram hidden
+    Assert.True(albumArt.Visible);
+    Assert.False(histogram.Visible);
+    
+    // Toggle ON with 'v' hotkey
+    context.KeyDown(Terminal.Gui.Input.Key.V);
+    Assert.False(albumArt.Visible);
+    Assert.True(histogram.Visible);
+    _mockPlaybackQueue.VerifySet(q => q.IsSpectrumActive = true, Times.Once());
+    
+    // Toggle OFF
+    context.KeyDown(Terminal.Gui.Input.Key.V);
+    Assert.True(albumArt.Visible);
+    Assert.False(histogram.Visible);
+    _mockPlaybackQueue.VerifySet(q => q.IsSpectrumActive = false, Times.Exactly(2));
+  }
+
+  /// <summary>
+  /// Verifies that running the 'np-vis' command successfully toggles the visualizer component.
+  /// </summary>
+  [Fact]
+  public void ToggleVisualization_Command_TogglesVisibility() {
+    using var context = NewNowPlayingContext();
+    var view = (NowPlayingView)context.App!.TopRunnableView!.SubViews.First();
+    
+    var albumArtField = typeof(NowPlayingView).GetField("_albumArtView", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+    var histogramField = typeof(NowPlayingView).GetField("_histogramView", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+    
+    var albumArt = (View?)albumArtField?.GetValue(view);
+    var histogram = (View?)histogramField?.GetValue(view);
+    
+    Assert.NotNull(albumArt);
+    Assert.NotNull(histogram);
+    
+    Assert.True(albumArt.Visible);
+    Assert.False(histogram.Visible);
+    
+    // Toggle ON with command
+    context.Then((_) => _commandService.ExecuteCommand("np-vis"));
+    Assert.False(albumArt.Visible);
+    Assert.True(histogram.Visible);
+    _mockPlaybackQueue.VerifySet(q => q.IsSpectrumActive = true, Times.Once());
+    
+    // Toggle OFF
+    context.Then((_) => _commandService.ExecuteCommand("np-vis"));
+    Assert.True(albumArt.Visible);
+    Assert.False(histogram.Visible);
+    _mockPlaybackQueue.VerifySet(q => q.IsSpectrumActive = false, Times.Exactly(2));
   }
 
   private static Image<Rgba32> GetImage() {

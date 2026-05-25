@@ -9,6 +9,7 @@ using Smoc.Ui.Components;
 using Smoc.Ui.Models;
 using Terminal.Gui.App;
 using Terminal.Gui.Drawing;
+using Terminal.Gui.Input;
 using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
 
@@ -29,6 +30,7 @@ public sealed class NowPlayingView : View {
   private readonly IMainWindow _mainWindow;
   private readonly CommandService _commandService;
   private readonly SixelImageView _albumArtView;
+  private readonly FrequencyHistogramView _histogramView;
   private readonly Label _songLabel;
   private readonly Label _artistLabel;
   private readonly View _progressContainer;
@@ -37,6 +39,7 @@ public sealed class NowPlayingView : View {
   private readonly Label _durationLabel;
   private Album? _currentAlbum;
   private CancellationTokenSource? _albumArtCancellationTokenSource;
+  private bool _showVisualization = false;
 
 
   /// <summary>
@@ -77,6 +80,14 @@ public sealed class NowPlayingView : View {
     };
     _albumArtView.Margin!.Thickness = new Thickness(0, 0, 1, 1);
 
+    _histogramView = new FrequencyHistogramView(playbackQueueService) {
+      X = Pos.Center(),
+      Y = Pos.Center() - Pos.Percent(10),
+      Width = Dim.Func((v) => _albumArtView.Frame.Width),
+      Height = Dim.Func((v) => _albumArtView.Frame.Height),
+      Visible = false
+    };
+
     _songLabel = new Label() {
       X = Pos.Center(),
       Y = Pos.Bottom(_albumArtView),
@@ -114,12 +125,17 @@ public sealed class NowPlayingView : View {
 
     Reset();
 
-    Add(_albumArtView, _songLabel, _artistLabel, _progressContainer);
+    Add(_albumArtView, _histogramView, _songLabel, _artistLabel, _progressContainer);
 
     _playbackQueueService.SongChanged += OnSongChanged;
     _playbackQueueService.PositionChanged += OnPositionChanged;
 
     _commandService.RegisterCommand("np", OnNowPlayingCommand);
+    _commandService.RegisterCommand("np-vis", OnToggleVisualizationCommand);
+
+    AddCommand(Command.HotKey, OnHotKey);
+    HotKeyBindings.Add(Key.V, Command.HotKey);
+    HotKeyBindings.Add(Key.V.WithShift, Command.HotKey);
   }
 
   private void OnPositionChanged(object? sender, TimeSpan e) {
@@ -166,6 +182,7 @@ public sealed class NowPlayingView : View {
 
   protected override void Dispose(bool disposing) {
     _commandService.UnregisterCommand("np");
+    _commandService.UnregisterCommand("np-vis");
     _playbackQueueService.SongChanged -= OnSongChanged;
     _playbackQueueService.PositionChanged -= OnPositionChanged;
     base.Dispose(disposing);
@@ -176,6 +193,10 @@ public sealed class NowPlayingView : View {
   }
 
   private void Reset() {
+    _showVisualization = false;
+    _albumArtView.Visible = true;
+    _histogramView.Visible = false;
+    _playbackQueueService.IsSpectrumActive = false;
     _songLabel.Text = Messages.NO_SONG;
     _artistLabel.Text = Messages.NO_ARTIST;
     _positionLabel.Text = "--:--";
@@ -183,5 +204,27 @@ public sealed class NowPlayingView : View {
     _albumArtView.ClearImage();
     _albumArtView.BorderStyle = LineStyle.Dashed;
     _progressBar.Fraction = 0.0f;
+  }
+
+  private void ToggleVisualization() {
+    _showVisualization = !_showVisualization;
+    _albumArtView.Visible = !_showVisualization;
+    _histogramView.Visible = _showVisualization;
+    _playbackQueueService.IsSpectrumActive = _showVisualization;
+    SetNeedsDraw();
+  }
+
+  private void OnToggleVisualizationCommand(string _, string __) {
+    ToggleVisualization();
+  }
+
+  private bool? OnHotKey(ICommandContext? ctx) {
+    if (ctx?.Binding is KeyBinding keyBinding && keyBinding.Key is Key pressedKey) {
+      if (pressedKey == Key.V || pressedKey == Key.V.WithShift) {
+        ToggleVisualization();
+        return true;
+      }
+    }
+    return null;
   }
 }
