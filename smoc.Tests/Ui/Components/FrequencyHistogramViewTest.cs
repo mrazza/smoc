@@ -5,6 +5,7 @@ using smoc.Tests.TestInfra;
 using Smoc.Services;
 using Smoc.Ui.Components;
 using Terminal.Gui.Views;
+using Terminal.Gui.Time;
 using View = Terminal.Gui.ViewBase.View;
 
 /// <summary>
@@ -25,14 +26,18 @@ public class FrequencyHistogramViewTest {
 
   private static AppTestHelper NewContext(int width = 40, int height = 10) => With.A<Runnable>(width, height, TestDriver.ANSI.ToString());
 
-  private FrequencyHistogramView NewVisualizer(Func<double>? timeSource = null) => new FrequencyHistogramView(_mockPlaybackQueue.Object, timeSource);
+  private FrequencyHistogramView NewVisualizer(ITimeProvider timeProvider) => new FrequencyHistogramView(_mockPlaybackQueue.Object, timeProvider);
 
-  private AppTestHelper NewVisualizerContext(int width = 40, int height = 10, Func<double>? timeSource = null) {
-    var view = NewVisualizer(timeSource);
+  private AppTestHelper NewVisualizerContext(int width = 40, int height = 10, double? startEpochOffsetMs = null) {
+    var context = NewContext(width, height);
+    if (startEpochOffsetMs.HasValue) {
+      (context.TimeProvider as VirtualTimeProvider)?.SetTime(DateTime.UnixEpoch.AddMilliseconds(startEpochOffsetMs.Value));
+    }
+    var view = NewVisualizer(context.TimeProvider);
     view.Visible = false; // Start invisible so that OnVisibleChanged fires when context is active
     view.Width = Terminal.Gui.ViewBase.Dim.Fill();
     view.Height = Terminal.Gui.ViewBase.Dim.Fill();
-    var context = NewContext(width, height).AddAndLayout(view);
+    context.AddAndLayout(view);
     
     // Set visible inside the running main loop so the timer successfully registers with App
     context.Then((_) => {
@@ -63,7 +68,7 @@ public class FrequencyHistogramViewTest {
     _mockPlaybackQueue.SetupGet(q => q.SpectrumData).Returns([]);
 
     // Use a fixed simulated time point for frozen deterministic screenshot
-    using var context = NewVisualizerContext(timeSource: () => 3500.0);
+    using var context = NewVisualizerContext(startEpochOffsetMs: 3500.0);
     
     // Trigger two update ticks to transition attack/decay interpolation towards target values
     context.AdvanceTime(TimeSpan.FromMilliseconds(100));
@@ -104,7 +109,7 @@ public class FrequencyHistogramViewTest {
     _mockPlaybackQueue.SetupGet(q => q.PlaybackState).Returns(PlaybackState.Playing);
     _mockPlaybackQueue.SetupGet(q => q.SpectrumData).Returns([]);
 
-    using var context = NewVisualizerContext(timeSource: () => 2000.0);
+    using var context = NewVisualizerContext(startEpochOffsetMs: 2000.0);
 
     // Pump initial values
     context.AdvanceTime(TimeSpan.FromMilliseconds(100));
