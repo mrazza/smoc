@@ -1059,4 +1059,39 @@ public class StandardPlaybackQueueServiceTest {
 
     Assert.Equal(PlaybackState.Playing, fakePlayerService2.PlaybackState);
   }
+
+  /// <summary>
+  /// Verifies that the IsSpectrumActive state persists across track transitions.
+  /// </summary>
+  [Fact]
+  public async Task Play_NewSong_PersistsIsSpectrumActiveState() {
+    var song1 = EntityTestFactory.GenerateSong(id: "1", postfix: "1");
+    var song2 = EntityTestFactory.GenerateSong(id: "2", postfix: "2");
+    using var sut = NewStandardPlaybackQueue();
+    var fakePlayerService1 = new FakePlaybackService(song1);
+    var fakePlayerService2 = new FakePlaybackService(song2);
+    _mockAudioService.Setup(a => a.MakePlaybackService(song1, It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+      .Returns(fakePlayerService1);
+    _mockAudioService.Setup(a => a.MakePlaybackService(song2, It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+      .Returns(fakePlayerService2);
+    _mockStreamingClient.Setup(c => c.GetSongStreamAsync(song1.Id, It.IsAny<CancellationToken>()))
+      .ReturnsAsync(new SongStream(song1.Id, "m4a", new MemoryStream()));
+    _mockStreamingClient.Setup(c => c.GetSongStreamAsync(song2.Id, It.IsAny<CancellationToken>()))
+      .ReturnsAsync(new SongStream(song2.Id, "m4a", new MemoryStream()));
+
+    sut.QueueNext([song1, song2]);
+
+    // Enable visualizer
+    sut.IsSpectrumActive = true;
+
+    await sut.Play();
+    Assert.True(fakePlayerService1.IsSpectrumActive);
+
+    // Transition to the next track
+    await sut.ChangeTrack(1);
+    await sut.Play();
+
+    // Verify that the second song inherits the IsSpectrumActive state automatically
+    Assert.True(fakePlayerService2.IsSpectrumActive);
+  }
 }
