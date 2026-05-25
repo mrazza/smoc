@@ -83,8 +83,8 @@ public sealed class NowPlayingView : View {
     _histogramView = new FrequencyHistogramView(playbackQueueService) {
       X = Pos.Center(),
       Y = Pos.Center() - Pos.Percent(10),
-      Width = Dim.Func((v) => _albumArtView.Frame.Width),
-      Height = Dim.Func((v) => _albumArtView.Frame.Height),
+      Width = _albumArtView.Width, 
+      Height = _albumArtView.Height,
       Visible = false
     };
 
