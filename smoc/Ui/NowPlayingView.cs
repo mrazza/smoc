@@ -1,9 +1,8 @@
 namespace Smoc.Ui;
 
 using System;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
 using Smoc.Services;
+using Smoc.Configuration;
 using Smoc.Streaming;
 using Smoc.Ui.Components;
 using Smoc.Ui.Models;
@@ -87,6 +86,7 @@ public sealed class NowPlayingView : View {
       Height = _albumArtView.Height,
       Visible = false
     };
+    _histogramView.Margin!.Thickness = new Thickness(0, 0, 0, 1);
 
     _songLabel = new Label() {
       X = Pos.Center(),
@@ -132,6 +132,7 @@ public sealed class NowPlayingView : View {
 
     _commandService.RegisterCommand("np", OnNowPlayingCommand);
     _commandService.RegisterCommand("np-vis", OnToggleVisualizationCommand);
+    _commandService.RegisterCommand("np-vis-fps", OnSetFpsCommand);
 
     AddCommand(Command.HotKey, OnHotKey);
     HotKeyBindings.Add(Key.V, Command.HotKey);
@@ -183,6 +184,7 @@ public sealed class NowPlayingView : View {
   protected override void Dispose(bool disposing) {
     _commandService.UnregisterCommand("np");
     _commandService.UnregisterCommand("np-vis");
+    _commandService.UnregisterCommand("np-vis-fps");
     _playbackQueueService.SongChanged -= OnSongChanged;
     _playbackQueueService.PositionChanged -= OnPositionChanged;
     base.Dispose(disposing);
@@ -216,6 +218,21 @@ public sealed class NowPlayingView : View {
 
   private void OnToggleVisualizationCommand(string _, string __) {
     ToggleVisualization();
+  }
+
+  private void OnSetFpsCommand(string command, string args) {
+    var splitArgs = CommandService.GetArgs(args);
+    if (splitArgs.Length == 0) {
+      return;
+    }
+
+    if (!int.TryParse(splitArgs[0], out int fps) || fps < 1 || fps > 60) {
+      Logging.Warning($"Invalid FPS: {splitArgs[0]}");
+      _mainWindow.DisplayError($"invalid FPS: {splitArgs[0]} ([1-60] expected)");
+      return;
+    }
+
+    SmocConfiguration.VisualizerFps = fps;
   }
 
   private bool? OnHotKey(ICommandContext? ctx) {

@@ -1,12 +1,13 @@
 namespace smoc.Tests.Ui.Components;
 
+using System;
 using Moq;
 using smoc.Tests.TestInfra;
+using Smoc.Configuration;
 using Smoc.Services;
 using Smoc.Ui.Components;
 using Terminal.Gui.Views;
 using Terminal.Gui.Time;
-using View = Terminal.Gui.ViewBase.View;
 
 /// <summary>
 /// Unit tests for <see cref="FrequencyHistogramView"/> verifying rendering, mapping, and state changes.
@@ -123,5 +124,80 @@ public class FrequencyHistogramViewTest {
     context.AdvanceTime(TimeSpan.FromMilliseconds(100));
 
     _screenshotDiffer.AssertEqualsGolden(context);
+  }
+
+  /// <summary>
+  /// Verifies that when <see cref="SmocConfiguration.VisualizerFps"/> changes dynamically,
+  /// the timer is recreated with the correct new interval.
+  /// </summary>
+  [Fact]
+  public void VisualizerFps_DynamicChange_RecreatesTimerWithNewInterval() {
+    int originalFps = SmocConfiguration.VisualizerFps;
+    try {
+      // 1. Initialize to 10 FPS (100ms interval)
+      SmocConfiguration.VisualizerFps = 10;
+      _mockPlaybackQueue.SetupGet(q => q.PlaybackState).Returns(PlaybackState.Playing);
+      _mockPlaybackQueue.SetupGet(q => q.SpectrumData).Returns([]);
+
+      // Create a visualizer context inline
+      using var context = NewContext(40, 10);
+      (context.TimeProvider as VirtualTimeProvider)?.SetTime(DateTime.UnixEpoch.AddMilliseconds(1000.0));
+
+      var view = NewVisualizer(context.TimeProvider);
+      view.Visible = false;
+      view.Width = Terminal.Gui.ViewBase.Dim.Fill();
+      view.Height = Terminal.Gui.ViewBase.Dim.Fill();
+      context.AddAndLayout(view);
+
+      context.Then((_) => {
+        view.Visible = true;
+        context.App!.TopRunnableView!.Layout();
+      });
+
+      var amplitudesField = typeof(FrequencyHistogramView).GetField("_amplitudes", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+      Assert.NotNull(amplitudesField);
+
+      // Initially, amplitudes are uninitialized/all zero
+      var initialAmplitudes = (float[]?)amplitudesField.GetValue(view);
+      Assert.NotNull(initialAmplitudes);
+      Assert.All(initialAmplitudes, amp => Assert.Equal(0f, amp));
+
+      // Advance by 100ms: the 10 FPS timer should trigger and procedural values should be populated
+      context.AdvanceTime(TimeSpan.FromMilliseconds(100));
+
+      var amplitudesAfter100ms = (float[]?)amplitudesField.GetValue(view);
+      Assert.NotNull(amplitudesAfter100ms);
+      Assert.Contains(amplitudesAfter100ms, amp => amp > 0f);
+
+      // Now change the configuration FPS dynamically to 2 FPS (500ms interval)
+      SmocConfiguration.VisualizerFps = 2;
+
+      // Advance by 101ms to reach the scheduled next tick (at t = 200ms)
+      // When this tick fires, it detects the FPS change (10 -> 2)
+      context.AdvanceTime(TimeSpan.FromMilliseconds(101));
+
+      // Copy the amplitudes to compare later
+      var amplitudesAfter200ms = (float[]?)amplitudesField.GetValue(view);
+      Assert.NotNull(amplitudesAfter200ms);
+      var copyAmplitudes = (float[])amplitudesAfter200ms.Clone();
+
+      // Since the new 2 FPS timer has a 500ms interval starting at t = 200ms,
+      // advancing by another 100ms (to t = 300ms) should NOT trigger any update.
+      context.AdvanceTime(TimeSpan.FromMilliseconds(100));
+
+      var amplitudesAfter300ms = (float[]?)amplitudesField.GetValue(view);
+      Assert.Equal(copyAmplitudes, amplitudesAfter300ms);
+
+      // Advancing by another 400ms (to t = 700ms, which is 500ms after the recreation at t = 200ms)
+      // should trigger the new 2 FPS timer.
+      context.AdvanceTime(TimeSpan.FromMilliseconds(400));
+
+      var amplitudesAfter700ms = (float[]?)amplitudesField.GetValue(view);
+      // Frequencies should have moved/updated from the wave procedural generator
+      Assert.NotEqual(copyAmplitudes, amplitudesAfter700ms);
+    } finally {
+      // Restore configuration
+      SmocConfiguration.VisualizerFps = originalFps;
+    }
   }
 }

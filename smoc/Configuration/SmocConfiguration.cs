@@ -57,4 +57,11 @@ public static class SmocConfiguration {
   /// </summary>
   [ConfigurationProperty(Scope = typeof(SettingsScope))]
   public static int AlbumCoverCacheMaxElements { get; set; } = 0;
+
+  /// <summary>
+  /// Gets or sets the visualizer refresh rate in frames per second (FPS).
+  /// The default value is 10.
+  /// </summary>
+  [ConfigurationProperty(Scope = typeof(SettingsScope))]
+  public static int VisualizerFps { get; set; } = 10;
 }

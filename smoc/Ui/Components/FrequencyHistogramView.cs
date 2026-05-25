@@ -1,4 +1,5 @@
 using Terminal.Gui.Time;
+using Smoc.Configuration;
 
 namespace Smoc.Ui.Components;
 
@@ -27,6 +28,7 @@ public sealed class FrequencyHistogramView : View {
   private readonly ITimeProvider _timeProvider;
   private float[] _amplitudes = [];
   private object? _timerToken;
+  private int _timerFps;
 
   /// <summary>
   /// Initializes a new instance of the <see cref="FrequencyHistogramView"/> class.
@@ -150,12 +152,30 @@ public sealed class FrequencyHistogramView : View {
   }
 
   private void StartTimer() {
-    if (_timerToken != null || App == null) {
+    if (_timerToken is not null || App == null) {
       return;
     }
 
-    _timerToken = App.AddTimeout(TimeSpan.FromMilliseconds(100), () => {
+    _timerFps = Math.Clamp(SmocConfiguration.VisualizerFps, 1, 60);
+    double intervalMs = 1000.0 / _timerFps;
+
+    _timerToken = App.AddTimeout(TimeSpan.FromMilliseconds(intervalMs), () => {
       UpdateVisualization();
+
+      int desiredFps = Math.Clamp(SmocConfiguration.VisualizerFps, 1, 60);
+
+      if (_timerToken == null) {
+        // If something cleared the token during processing, we need to cancel this timer to avoid orphaned timers running indefinitely.
+        return false;
+      }
+
+      if (desiredFps != _timerFps) {
+        // Clear the token to allow a new timer to be created with the updated FPS
+        _timerToken = null;
+        StartTimer();
+        return false;
+      }
+
       return true;
     });
   }
