@@ -29,8 +29,17 @@ public class FrequencyHistogramViewTest {
 
   private AppTestHelper NewVisualizerContext(int width = 40, int height = 10, Func<double>? timeSource = null) {
     var view = NewVisualizer(timeSource);
-    view.Visible = true;
-    return NewContext(width, height).AddAndLayout(view);
+    view.Visible = false; // Start invisible so that OnVisibleChanged fires when context is active
+    view.Width = Terminal.Gui.ViewBase.Dim.Fill();
+    view.Height = Terminal.Gui.ViewBase.Dim.Fill();
+    var context = NewContext(width, height).AddAndLayout(view);
+    
+    // Set visible inside the running main loop so the timer successfully registers with App
+    context.Then((_) => {
+      view.Visible = true;
+      context.App!.TopRunnableView!.Layout();
+    });
+    return context;
   }
 
   /// <summary>
@@ -57,14 +66,8 @@ public class FrequencyHistogramViewTest {
     using var context = NewVisualizerContext(timeSource: () => 3500.0);
     
     // Trigger two update ticks to transition attack/decay interpolation towards target values
-    context.Then((_) => {
-      // Direct call to trigger a redraw update
-      var view = (FrequencyHistogramView)context.App!.TopRunnableView!.SubViews.First();
-      // Invoke private UpdateVisualization via reflection to force update states
-      var updateMethod = typeof(FrequencyHistogramView).GetMethod("UpdateVisualization", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-      updateMethod?.Invoke(view, null);
-      updateMethod?.Invoke(view, null);
-    });
+    context.AdvanceTime(TimeSpan.FromMilliseconds(100));
+    context.AdvanceTime(TimeSpan.FromMilliseconds(100));
 
     _screenshotDiffer.AssertEqualsGolden(context);
   }
@@ -86,12 +89,8 @@ public class FrequencyHistogramViewTest {
 
     using var context = NewVisualizerContext();
 
-    context.Then((_) => {
-      var view = (FrequencyHistogramView)context.App!.TopRunnableView!.SubViews.First();
-      var updateMethod = typeof(FrequencyHistogramView).GetMethod("UpdateVisualization", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-      updateMethod?.Invoke(view, null);
-      updateMethod?.Invoke(view, null);
-    });
+    context.AdvanceTime(TimeSpan.FromMilliseconds(100));
+    context.AdvanceTime(TimeSpan.FromMilliseconds(100));
 
     _screenshotDiffer.AssertEqualsGolden(context);
   }
@@ -107,20 +106,16 @@ public class FrequencyHistogramViewTest {
 
     using var context = NewVisualizerContext(timeSource: () => 2000.0);
 
-    context.Then((_) => {
-      var view = (FrequencyHistogramView)context.App!.TopRunnableView!.SubViews.First();
-      var updateMethod = typeof(FrequencyHistogramView).GetMethod("UpdateVisualization", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-      // Pump initial values
-      updateMethod?.Invoke(view, null);
-      updateMethod?.Invoke(view, null);
+    // Pump initial values
+    context.AdvanceTime(TimeSpan.FromMilliseconds(100));
+    context.AdvanceTime(TimeSpan.FromMilliseconds(100));
 
-      // 2. Pause playback
-      _mockPlaybackQueue.SetupGet(q => q.PlaybackState).Returns(PlaybackState.Paused);
+    // 2. Pause playback
+    _mockPlaybackQueue.SetupGet(q => q.PlaybackState).Returns(PlaybackState.Paused);
 
-      // 3. Pump updates to run the decay logic
-      updateMethod?.Invoke(view, null);
-      updateMethod?.Invoke(view, null);
-    });
+    // 3. Pump updates to run the decay logic
+    context.AdvanceTime(TimeSpan.FromMilliseconds(100));
+    context.AdvanceTime(TimeSpan.FromMilliseconds(100));
 
     _screenshotDiffer.AssertEqualsGolden(context);
   }
