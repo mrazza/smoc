@@ -23,6 +23,8 @@ public sealed class SoundFlowPlaybackService : IPlaybackService {
   private readonly Song _song;
   private readonly SpectrumAnalyzer? _spectrumAnalyzer;
   private readonly LevelMeterAnalyzer? _levelMeterAnalyzer;
+  private float[] _cachedSpectrumData = [];
+  private readonly object _spectrumLock = new();
 
   /// <inheritdoc/>
   public event EventHandler? SongEnded;
@@ -46,12 +48,16 @@ public sealed class SoundFlowPlaybackService : IPlaybackService {
       float[] raw = _spectrumAnalyzer.SpectrumData;
       if (raw == null || raw.Length == 0) return Array.Empty<float>();
 
-      float peak = _levelMeterAnalyzer?.Peak ?? 1.0f;
-      float[] scaled = new float[raw.Length];
-      for (int i = 0; i < raw.Length; i++) {
-        scaled[i] = raw[i] * peak;
+      lock (_spectrumLock) {
+        if (_cachedSpectrumData.Length != raw.Length) {
+          _cachedSpectrumData = new float[raw.Length];
+        }
+        float peak = _levelMeterAnalyzer?.Peak ?? 1.0f;
+        for (int i = 0; i < raw.Length; i++) {
+          _cachedSpectrumData[i] = raw[i] * peak;
+        }
+        return _cachedSpectrumData;
       }
-      return scaled;
     }
   }
 

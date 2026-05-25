@@ -91,7 +91,7 @@ public sealed class FrequencyHistogramView : View {
           }
         } else {
           char blockChar = cellLevel switch {
-            1 => ' ',
+            1 => '\u2581',
             2 => '▂',
             3 => '▃',
             4 => '▄',
