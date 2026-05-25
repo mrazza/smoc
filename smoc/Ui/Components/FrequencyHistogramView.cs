@@ -1,3 +1,5 @@
+using Terminal.Gui.Time;
+
 namespace Smoc.Ui.Components;
 
 using System;
@@ -22,7 +24,7 @@ public sealed class FrequencyHistogramView : View {
   ];
 
   private readonly IPlaybackQueueService _playbackQueueService;
-  private readonly Func<double> _timeSource;
+  private readonly ITimeProvider _timeProvider;
   private float[] _amplitudes = [];
   private object? _timerToken;
 
@@ -30,10 +32,10 @@ public sealed class FrequencyHistogramView : View {
   /// Initializes a new instance of the <see cref="FrequencyHistogramView"/> class.
   /// </summary>
   /// <param name="playbackQueueService">The playback queue service for retrieving spectrum data.</param>
-  /// <param name="timeSource">An optional custom time source for deterministic testing.</param>
-  public FrequencyHistogramView(IPlaybackQueueService playbackQueueService, Func<double>? timeSource = null) {
+  /// <param name="timeProvider">An optional custom time provider for deterministic testing.</param>
+  public FrequencyHistogramView(IPlaybackQueueService playbackQueueService, ITimeProvider? timeProvider = null) {
     _playbackQueueService = playbackQueueService;
-    _timeSource = timeSource ?? (() => DateTime.UtcNow.Subtract(DateTime.UnixEpoch).TotalMilliseconds);
+    _timeProvider = timeProvider ?? new SystemTimeProvider();
     CanFocus = false;
 
     _playbackQueueService.PlaybackStateChanged += OnPlaybackStateChanged;
@@ -228,7 +230,7 @@ public sealed class FrequencyHistogramView : View {
       }
     } else if (isPlaying) {
       // Procedural fallback animation (e.g. for unit tests or streams without FFT)
-      double t = _timeSource();
+      double t = _timeProvider.Now.ToUniversalTime().Subtract(DateTime.UnixEpoch).TotalMilliseconds;
       for (int i = 0; i < totalBars; i++) {
         double tSeconds = t / 1000.0;
         double fraction = (double)i / totalBars;
