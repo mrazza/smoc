@@ -174,6 +174,11 @@ public sealed class FrequencyHistogramView : View {
     bool isPlaying = _playbackQueueService.PlaybackState == PlaybackState.Playing;
     int totalBars = _amplitudes.Length;
 
+    if (totalBars == 0 && Viewport.Width > 0) {
+      totalBars = (Viewport.Width + 1) / 2;
+      Array.Resize(ref _amplitudes, totalBars);
+    }
+
     if (totalBars == 0) {
       SetNeedsDraw();
       return;
