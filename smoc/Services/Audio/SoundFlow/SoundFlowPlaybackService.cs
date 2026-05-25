@@ -6,6 +6,7 @@ using SoundFlow.Components;
 using SoundFlow.Providers;
 using SoundFlow.Structs;
 using Terminal.Gui.App;
+using SoundFlow.Visualization;
 using SoundFlowPlaybackState = SoundFlow.Enums.PlaybackState;
 
 namespace Smoc.Services.Audio.SoundFlow;
@@ -20,6 +21,8 @@ public sealed class SoundFlowPlaybackService : IPlaybackService {
   private readonly AssetDataProvider _streamDataProvider;
   private readonly SoundPlayer _soundPlayer;
   private readonly Song _song;
+  private readonly SpectrumAnalyzer? _spectrumAnalyzer;
+  private readonly LevelMeterAnalyzer? _levelMeterAnalyzer;
 
   /// <inheritdoc/>
   public event EventHandler? SongEnded;
@@ -35,6 +38,35 @@ public sealed class SoundFlowPlaybackService : IPlaybackService {
 
   /// <inheritdoc/>
   public TimeSpan CurrentTime => TimeSpan.FromSeconds(_soundPlayer.Time);
+
+  /// <inheritdoc/>
+  public float[] SpectrumData {
+    get {
+      if (_spectrumAnalyzer == null) return Array.Empty<float>();
+      float[] raw = _spectrumAnalyzer.SpectrumData;
+      if (raw == null || raw.Length == 0) return Array.Empty<float>();
+
+      float peak = _levelMeterAnalyzer?.Peak ?? 1.0f;
+      float[] scaled = new float[raw.Length];
+      for (int i = 0; i < raw.Length; i++) {
+        scaled[i] = raw[i] * peak;
+      }
+      return scaled;
+    }
+  }
+
+  /// <inheritdoc/>
+  public bool IsSpectrumActive {
+    get => (_spectrumAnalyzer?.Enabled ?? false) && (_levelMeterAnalyzer?.Enabled ?? false);
+    set {
+      if (_spectrumAnalyzer != null) {
+        _spectrumAnalyzer.Enabled = value;
+      }
+      if (_levelMeterAnalyzer != null) {
+        _levelMeterAnalyzer.Enabled = value;
+      }
+    }
+  }
 
   /// <inheritdoc/>
   public float Progress => _soundPlayer.Time / _soundPlayer.Duration;
@@ -67,6 +99,19 @@ public sealed class SoundFlowPlaybackService : IPlaybackService {
     _streamDataProvider = new AssetDataProvider(audioEngine, audioFormat, songStream);
     _soundPlayer = new SoundPlayer(audioEngine, audioFormat, _streamDataProvider);
     _playbackDevice.MasterMixer.AddComponent(_soundPlayer);
+
+    try {
+      _spectrumAnalyzer = new SpectrumAnalyzer(audioFormat, 1024, null);
+      _spectrumAnalyzer.Enabled = false;
+      _soundPlayer.AddAnalyzer(_spectrumAnalyzer);
+
+      _levelMeterAnalyzer = new LevelMeterAnalyzer(audioFormat, null);
+      _levelMeterAnalyzer.Enabled = false;
+      _soundPlayer.AddAnalyzer(_levelMeterAnalyzer);
+    } catch (Exception ex) {
+      Logging.Warning($"Failed to initialize spectrum analyzer: {ex.Message}");
+    }
+
     _streamDataProvider.PositionChanged += (sender, args) => PositionChanged?.Invoke(this, CurrentTime);
     _soundPlayer.PlaybackEnded += (sender, args) => SongEnded?.Invoke(this, EventArgs.Empty);
   }
@@ -105,6 +150,12 @@ public sealed class SoundFlowPlaybackService : IPlaybackService {
 
   /// <inheritdoc/>
   public void Dispose() {
+    if (_spectrumAnalyzer != null) {
+      _soundPlayer.RemoveAnalyzer(_spectrumAnalyzer);
+    }
+    if (_levelMeterAnalyzer != null) {
+      _soundPlayer.RemoveAnalyzer(_levelMeterAnalyzer);
+    }
     _playbackDevice.MasterMixer.RemoveComponent(_soundPlayer);
     _soundPlayer.Dispose();
     _streamDataProvider.Dispose();

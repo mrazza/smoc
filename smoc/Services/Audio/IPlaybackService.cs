@@ -22,6 +22,16 @@ public interface IPlaybackService : IDisposable {
   event EventHandler<PlaybackState>? PlaybackStateChanged;
 
   /// <summary>
+  /// Gets the current frequency spectrum data from playback.
+  /// </summary>
+  float[] SpectrumData { get; }
+
+  /// <summary>
+  /// Gets or sets a value indicating whether frequency spectrum analysis is active.
+  /// </summary>
+  bool IsSpectrumActive { get; set; }
+
+  /// <summary>
   /// Gets the current playback position; or <see cref="TimeSpan.Zero"/> if no song is playing.
   /// </summary>
   TimeSpan CurrentTime { get; }
