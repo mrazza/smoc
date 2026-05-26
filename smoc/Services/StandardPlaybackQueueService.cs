@@ -53,18 +53,16 @@ public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
   /// <inheritdoc/>
   public float[] SpectrumData => _playbackService.Resource?.SpectrumData ?? Array.Empty<float>();
 
-  private bool _isSpectrumActive = false;
-
   /// <inheritdoc/>
   public bool IsSpectrumActive {
-    get => _isSpectrumActive;
+    get;
     set {
-      _isSpectrumActive = value;
+      field = value;
       if (_playbackService.Resource != null) {
         _playbackService.Resource.IsSpectrumActive = value;
       }
     }
-  }
+  } = false;
 
   /// <inheritdoc/>
   public IEnumerable<Song> GetCurrentPlaybackQueue() => _playbackQueue.ToList();
@@ -239,7 +237,7 @@ public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
       }
 
       _playbackService.Replace(playback);
-      playback.IsSpectrumActive = _isSpectrumActive;
+      playback.IsSpectrumActive = IsSpectrumActive;
       playback.SongEnded += OnSongEnded;
       playback.PositionChanged += OnPositionChanged;
       playback.PlaybackStateChanged += OnPlaybackStateChanged;
