@@ -29,7 +29,7 @@ public class FrequencyHistogramViewTest {
 
   private FrequencyHistogramView NewVisualizer(ITimeProvider timeProvider) => new FrequencyHistogramView(_mockPlaybackQueue.Object, timeProvider);
 
-  private AppTestHelper NewVisualizerContext(int width = 40, int height = 10, double? startEpochOffsetMs = null) {
+  private AppTestHelper NewVisualizerContext(int width = 40, int height = 10, int? startEpochOffsetMs = null) {
     var context = NewContext(width, height);
     if (startEpochOffsetMs.HasValue) {
       (context.TimeProvider as VirtualTimeProvider)?.SetTime(DateTime.UnixEpoch.AddMilliseconds(startEpochOffsetMs.Value));
@@ -69,11 +69,11 @@ public class FrequencyHistogramViewTest {
     _mockPlaybackQueue.SetupGet(q => q.SpectrumData).Returns([]);
 
     // Use a fixed simulated time point for frozen deterministic screenshot
-    using var context = NewVisualizerContext(startEpochOffsetMs: 3500.0);
+    using var context = NewVisualizerContext(startEpochOffsetMs: 3500);
     
     // Trigger two update ticks to transition attack/decay interpolation towards target values
-    context.AdvanceTime(TimeSpan.FromMilliseconds(100));
-    context.AdvanceTime(TimeSpan.FromMilliseconds(100));
+    context.AdvanceTime(TimeSpan.FromMilliseconds(101));
+    context.AdvanceTime(TimeSpan.FromMilliseconds(101));
 
     _screenshotDiffer.AssertEqualsGolden(context);
   }
@@ -95,8 +95,8 @@ public class FrequencyHistogramViewTest {
 
     using var context = NewVisualizerContext();
 
-    context.AdvanceTime(TimeSpan.FromMilliseconds(100));
-    context.AdvanceTime(TimeSpan.FromMilliseconds(100));
+    context.AdvanceTime(TimeSpan.FromMilliseconds(101));
+    context.AdvanceTime(TimeSpan.FromMilliseconds(101));
 
     _screenshotDiffer.AssertEqualsGolden(context);
   }
@@ -110,18 +110,18 @@ public class FrequencyHistogramViewTest {
     _mockPlaybackQueue.SetupGet(q => q.PlaybackState).Returns(PlaybackState.Playing);
     _mockPlaybackQueue.SetupGet(q => q.SpectrumData).Returns([]);
 
-    using var context = NewVisualizerContext(startEpochOffsetMs: 2000.0);
+    using var context = NewVisualizerContext(startEpochOffsetMs: 2000);
 
     // Pump initial values
-    context.AdvanceTime(TimeSpan.FromMilliseconds(100));
-    context.AdvanceTime(TimeSpan.FromMilliseconds(100));
+    context.AdvanceTime(TimeSpan.FromMilliseconds(101));
+    context.AdvanceTime(TimeSpan.FromMilliseconds(101));
 
     // 2. Pause playback
     _mockPlaybackQueue.SetupGet(q => q.PlaybackState).Returns(PlaybackState.Paused);
 
     // 3. Pump updates to run the decay logic
-    context.AdvanceTime(TimeSpan.FromMilliseconds(100));
-    context.AdvanceTime(TimeSpan.FromMilliseconds(100));
+    context.AdvanceTime(TimeSpan.FromMilliseconds(101));
+    context.AdvanceTime(TimeSpan.FromMilliseconds(101));
 
     _screenshotDiffer.AssertEqualsGolden(context);
   }
