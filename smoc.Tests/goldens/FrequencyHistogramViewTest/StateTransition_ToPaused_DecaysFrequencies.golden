@@ -5,8 +5,8 @@ FrequencyHistogramViewTest.StateTransition_ToPaused_DecaysFrequencies_0:
                                         
                                         
                                         
-                                        
     ▇       ▁                           
-    █ ▂ ▅ ▄ █ ▄   █   ▅     ▆     ▁     
-▃ ▅ █ █ █ █ █ █ ▅ █ ▅ █ █ ▃ █ ▄ ▄ █ ▆ ▁ 
+    █   ▁   █     ▆   ▃     ▁           
+    █ █ █ █ █ ▆ ▁ █ ▁ █ ▁ ▂ █ ▁   ▂ ▃   
+▆ █ █ █ █ █ █ █ █ █ █ █ █ █ █ █ ▇ █ █ ▂ 
 
