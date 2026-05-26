@@ -31,7 +31,7 @@ A terminal-based music player (TUI) for streaming services, currently supporting
 - **Cross-Platform Audio**: Powered by [SoundFlow](https://github.com/LSXPrime/SoundFlow).
 - **YouTube Music Integration**: Powered by [YouTubeMusicAPI](https://github.com/IcySnex/YouTubeMusicAPI). Search, stream, and manage your library.
 - **Subsonic API Integration**: Streaming client for any Subsonic-compatible server. For instance, [Navidrome](https://www.navidrome.org/), [Airsonic Advanced](https://github.com/airsonic-advanced/airsonic-advanced), [Gonic](https://github.com/sentriz/gonic), or [Madsonic](https://www.madsonic.org/).
-- **Visuals**: Displays album art using Sixel graphics (requires a compatible terminal).
+- **Visuals**: Displays album art using Sixel graphics (requires a compatible terminal) and a beautiful real-time audio frequency spectrum visualizer.
 
 ### Feature Progress
 While most basic functionality is available and SMoC is totally usable, there's a lot left to do.
@@ -46,7 +46,7 @@ While most basic functionality is available and SMoC is totally usable, there's 
   - [x] Now Playing Bar
   - [x] Album Art (Sixel)
   - [x] Status Bar
-  - [ ] Visualizations
+  - [x] Visualizations
   - [x] Now Playing Screen
 - [ ] Playback
   - [x] Play
@@ -164,6 +164,7 @@ SMoC operates with a Vim-style command bar. Press `:` to enter command mode.
 | `:url/<url>`    | Load songs from a specific YouTube Music URL            |
 | `:pq`           | View the **Playback Queue**                             |
 | `:np`           | View **Now Playing** screen                             |
+| `:np-vis`       | Toggle real-time frequency visualizer in Now Playing    |
 | `:v/<0-100>`    | Set volume (e.g., `:v/80`)                              |
 | `:q`            | **Quit** application                                    |
 
@@ -181,6 +182,7 @@ SMoC operates with a Vim-style command bar. Press `:` to enter command mode.
 | `h/j/k/l`            | Navigate Tables (Vim style)              |
 | `Shift + Nav Key`    | Select multiple items                    |
 | `Tab`                | Switch active pane                       |
+| `v` / `V` (Shift+v)  | Toggle real-time frequency visualizer (on Now Playing screen) |
 | `Enter`              | Open Song Context Menu for selected item |
 
 ### Song Context Menu
