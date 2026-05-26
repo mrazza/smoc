@@ -87,15 +87,14 @@ public class FrequencyHistogramViewTest {
 
     // Simulate 32 frequency bins from SoundFlow with distinct bass (strong) and treble peaks
     float[] mockFrequencies = new float[32];
-    mockFrequencies[1] = 0.8f;  // Bass peak
-    mockFrequencies[2] = 0.9f;
-    mockFrequencies[10] = 0.5f; // Mid peak
-    mockFrequencies[28] = 0.3f; // Treble peak
+    mockFrequencies[1] = 225;  // Bass peak
+    mockFrequencies[2] = 225;  // Bass peak
+    mockFrequencies[10] = 64; // Mid peak
+    mockFrequencies[28] = 10; // Treble peak
     _mockPlaybackQueue.SetupGet(q => q.SpectrumData).Returns(mockFrequencies);
 
     using var context = NewVisualizerContext();
 
-    context.AdvanceTime(TimeSpan.FromMilliseconds(101));
     context.AdvanceTime(TimeSpan.FromMilliseconds(101));
 
     _screenshotDiffer.AssertEqualsGolden(context);

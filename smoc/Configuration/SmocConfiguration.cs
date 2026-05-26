@@ -60,8 +60,8 @@ public static class SmocConfiguration {
 
   /// <summary>
   /// Gets or sets the visualizer refresh rate in frames per second (FPS).
-  /// The default value is 10.
+  /// The default value is 24.
   /// </summary>
   [ConfigurationProperty(Scope = typeof(SettingsScope))]
-  public static int VisualizerFps { get; set; } = 10;
+  public static int VisualizerFps { get; set; } = 24;
 }

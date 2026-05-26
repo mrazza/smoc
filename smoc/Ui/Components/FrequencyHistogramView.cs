@@ -69,17 +69,17 @@ public sealed class FrequencyHistogramView : View {
     int height = contentArea.Height;
     var currentAttr = GetCurrentAttribute();
 
-    for (int i = 0; i < totalBars; i++) {
-      int col = i * 2;
-      float amp = _amplitudes[i];
+    for (int currBar = 0; currBar < totalBars; currBar++) {
+      int col = currBar * 2;
+      float amp = _amplitudes[currBar];
       float totalLevels = amp * height * 8;
 
-      for (int r = 0; r < height; r++) {
-        int cellLevel = (int)totalLevels - (r * 8);
-        int row = height - 1 - r; // Draw from bottom up
+      for (int rowIndex = 0; rowIndex < height; rowIndex++) {
+        int cellLevel = (int)totalLevels - (rowIndex * 8);
+        int row = height - 1 - rowIndex; // Draw from bottom up
 
         // Select the color for this vertical level segment
-        int colorIndex = (int)Math.Clamp((double)r / Math.Max(1, height) * _gradientColors.Length, 0, _gradientColors.Length - 1);
+        int colorIndex = (int)Math.Clamp((double)rowIndex / Math.Max(1, height) * _gradientColors.Length, 0, _gradientColors.Length - 1);
         var barColor = _gradientColors[colorIndex];
         SetAttribute(new Attribute(barColor, currentAttr.Background));
 
@@ -100,7 +100,7 @@ public sealed class FrequencyHistogramView : View {
             5 => '▅',
             6 => '▆',
             7 => '▇',
-            _ => ' '
+            _ => 'X'
           };
           if (Move(col, row)) {
             AddRune(blockChar);
@@ -210,74 +210,64 @@ public sealed class FrequencyHistogramView : View {
 
     // Use atomic / thread-safe local reference for the spectrum data
     if (isPlaying && spectrum != null && spectrum.Length > 0) {
-      int minBin = Math.Min(1, spectrum.Length - 1);
-      // Discard DC offset (bin 0) and map up to 20 kHz (approx 90.7% of Nyquist at 44.1 kHz sample rate)
-      int maxBin = Math.Clamp((int)(spectrum.Length * 0.907f), minBin + 1, spectrum.Length);
-
       // Group spectrum bins logarithmically into columns
-      for (int i = 0; i < totalBars; i++) {
-        double lowFrac = Math.Pow((double)i / totalBars, 1.5);
-        double highFrac = Math.Pow((double)(i + 1) / totalBars, 1.5);
+      for (int currBar = 0; currBar < totalBars; currBar++) {
+        // Invert the logarithmic mapping so wider spectrum ranges occur at higher frequencies
+        double startFrac = (double)currBar / totalBars;
+        double endFrac = (double)(currBar + 1) / totalBars;
+        double startLogIndex = 1.0 - Math.Log10(1 + 9 * (1.0 - startFrac));
+        double endLogIndex = 1.0 - Math.Log10(1 + 9 * (1.0 - endFrac));
 
-        int startBin = minBin + (int)(lowFrac * (maxBin - minBin));
-        int endBin = minBin + (int)(highFrac * (maxBin - minBin));
-        if (endBin <= startBin) {
-          endBin = startBin + 1;
+        int startSpectrumIndex = (int)Math.Round(startLogIndex * (spectrum.Length - 1));
+        int endSpectrumIndex = (int)Math.Round(endLogIndex * (spectrum.Length - 1)) - 1;
+
+        if (startSpectrumIndex == endSpectrumIndex) {
+          endSpectrumIndex = startSpectrumIndex + 1;
         }
 
-        float sum = 0f;
-        int count = 0;
-        for (int bin = startBin; bin < endBin && bin < spectrum.Length; bin++) {
-          sum += spectrum[bin];
-          count++;
+        double magnitude = 0;
+        for (int spectrumIndex = startSpectrumIndex; spectrumIndex < endSpectrumIndex; spectrumIndex++) {
+          magnitude = Math.Max(magnitude, spectrum[spectrumIndex]);
         }
-        float amp = count > 0 ? sum / count : 0f;
-
-        // Apply a psychoacoustic weighting filter (sine window) to roll off subsonic DC offset on the left and ultrasonic noise on the right
-        double fraction = (double)i / totalBars;
-        double weight = Math.Sin((0.05 + 0.90 * fraction) * Math.PI);
-        
-        // Scale with a safer 4.5f coefficient to completely eliminate excessive pegging
-        float target = amp * 4.5f * (float)weight;
-        target = Math.Clamp(target, 0.0f, 1.0f);
+        magnitude = Math.Log(magnitude + 1) / Math.Log(256.0);
 
         // Attack & decay smoothing
-        if (target > _amplitudes[i]) {
-          _amplitudes[i] += (target - _amplitudes[i]) * 0.7f; // Quick attack
+        if (magnitude > _amplitudes[currBar]) {
+          _amplitudes[currBar] += (float)(magnitude - _amplitudes[currBar]) * 0.9f; // Quick attack
         } else {
-          _amplitudes[i] += (target - _amplitudes[i]) * 0.25f; // Gradual decay
+          _amplitudes[currBar] += (float)(magnitude - _amplitudes[currBar]) * 0.4f; // Gradual decay
         }
       }
     } else if (isPlaying) {
       // Procedural fallback animation (e.g. for unit tests or streams without FFT)
-      double t = _timeProvider.Now.ToUniversalTime().Subtract(DateTime.UnixEpoch).TotalMilliseconds;
-      for (int i = 0; i < totalBars; i++) {
-        double tSeconds = t / 1000.0;
-        double fraction = (double)i / totalBars;
+      double time = _timeProvider.Now.ToUniversalTime().Subtract(DateTime.UnixEpoch).TotalMilliseconds;
+      for (int currBar = 0; currBar < totalBars; currBar++) {
+        double tSeconds = time / 1000.0;
+        double fraction = (double)currBar / totalBars;
 
         double speed = 3.0 + fraction * 10.0;
-        double wave1 = Math.Sin(tSeconds * speed + i * 0.8);
-        double wave2 = Math.Cos(tSeconds * (speed * 0.5) - i * 0.4);
-        double wave3 = Math.Sin(tSeconds * (speed * 0.2) + i * 1.5);
+        double wave1 = Math.Sin(tSeconds * speed + currBar * 0.8);
+        double wave2 = Math.Cos(tSeconds * (speed * 0.5) - currBar * 0.4);
+        double wave3 = Math.Sin(tSeconds * (speed * 0.2) + currBar * 1.5);
         double blended = 0.5 * wave1 + 0.3 * wave2 + 0.2 * wave3;
 
         double freqBias = Math.Pow(1.0 - fraction, 0.3);
         float target = (float)((0.1 + 0.9 * Math.Abs(blended)) * freqBias);
         target = Math.Clamp(target, 0.0f, 1.0f);
 
-        if (target > _amplitudes[i]) {
-          _amplitudes[i] += (target - _amplitudes[i]) * 0.6f;
+        if (target > _amplitudes[currBar]) {
+          _amplitudes[currBar] += (target - _amplitudes[currBar]) * 0.6f;
         } else {
-          _amplitudes[i] += (target - _amplitudes[i]) * 0.3f;
+          _amplitudes[currBar] += (target - _amplitudes[currBar]) * 0.3f;
         }
       }
     } else {
       // Natural visual decay fallback to 0 when paused or stopped
       bool stillDecaying = false;
-      for (int i = 0; i < totalBars; i++) {
-        _amplitudes[i] *= 0.75f;
-        if (_amplitudes[i] < 0.01f) {
-          _amplitudes[i] = 0f;
+      for (int currBar = 0; currBar < totalBars; currBar++) {
+        _amplitudes[currBar] *= 0.75f;
+        if (_amplitudes[currBar] < 0.01f) {
+          _amplitudes[currBar] = 0f;
         } else {
           stillDecaying = true;
         }
