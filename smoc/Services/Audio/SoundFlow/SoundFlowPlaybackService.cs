@@ -22,7 +22,6 @@ public sealed class SoundFlowPlaybackService : IPlaybackService {
   private readonly SoundPlayer _soundPlayer;
   private readonly Song _song;
   private readonly SpectrumAnalyzer? _spectrumAnalyzer;
-  private readonly LevelMeterAnalyzer? _levelMeterAnalyzer;
   private float[] _cachedSpectrumData = [];
   private readonly object _spectrumLock = new();
 
@@ -44,17 +43,16 @@ public sealed class SoundFlowPlaybackService : IPlaybackService {
   /// <inheritdoc/>
   public float[] SpectrumData {
     get {
-      if (_spectrumAnalyzer == null) return Array.Empty<float>();
+      if (_spectrumAnalyzer == null) return [];
       float[] raw = _spectrumAnalyzer.SpectrumData;
-      if (raw == null || raw.Length == 0) return Array.Empty<float>();
+      if (raw == null || raw.Length == 0) return [];
 
       lock (_spectrumLock) {
         if (_cachedSpectrumData.Length != raw.Length) {
           _cachedSpectrumData = new float[raw.Length];
         }
-        float peak = _levelMeterAnalyzer?.Peak ?? 1.0f;
         for (int i = 0; i < raw.Length; i++) {
-          _cachedSpectrumData[i] = raw[i] * peak;
+          _cachedSpectrumData[i] = raw[i] / _soundPlayer.Volume;
         }
         return _cachedSpectrumData;
       }
@@ -63,14 +61,9 @@ public sealed class SoundFlowPlaybackService : IPlaybackService {
 
   /// <inheritdoc/>
   public bool IsSpectrumActive {
-    get => (_spectrumAnalyzer?.Enabled ?? false) && (_levelMeterAnalyzer?.Enabled ?? false);
+    get => _spectrumAnalyzer?.Enabled ?? false;
     set {
-      if (_spectrumAnalyzer != null) {
-        _spectrumAnalyzer.Enabled = value;
-      }
-      if (_levelMeterAnalyzer != null) {
-        _levelMeterAnalyzer.Enabled = value;
-      }
+      _spectrumAnalyzer?.Enabled = value;
     }
   }
 
@@ -107,13 +100,10 @@ public sealed class SoundFlowPlaybackService : IPlaybackService {
     _playbackDevice.MasterMixer.AddComponent(_soundPlayer);
 
     try {
-      _spectrumAnalyzer = new SpectrumAnalyzer(audioFormat, 1024, null);
-      _spectrumAnalyzer.Enabled = false;
+      _spectrumAnalyzer = new SpectrumAnalyzer(audioFormat, fftSize: 1024) {
+        Enabled = false
+      };
       _soundPlayer.AddAnalyzer(_spectrumAnalyzer);
-
-      _levelMeterAnalyzer = new LevelMeterAnalyzer(audioFormat, null);
-      _levelMeterAnalyzer.Enabled = false;
-      _soundPlayer.AddAnalyzer(_levelMeterAnalyzer);
     } catch (Exception ex) {
       Logging.Warning($"Failed to initialize spectrum analyzer: {ex.Message}");
     }
@@ -158,9 +148,6 @@ public sealed class SoundFlowPlaybackService : IPlaybackService {
   public void Dispose() {
     if (_spectrumAnalyzer != null) {
       _soundPlayer.RemoveAnalyzer(_spectrumAnalyzer);
-    }
-    if (_levelMeterAnalyzer != null) {
-      _soundPlayer.RemoveAnalyzer(_levelMeterAnalyzer);
     }
     _playbackDevice.MasterMixer.RemoveComponent(_soundPlayer);
     _soundPlayer.Dispose();
