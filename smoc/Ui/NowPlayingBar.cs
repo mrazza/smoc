@@ -167,9 +167,9 @@ public sealed class NowPlayingBar : View {
       return;
     }
 
-    if (!int.TryParse(splitArgs[0], out int volume) || volume < 0 || volume > 100) {
+    if (!int.TryParse(splitArgs[0], out int volume) || volume < 0 || volume > 200) {
       Logging.Warning($"Invalid volume: {splitArgs[0]}");
-      _mainWindow.DisplayError($"invalid volume: {splitArgs[0]} ([0-100] expected)");
+      _mainWindow.DisplayError($"invalid volume: {splitArgs[0]} ([0-200] expected)");
       return;
     }
 

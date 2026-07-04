@@ -121,9 +121,23 @@ public class NowPlayingBarTest {
     _mockPlaybackQueue.Verify();
   }
 
+  /// <summary>
+  /// Tests that setting a volume beyond 200% does nothing.
+  /// </summary>
   [Fact]
   public void Volume_VolumeCommand_TooLarge_DoesNothing() {
     _mockPlaybackQueue.SetupSet((ps) => ps.Volume = It.IsAny<float>()).Verifiable(Times.Never());
+    using var context = NewNowPlayingContext()
+        .Then((_) => _commandService.ExecuteCommand("v/201"));
+    _mockPlaybackQueue.Verify();
+  }
+
+  /// <summary>
+  /// Tests that the volume command sets the volume correctly to 200%.
+  /// </summary>
+  [Fact]
+  public void Volume_VolumeCommand_SetsVolumeToMax() {
+    _mockPlaybackQueue.SetupSet((ps) => ps.Volume = 2.0f).Verifiable(Times.Once());
     using var context = NewNowPlayingContext()
         .Then((_) => _commandService.ExecuteCommand("v/200"));
     _mockPlaybackQueue.Verify();
