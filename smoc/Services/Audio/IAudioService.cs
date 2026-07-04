@@ -8,7 +8,7 @@ namespace Smoc.Services.Audio;
 public interface IAudioService : IDisposable {
 
   /// <summary>
-  /// Gets or sets the master volume (0.0 to 1.0).
+  /// Gets or sets the master volume (0.0 to 2.0).
   /// </summary>
   float Volume { get; set; }
 
