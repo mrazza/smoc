@@ -13,11 +13,16 @@ public sealed class SoundFlowAudioService : IAudioService {
   private readonly MiniAudioEngine _audioEngine;
   private readonly DeviceInfo _playbackDeviceInfo;
   private readonly AudioPlaybackDevice _playbackDevice;
+  private readonly SoftClipperModifier _softClipperModifier;
+  private float _volume;
 
   /// <inheritdoc/>
   public float Volume {
-    get => _playbackDevice.MasterMixer.Volume / 2.0f;
-    set => _playbackDevice.MasterMixer.Volume = value * 2.0f;
+    get => _volume;
+    set {
+      _volume = Math.Clamp(value, 0f, 2.0f);
+      _playbackDevice.MasterMixer.Volume = AudioMath.VolumeToGain(_volume);
+    }
   }
 
   /// <summary>
@@ -29,6 +34,9 @@ public sealed class SoundFlowAudioService : IAudioService {
     _audioEngine.UpdateAudioDevicesInfo();
     _playbackDeviceInfo = _audioEngine.PlaybackDevices.FirstOrDefault(x => x.IsDefault);
     _playbackDevice = _audioEngine.InitializePlaybackDevice(_playbackDeviceInfo, AudioFormat.DvdHq);
+    _softClipperModifier = new SoftClipperModifier();
+    _playbackDevice.MasterMixer.AddModifier(_softClipperModifier);
+    Volume = AudioMath.DEFAULT_VOLUME;
 
     _playbackDevice.Start();
   }
@@ -48,8 +56,12 @@ public sealed class SoundFlowAudioService : IAudioService {
     return new SoundFlowPlaybackService(_audioEngine, _playbackDevice, song, stream, format);
   }
 
+  /// <inheritdoc/>
   public void Dispose() {
-    if (!_playbackDevice.IsDisposed) _playbackDevice.Stop();
+    if (!_playbackDevice.IsDisposed) {
+      _playbackDevice.MasterMixer.RemoveModifier(_softClipperModifier);
+      _playbackDevice.Stop();
+    }
     _playbackDevice.Dispose();
     _audioEngine.Dispose();
   }
