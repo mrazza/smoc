@@ -41,12 +41,24 @@ public static class Program {
     });
 
     rootCommand.SetAction((_) => {
+      var builder = new TuiConfigurationBuilder(ProductName);
       if (File.Exists(_configPath)) {
         var configFile = File.ReadAllText(_configPath);
+        builder.RuntimeConfig = configFile;
+#pragma warning disable CS0618 // ConfigurationManager is obsolete in Terminal.Gui during MEC migration
         ConfigurationManager.RuntimeConfig = configFile;
+#pragma warning restore CS0618
       }
 
+#pragma warning disable CS0618 // ConfigurationManager is obsolete in Terminal.Gui during MEC migration
       ConfigurationManager.Enable(ConfigLocations.AppResources | ConfigLocations.Runtime);
+#pragma warning restore CS0618
+      builder.ApplyToStaticFacades();
+      SmocConfiguration.Bind(builder.Configuration);
+      ListenHistoryConfig.Bind(builder.Configuration);
+      SoundCloudConfig.Bind(builder.Configuration);
+      SubsonicConfig.Bind(builder.Configuration);
+      YouTubeMusicConfig.Bind(builder.Configuration);
       Application.SetDefaultKeyBinding(Terminal.Gui.Input.Command.Quit, new Terminal.Gui.Input.PlatformKeyBinding() {
         All = [new Terminal.Gui.Input.Key(':')]
       });

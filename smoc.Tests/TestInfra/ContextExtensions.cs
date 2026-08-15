@@ -47,7 +47,8 @@ public static class ContextExtensions {
     if (_isConfigSet) return context;
     lock (_configLock) {
       if (_isConfigSet) return context;
-      ConfigurationManager.RuntimeConfig = """
+      var builder = new TuiConfigurationBuilder();
+      builder.RuntimeConfig = """
       {
         "Themes": [
             {
@@ -101,7 +102,11 @@ public static class ContextExtensions {
         ]
     }
     """;
+#pragma warning disable CS0618 // ConfigurationManager is obsolete in Terminal.Gui during MEC migration
+      ConfigurationManager.RuntimeConfig = builder.RuntimeConfig;
       ConfigurationManager.Enable(ConfigLocations.Runtime);
+#pragma warning restore CS0618
+      builder.ApplyToStaticFacades();
       _isConfigSet = true;
     }
     return context;
