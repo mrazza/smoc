@@ -47,12 +47,13 @@ public sealed class SoundFlowPlaybackService : IPlaybackService {
       float[] raw = _spectrumAnalyzer.SpectrumData;
       if (raw == null || raw.Length == 0) return [];
 
+      float gain = _playbackDevice.MasterMixer.Volume;
       lock (_spectrumLock) {
         if (_cachedSpectrumData.Length != raw.Length) {
           _cachedSpectrumData = new float[raw.Length];
         }
         for (int i = 0; i < raw.Length; i++) {
-          _cachedSpectrumData[i] = raw[i] / _soundPlayer.Volume;
+          _cachedSpectrumData[i] = raw[i] * gain;
         }
         return _cachedSpectrumData;
       }
@@ -97,6 +98,7 @@ public sealed class SoundFlowPlaybackService : IPlaybackService {
 
     _streamDataProvider = new AssetDataProvider(audioEngine, audioFormat, songStream);
     _soundPlayer = new SoundPlayer(audioEngine, audioFormat, _streamDataProvider);
+    _soundPlayer.Volume = 1.0f;
     _playbackDevice.MasterMixer.AddComponent(_soundPlayer);
 
     try {
