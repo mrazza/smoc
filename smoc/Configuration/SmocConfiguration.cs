@@ -64,4 +64,19 @@ public static class SmocConfiguration {
   /// </summary>
   [ConfigurationProperty(Scope = typeof(SettingsScope))]
   public static int VisualizerFps { get; set; } = 24;
+
+  /// <summary>
+  /// Gets or sets whether loudness normalization is enabled.
+  /// The default value is true.
+  /// </summary>
+  [ConfigurationProperty(Scope = typeof(SettingsScope))]
+  public static bool EnableLoudnessNormalization { get; set; } = true;
+
+  /// <summary>
+  /// Gets or sets the mode for loudness normalization.
+  /// The default value is <see cref="LoudnessNormalizationMode.AttenuateOnly"/>.
+  /// </summary>
+  [ConfigurationProperty(Scope = typeof(SettingsScope))]
+  [JsonConverter(typeof(JsonStringEnumConverter))]
+  public static LoudnessNormalizationMode LoudnessNormalizationMode { get; set; } = LoudnessNormalizationMode.AttenuateOnly;
 }

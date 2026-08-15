@@ -73,4 +73,18 @@ public static class AudioMath {
       buffer[i] = SoftClip(buffer[i]);
     }
   }
+
+  /// <summary>
+  /// Calculates the linear normalization gain multiplier for a given loudness in dB.
+  /// </summary>
+  /// <param name="loudnessDb">The loudness relative to the target in decibels (e.g. +3.0 dB for a hot track).</param>
+  /// <param name="attenuateOnly">True to replicate web player behavior (only attenuate loud tracks, never boost).</param>
+  /// <returns>The linear gain multiplier.</returns>
+  public static float CalculateNormalizationGain(float loudnessDb, bool attenuateOnly = true) {
+    if (float.IsNaN(loudnessDb) || float.IsInfinity(loudnessDb)) return 1.0f;
+    if (attenuateOnly && loudnessDb <= 0f) return 1.0f;
+
+    float linearGain = MathF.Pow(10f, -loudnessDb / 20f);
+    return Math.Clamp(linearGain, 0.01f, 4.0f);
+  }
 }

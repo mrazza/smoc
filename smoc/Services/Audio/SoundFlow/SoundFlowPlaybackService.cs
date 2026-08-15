@@ -90,7 +90,8 @@ public sealed class SoundFlowPlaybackService : IPlaybackService {
   /// <param name="song">The song to play.</param>
   /// <param name="songStream">The stream of the song to play.</param>
   /// <param name="audioFormat">The format of the audio.</param>
-  public SoundFlowPlaybackService(MiniAudioEngine audioEngine, AudioPlaybackDevice playbackDevice, Song song, Stream songStream, AudioFormat audioFormat) {
+  /// <param name="trackGain">The normalized track gain multiplier.</param>
+  public SoundFlowPlaybackService(MiniAudioEngine audioEngine, AudioPlaybackDevice playbackDevice, Song song, Stream songStream, AudioFormat audioFormat, float trackGain = 1.0f) {
     _playbackDevice = playbackDevice;
     _song = song;
     _songStream = songStream;
@@ -98,7 +99,7 @@ public sealed class SoundFlowPlaybackService : IPlaybackService {
 
     _streamDataProvider = new AssetDataProvider(audioEngine, audioFormat, songStream);
     _soundPlayer = new SoundPlayer(audioEngine, audioFormat, _streamDataProvider);
-    _soundPlayer.Volume = 1.0f;
+    _soundPlayer.Volume = trackGain;
     _playbackDevice.MasterMixer.AddComponent(_soundPlayer);
 
     try {

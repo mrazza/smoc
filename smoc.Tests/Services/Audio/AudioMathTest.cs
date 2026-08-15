@@ -84,4 +84,38 @@ public class AudioMathTest {
     Assert.InRange(buffer[3], AudioMath.SOFT_CLIP_THRESHOLD, 1.0f);
     Assert.InRange(buffer[4], -1.0f, -AudioMath.SOFT_CLIP_THRESHOLD);
   }
+
+  [Theory]
+  [InlineData(0.0f, 1.0f)]
+  [InlineData(6.0205999f, 0.5f)]
+  [InlineData(3.0f, 0.7079458f)]
+  public void CalculateNormalizationGain_AttenuateOnly_PositiveLoudness_Attenuates(float loudnessDb, float expectedGain) {
+    float gain = AudioMath.CalculateNormalizationGain(loudnessDb, attenuateOnly: true);
+    Assert.Equal(expectedGain, gain, 0.001f);
+  }
+
+  [Theory]
+  [InlineData(-3.0f, 1.0f)]
+  [InlineData(-6.0f, 1.0f)]
+  [InlineData(0.0f, 1.0f)]
+  public void CalculateNormalizationGain_AttenuateOnly_NegativeOrZeroLoudness_ReturnsUnity(float loudnessDb, float expectedGain) {
+    float gain = AudioMath.CalculateNormalizationGain(loudnessDb, attenuateOnly: true);
+    Assert.Equal(expectedGain, gain, 0.001f);
+  }
+
+  [Theory]
+  [InlineData(-6.0205999f, 2.0f)]
+  [InlineData(-3.0f, 1.4125375f)]
+  [InlineData(6.0205999f, 0.5f)]
+  public void CalculateNormalizationGain_Full_ScalesBothDirections(float loudnessDb, float expectedGain) {
+    float gain = AudioMath.CalculateNormalizationGain(loudnessDb, attenuateOnly: false);
+    Assert.Equal(expectedGain, gain, 0.001f);
+  }
+
+  [Fact]
+  public void CalculateNormalizationGain_InvalidValues_ReturnsUnity() {
+    Assert.Equal(1.0f, AudioMath.CalculateNormalizationGain(float.NaN));
+    Assert.Equal(1.0f, AudioMath.CalculateNormalizationGain(float.PositiveInfinity));
+    Assert.Equal(1.0f, AudioMath.CalculateNormalizationGain(float.NegativeInfinity));
+  }
 }
