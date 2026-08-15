@@ -78,9 +78,9 @@ public static class AudioMath {
   /// Calculates the linear normalization gain multiplier for a given loudness in dB.
   /// </summary>
   /// <param name="loudnessDb">The loudness relative to the target in decibels (e.g. +3.0 dB for a hot track).</param>
-  /// <param name="attenuateOnly">True to replicate web player behavior (only attenuate loud tracks, never boost).</param>
+  /// <param name="attenuateOnly">True to only attenuate loud tracks and never boost; false to scale in both directions.</param>
   /// <returns>The linear gain multiplier.</returns>
-  public static float CalculateNormalizationGain(float loudnessDb, bool attenuateOnly = true) {
+  public static float CalculateNormalizationGain(float loudnessDb, bool attenuateOnly = false) {
     if (float.IsNaN(loudnessDb) || float.IsInfinity(loudnessDb)) return 1.0f;
     if (attenuateOnly && loudnessDb <= 0f) return 1.0f;
 

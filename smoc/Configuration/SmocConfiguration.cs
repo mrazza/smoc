@@ -74,9 +74,9 @@ public static class SmocConfiguration {
 
   /// <summary>
   /// Gets or sets the mode for loudness normalization.
-  /// The default value is <see cref="LoudnessNormalizationMode.AttenuateOnly"/>.
+  /// The default value is <see cref="LoudnessNormalizationMode.Full"/>.
   /// </summary>
   [ConfigurationProperty(Scope = typeof(SettingsScope))]
   [JsonConverter(typeof(JsonStringEnumConverter))]
-  public static LoudnessNormalizationMode LoudnessNormalizationMode { get; set; } = LoudnessNormalizationMode.AttenuateOnly;
+  public static LoudnessNormalizationMode LoudnessNormalizationMode { get; set; } = LoudnessNormalizationMode.Full;
 }
