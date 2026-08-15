@@ -290,7 +290,7 @@ Create or edit `~/.config/smoc/config.json` to customize settings.
 | `SmocConfiguration.AlbumCoverCacheMaxElements` | `int` | `0` | Max album covers to cache (0 = no limit) |
 | `SmocConfiguration.LogLevel`                   | `LogLevel` | `Information` | Minimum log level |
 | `SmocConfiguration.EnableLoudnessNormalization` | `bool` | `true` | Enable track loudness normalization |
-| `SmocConfiguration.LoudnessNormalizationMode`   | `LoudnessNormalizationMode` | `AttenuateOnly` | Loudness normalization mode (`AttenuateOnly`, `Full`) |
+| `SmocConfiguration.LoudnessNormalizationMode`   | `LoudnessNormalizationMode` | `Full` | Loudness normalization mode (`Full`, `AttenuateOnly`) |
 | `ListenHistory.Enabled`                        | `bool` | `true` | Enable listen history tracking |
 | `ListenHistory.MinimumPositionSeconds`         | `int` | `30` | Min seconds for 'listened' status |
 | `ListenHistory.MinimumFraction`                | `double` | `0.5` | Min fraction for 'listened' status |
