@@ -1,3 +1,4 @@
+using Smoc.Configuration;
 using Smoc.Streaming;
 using SoundFlow.Abstracts.Devices;
 using SoundFlow.Backends.MiniAudio;
@@ -43,6 +44,11 @@ public sealed class SoundFlowAudioService : IAudioService {
 
   /// <inheritdoc/>
   public IPlaybackService MakePlaybackService(Song song, Stream stream, string codec, CancellationToken cancellationToken = default) {
+    return MakePlaybackService(song, stream, codec, null, cancellationToken);
+  }
+
+  /// <inheritdoc/>
+  public IPlaybackService MakePlaybackService(Song song, Stream stream, string codec, float? loudnessDb, CancellationToken cancellationToken = default) {
     if (_playbackDevice.IsDisposed) throw new InvalidOperationException("Audio service is not initialized.");
 
     using var decoder = _audioEngine.CreateDecoder(stream, codec, AudioFormat.DvdHq);
@@ -53,7 +59,14 @@ public sealed class SoundFlowAudioService : IAudioService {
       Layout = AudioFormat.GetLayoutFromChannels(decoder.Channels)
     };
     cancellationToken.ThrowIfCancellationRequested();
-    return new SoundFlowPlaybackService(_audioEngine, _playbackDevice, song, stream, format);
+
+    float trackGain = 1.0f;
+    if (SmocConfiguration.EnableLoudnessNormalization && loudnessDb.HasValue) {
+      bool attenuateOnly = SmocConfiguration.LoudnessNormalizationMode == LoudnessNormalizationMode.AttenuateOnly;
+      trackGain = AudioMath.CalculateNormalizationGain(loudnessDb.Value, attenuateOnly);
+    }
+
+    return new SoundFlowPlaybackService(_audioEngine, _playbackDevice, song, stream, format, trackGain);
   }
 
   /// <inheritdoc/>

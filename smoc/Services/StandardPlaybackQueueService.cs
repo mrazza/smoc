@@ -233,7 +233,9 @@ public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
         token.ThrowIfCancellationRequested();
 
         Logging.Debug($"Creating playing service for {currentSong.Title} ({currentSong.Id})...");
-        playback = _audioService.MakePlaybackService(currentSong, songStream.Stream, codec, token);
+        playback = songStream.LoudnessDb.HasValue
+          ? _audioService.MakePlaybackService(currentSong, songStream.Stream, codec, songStream.LoudnessDb.Value, token)
+          : _audioService.MakePlaybackService(currentSong, songStream.Stream, codec, token);
       }
 
       _playbackService.Replace(playback);
@@ -321,7 +323,9 @@ public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
         codec = "m4a";
       }
 
-      var playback = _audioService.MakePlaybackService(song, songStream.Stream, codec, token);
+      var playback = songStream.LoudnessDb.HasValue
+        ? _audioService.MakePlaybackService(song, songStream.Stream, codec, songStream.LoudnessDb.Value, token)
+        : _audioService.MakePlaybackService(song, songStream.Stream, codec, token);
       _preloadedPlaybackService.Replace(playback);
       token.ThrowIfCancellationRequested();
 

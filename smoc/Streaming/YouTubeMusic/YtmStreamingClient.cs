@@ -107,7 +107,7 @@ public sealed class YtmStreamingClient : IStreamingClient {
       string.Concat(songId, "-", highestAudioStreamInfo.Bitrate.ToString()),
       highestAudioStreamInfo.GetStreamAsync,
       cancellationToken);
-    return new SongStream(songId, highestAudioStreamInfo.Container.Codecs, stream);
+    return new SongStream(songId, highestAudioStreamInfo.Container.Codecs, stream, (float?)highestAudioStreamInfo.LoudnessDb);
   }
 
   /// <inheritdoc/>

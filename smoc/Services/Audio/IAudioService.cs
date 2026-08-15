@@ -15,5 +15,11 @@ public interface IAudioService : IDisposable {
   /// <summary>
   /// Creates a new playback service for the given stream and codec.
   /// </summary>
-  IPlaybackService MakePlaybackService(Song song, Stream stream, string codec, CancellationToken cancellationToken = default);
+  IPlaybackService MakePlaybackService(Song song, Stream stream, string codec, CancellationToken cancellationToken = default) =>
+    MakePlaybackService(song, stream, codec, null, cancellationToken);
+
+  /// <summary>
+  /// Creates a new playback service for the given stream, codec, and optional loudness metadata.
+  /// </summary>
+  IPlaybackService MakePlaybackService(Song song, Stream stream, string codec, float? loudnessDb, CancellationToken cancellationToken = default);
 }

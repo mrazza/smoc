@@ -1094,4 +1094,38 @@ public class StandardPlaybackQueueServiceTest {
     // Verify that the second song inherits the IsSpectrumActive state automatically
     Assert.True(fakePlayerService2.IsSpectrumActive);
   }
+
+  [Fact]
+  public async Task Play_SongWithLoudnessDb_PassesLoudnessToAudioService() {
+    using var sut = NewStandardPlaybackQueue();
+    var song = EntityTestFactory.GenerateSong(id: "123");
+    var fakePlayerService = new FakePlaybackService(song);
+
+    _mockAudioService.Setup(a => a.MakePlaybackService(song, It.IsAny<Stream>(), "m4a", 3.5f, It.IsAny<CancellationToken>()))
+      .Returns(fakePlayerService);
+    _mockStreamingClient.Setup(c => c.GetSongStreamAsync(song.Id, It.IsAny<CancellationToken>()))
+      .ReturnsAsync(new SongStream(song.Id, "m4a", new MemoryStream(), 3.5f));
+
+    sut.QueueNext(song);
+    await sut.Play();
+
+    _mockAudioService.Verify(a => a.MakePlaybackService(song, It.IsAny<Stream>(), "m4a", 3.5f, It.IsAny<CancellationToken>()), Times.Once);
+  }
+
+  [Fact]
+  public void Preload_SongWithLoudnessDb_PassesLoudnessToAudioService() {
+    using var sut = NewStandardPlaybackQueue();
+    var song1 = EntityTestFactory.GenerateSong(id: "1", postfix: "_1");
+    var song2 = EntityTestFactory.GenerateSong(id: "2", postfix: "_2");
+    var fakePlayerService2 = new FakePlaybackService(song2);
+
+    _mockAudioService.Setup(a => a.MakePlaybackService(song2, It.IsAny<Stream>(), "m4a", -2.5f, It.IsAny<CancellationToken>()))
+      .Returns(fakePlayerService2);
+    _mockStreamingClient.Setup(c => c.GetSongStreamAsync(song2.Id, It.IsAny<CancellationToken>()))
+      .ReturnsAsync(new SongStream(song2.Id, "m4a", new MemoryStream(), -2.5f));
+
+    sut.QueueNext([song1, song2]);
+
+    _mockAudioService.Verify(a => a.MakePlaybackService(song2, It.IsAny<Stream>(), "m4a", -2.5f, It.IsAny<CancellationToken>()), Times.Once);
+  }
 }
