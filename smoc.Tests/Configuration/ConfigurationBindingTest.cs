@@ -1,7 +1,9 @@
 using System.Text;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Smoc;
 using Smoc.Configuration;
+using Terminal.Gui.Configuration;
 using Xunit;
 
 namespace smoc.Tests.Configuration;
@@ -27,21 +29,21 @@ public class ConfigurationBindingTest {
         .AddJsonStream(new MemoryStream(Encoding.UTF8.GetBytes(json)))
         .Build();
 
-    SmocConfiguration.Bind(config);
+    Program.BindFlatKeys(config);
 
-    Assert.Equal(LogLevel.Debug, SmocConfiguration.LogLevel);
-    Assert.Equal(StreamingService.Subsonic, SmocConfiguration.ActiveService);
-    Assert.Equal(1000000, SmocConfiguration.SongCacheSizeBytes);
-    Assert.Equal(50, SmocConfiguration.SongCacheMaxElements);
-    Assert.Equal(2000000, SmocConfiguration.AlbumCoverCacheSizeBytes);
-    Assert.Equal(100, SmocConfiguration.AlbumCoverCacheMaxElements);
-    Assert.Equal(60, SmocConfiguration.VisualizerFps);
-    Assert.False(SmocConfiguration.EnableLoudnessNormalization);
-    Assert.Equal(LoudnessNormalizationMode.AttenuateOnly, SmocConfiguration.LoudnessNormalizationMode);
+    Assert.Equal(LogLevel.Debug, SmocConfiguration.Defaults.LogLevel);
+    Assert.Equal(StreamingService.Subsonic, SmocConfiguration.Defaults.ActiveService);
+    Assert.Equal(1000000, SmocConfiguration.Defaults.SongCacheSizeBytes);
+    Assert.Equal(50, SmocConfiguration.Defaults.SongCacheMaxElements);
+    Assert.Equal(2000000, SmocConfiguration.Defaults.AlbumCoverCacheSizeBytes);
+    Assert.Equal(100, SmocConfiguration.Defaults.AlbumCoverCacheMaxElements);
+    Assert.Equal(60, SmocConfiguration.Defaults.VisualizerFps);
+    Assert.False(SmocConfiguration.Defaults.EnableLoudnessNormalization);
+    Assert.Equal(LoudnessNormalizationMode.AttenuateOnly, SmocConfiguration.Defaults.LoudnessNormalizationMode);
   }
 
   [Fact]
-  public void Bind_SmocConfiguration_FromSection() {
+  public void Bind_SmocConfiguration_FromSection_UsingTuiConfigurationBuilder() {
     var json = """
     {
       "SmocConfiguration": {
@@ -58,32 +60,34 @@ public class ConfigurationBindingTest {
     }
     """;
 
-    var config = new ConfigurationBuilder()
-        .AddJsonStream(new MemoryStream(Encoding.UTF8.GetBytes(json)))
-        .Build();
+    var builder = new TuiConfigurationBuilder("SMoC");
+    builder.RuntimeConfig = json;
+    builder.BindAppSettings<SmocConfiguration>("SmocConfiguration", s => SmocConfiguration.Defaults = s);
 
-    SmocConfiguration.Bind(config);
-
-    Assert.Equal(LogLevel.Trace, SmocConfiguration.LogLevel);
-    Assert.Equal(StreamingService.SoundCloud, SmocConfiguration.ActiveService);
-    Assert.Equal(5000000, SmocConfiguration.SongCacheSizeBytes);
-    Assert.Equal(20, SmocConfiguration.SongCacheMaxElements);
-    Assert.Equal(3000000, SmocConfiguration.AlbumCoverCacheSizeBytes);
-    Assert.Equal(40, SmocConfiguration.AlbumCoverCacheMaxElements);
-    Assert.Equal(30, SmocConfiguration.VisualizerFps);
-    Assert.True(SmocConfiguration.EnableLoudnessNormalization);
-    Assert.Equal(LoudnessNormalizationMode.Full, SmocConfiguration.LoudnessNormalizationMode);
+    Assert.Equal(LogLevel.Trace, SmocConfiguration.Defaults.LogLevel);
+    Assert.Equal(StreamingService.SoundCloud, SmocConfiguration.Defaults.ActiveService);
+    Assert.Equal(5000000, SmocConfiguration.Defaults.SongCacheSizeBytes);
+    Assert.Equal(20, SmocConfiguration.Defaults.SongCacheMaxElements);
+    Assert.Equal(3000000, SmocConfiguration.Defaults.AlbumCoverCacheSizeBytes);
+    Assert.Equal(40, SmocConfiguration.Defaults.AlbumCoverCacheMaxElements);
+    Assert.Equal(30, SmocConfiguration.Defaults.VisualizerFps);
+    Assert.True(SmocConfiguration.Defaults.EnableLoudnessNormalization);
+    Assert.Equal(LoudnessNormalizationMode.Full, SmocConfiguration.Defaults.LoudnessNormalizationMode);
   }
 
   [Fact]
-  public void Bind_OtherConfigs_FromFlatAndSections() {
+  public void Bind_OtherConfigs_UsingTuiConfigurationBuilder() {
     var json = """
     {
-      "ListenHistoryConfig.Enabled": false,
-      "ListenHistoryConfig.MinimumPositionSeconds": 45,
-      "ListenHistoryConfig.MinimumFraction": 0.75,
-      "SoundCloudConfig.ClientId": "sc-id",
-      "SoundCloudConfig.AuthToken": "sc-token",
+      "ListenHistoryConfig": {
+        "Enabled": false,
+        "MinimumPositionSeconds": 45,
+        "MinimumFraction": 0.75
+      },
+      "SoundCloudConfig": {
+        "ClientId": "sc-id",
+        "AuthToken": "sc-token"
+      },
       "SubsonicConfig": {
         "ServerHost": "subsonic.local",
         "ServerPort": 4040,
@@ -98,29 +102,27 @@ public class ConfigurationBindingTest {
     }
     """;
 
-    var config = new ConfigurationBuilder()
-        .AddJsonStream(new MemoryStream(Encoding.UTF8.GetBytes(json)))
-        .Build();
+    var builder = new TuiConfigurationBuilder("SMoC");
+    builder.RuntimeConfig = json;
+    builder.BindAppSettings<ListenHistoryConfig>("ListenHistoryConfig", s => ListenHistoryConfig.Defaults = s)
+           .BindAppSettings<SoundCloudConfig>("SoundCloudConfig", s => SoundCloudConfig.Defaults = s)
+           .BindAppSettings<SubsonicConfig>("SubsonicConfig", s => SubsonicConfig.Defaults = s)
+           .BindAppSettings<YouTubeMusicConfig>("YouTubeMusicConfig", s => YouTubeMusicConfig.Defaults = s);
 
-    ListenHistoryConfig.Bind(config);
-    SoundCloudConfig.Bind(config);
-    SubsonicConfig.Bind(config);
-    YouTubeMusicConfig.Bind(config);
+    Assert.False(ListenHistoryConfig.Defaults.Enabled);
+    Assert.Equal(45, ListenHistoryConfig.Defaults.MinimumPositionSeconds);
+    Assert.Equal(0.75, ListenHistoryConfig.Defaults.MinimumFraction);
 
-    Assert.False(ListenHistoryConfig.Enabled);
-    Assert.Equal(45, ListenHistoryConfig.MinimumPositionSeconds);
-    Assert.Equal(0.75, ListenHistoryConfig.MinimumFraction);
+    Assert.Equal("sc-id", SoundCloudConfig.Defaults.ClientId);
+    Assert.Equal("sc-token", SoundCloudConfig.Defaults.AuthToken);
 
-    Assert.Equal("sc-id", SoundCloudConfig.ClientId);
-    Assert.Equal("sc-token", SoundCloudConfig.AuthToken);
+    Assert.Equal("subsonic.local", SubsonicConfig.Defaults.ServerHost);
+    Assert.Equal(4040, SubsonicConfig.Defaults.ServerPort);
+    Assert.Equal("https", SubsonicConfig.Defaults.ServerScheme);
+    Assert.Equal("admin", SubsonicConfig.Defaults.Username);
+    Assert.Equal("secretpassword", SubsonicConfig.Defaults.Password);
+    Assert.False(SubsonicConfig.Defaults.UseToken);
 
-    Assert.Equal("subsonic.local", SubsonicConfig.ServerHost);
-    Assert.Equal(4040, SubsonicConfig.ServerPort);
-    Assert.Equal("https", SubsonicConfig.ServerScheme);
-    Assert.Equal("admin", SubsonicConfig.Username);
-    Assert.Equal("secretpassword", SubsonicConfig.Password);
-    Assert.False(SubsonicConfig.UseToken);
-
-    Assert.Equal("player123", YouTubeMusicConfig.PlayerId);
+    Assert.Equal("player123", YouTubeMusicConfig.Defaults.PlayerId);
   }
 }

@@ -39,9 +39,9 @@ public sealed class MainWindow : Runnable, IMainWindow {
     _playbackQueueService = StandardPlaybackQueueService.UsingAudioService<SoundFlowAudioService>(this, streamingClient);
     _playbackTrackingService = new StreamingListenHistoryService(
       streamingClient,
-      TimeSpan.FromSeconds(ListenHistoryConfig.MinimumPositionSeconds),
-      ListenHistoryConfig.MinimumFraction);
-    if (ListenHistoryConfig.Enabled) {
+      TimeSpan.FromSeconds(ListenHistoryConfig.Defaults.MinimumPositionSeconds),
+      ListenHistoryConfig.Defaults.MinimumFraction);
+    if (ListenHistoryConfig.Defaults.Enabled) {
       _playbackQueueService.PositionChanged += (_, position) => {
         if (_playbackQueueService.CurrentSong is { } song) {
           _playbackTrackingService.TrackPlayback(song, position);

@@ -1,4 +1,5 @@
 using Terminal.Gui.Configuration;
+using Terminal.Gui.Drawing;
 using Terminal.Gui.Time;
 using Terminal.Gui.ViewBase;
 
@@ -47,66 +48,21 @@ public static class ContextExtensions {
     if (_isConfigSet) return context;
     lock (_configLock) {
       if (_isConfigSet) return context;
-      var builder = new TuiConfigurationBuilder();
-      builder.RuntimeConfig = """
-      {
-        "Themes": [
-            {
-                "default": {
-                    "Schemes": [
-                        {
-                            "CommandLine": {
-                                "Normal": {
-                                    "Foreground": "#ebdbb2",
-                                    "Background": "#00000000"
-                                }
-                            }
-                        },
-                        {
-                            "CommandLineError": {
-                                "Normal": {
-                                    "Foreground": "#262626",
-                                    "Background": "#d75f5f",
-                                    "Style": "Bold"
-                                }
-                            }
-                        },
-                        {
-                            "ProgressBar": {
-                                "Normal": {
-                                    "Foreground": "#ebdbb2",
-                                    "Background": "#394e4e"
-                                }
-                            }
-                        },
-                        {
-                            "StatusBar_State": {
-                                "Normal": {
-                                    "Foreground": "#949494",
-                                    "Background": "#3a3a3a"
-                                }
-                            }
-                        },
-                        {
-                            "StatusBar": {
-                                "Normal": {
-                                    "Foreground": "#262626",
-                                    "Background": "#949494",
-                                    "Style": "Bold"
-                                }
-                            }
-                        }
-                    ]
-                }
-            }
-        ]
-    }
-    """;
-#pragma warning disable CS0618 // ConfigurationManager is obsolete in Terminal.Gui during MEC migration
-      ConfigurationManager.RuntimeConfig = builder.RuntimeConfig;
-      ConfigurationManager.Enable(ConfigLocations.Runtime);
-#pragma warning restore CS0618
-      builder.ApplyToStaticFacades();
+      SchemeManager.AddScheme("CommandLine", new Scheme {
+        Normal = new Terminal.Gui.Drawing.Attribute(new Color("#ebdbb2"), new Color(0, 0, 0, 0))
+      });
+      SchemeManager.AddScheme("CommandLineError", new Scheme {
+        Normal = new Terminal.Gui.Drawing.Attribute(new Color("#262626"), new Color("#d75f5f"), TextStyle.Bold)
+      });
+      SchemeManager.AddScheme("ProgressBar", new Scheme {
+        Normal = new Terminal.Gui.Drawing.Attribute(new Color("#ebdbb2"), new Color("#394e4e"))
+      });
+      SchemeManager.AddScheme("StatusBar_State", new Scheme {
+        Normal = new Terminal.Gui.Drawing.Attribute(new Color("#949494"), new Color("#3a3a3a"))
+      });
+      SchemeManager.AddScheme("StatusBar", new Scheme {
+        Normal = new Terminal.Gui.Drawing.Attribute(new Color("#262626"), new Color("#949494"), TextStyle.Bold)
+      });
       _isConfigSet = true;
     }
     return context;
