@@ -206,13 +206,18 @@ SMoC stores configuration and authentication data in `~/.config/smoc/` (on Linux
 ### Subsonic
 To use a Subsonic-compatible service (like Navidrome, Gonic, or Airsonic):
 1. Ensure your server has the Subsonic API enabled.
-2. Configure your server hostname, port, scheme, username, and password in `config.json` (see below).
-3. Set `SmocConfiguration.ActiveService` to `Subsonic`.
+2. Configure your server hostname, port, scheme, username, and password under `SubsonicConfig` in `config.json` (see below).
+3. Set `ActiveService` to `Subsonic` under `SmocConfiguration`.
 
 ### YouTube Music
 To use YouTube Music:
-1. Set `SmocConfiguration.ActiveService` to `YouTubeMusic`.
+1. Set `ActiveService` to `YouTubeMusic` under `SmocConfiguration`.
 2. Setup required settings for YouTube Music authentication (see below).
+
+### SoundCloud
+To use SoundCloud:
+1. Set `ActiveService` to `SoundCloud` under `SmocConfiguration`.
+2. Configure `ClientId` and `AuthToken` under `SoundCloudConfig` in `config.json`.
 
 #### Authentication
 
@@ -243,192 +248,65 @@ Create or edit `~/.config/smoc/config.json` to customize settings.
 
 ```json
 {
-    "SmocConfiguration.LogLevel": "Warning",
-    "SmocConfiguration.SongCacheSizeBytes": 1073741824,
-    "SmocConfiguration.AlbumCoverCacheSizeBytes": 1073741824,
-    "SmocConfiguration.SongCacheMaxElements": 1000,
-    "SmocConfiguration.AlbumCoverCacheMaxElements": 1000,
-    "SmocConfiguration.ActiveService": "Subsonic",
-	"SubsonicConfig.ServerHost": "localhost",
-	"SubsonicConfig.ServerPort": 8080,
-	"SubsonicConfig.Username": "username",
-	"SubsonicConfig.Password": "password",
-    "Theme": "gruvbox-custom",
-    "Themes": [
-        {
-            "gruvbox-custom": {
-                "Schemes": [
-                    {
-                        "Accent": {
-                            "Normal": { "Foreground": "#ebdbb2", "Background": "#00000000" },
-                            "Focus": { "Foreground": "#ebdbb2", "Background": "#639494" },
-                            "Active": { "Foreground": "#ebdbb2", "Background": "#394e4e" }
-                        }
-                    }
-                    // ... (other schemes)
-                ]
-            }
-        }
-    ]
+  "SmocConfiguration": {
+    "LogLevel": "Information",
+    "ActiveService": "YouTubeMusic",
+    "SongCacheSizeBytes": 536870912,
+    "SongCacheMaxElements": 0,
+    "AlbumCoverCacheSizeBytes": 104857600,
+    "AlbumCoverCacheMaxElements": 0,
+    "VisualizerFps": 24,
+    "EnableLoudnessNormalization": true,
+    "LoudnessNormalizationMode": "Full"
+  },
+  "SubsonicConfig": {
+    "ServerScheme": "https",
+    "ServerHost": "subsonic.example.com",
+    "ServerPort": 443,
+    "Username": "username",
+    "Password": "password",
+    "UseToken": true
+  },
+  "ListenHistoryConfig": {
+    "Enabled": true,
+    "MinimumPositionSeconds": 30,
+    "MinimumFraction": 0.5
+  },
+  "SoundCloudConfig": {
+    "ClientId": "your-client-id",
+    "AuthToken": "your-auth-token"
+  },
+  "YouTubeMusicConfig": {
+    "PlayerId": "your-player-id"
+  }
 }
 ```
 </details>
 
 #### Common Settings
-| Key                                            | Type | Default | Description |
-| :--------------------------------------------- | :--- | :------ | :---------- |
-| `SmocConfiguration.ActiveService`              | `StreamingService` | `YouTubeMusic` | Active service (`YouTubeMusic`, `Subsonic`) |
-| `SubsonicConfig.ServerScheme`                  | `string` | `http` | Subsonic API URI scheme |
-| `SubsonicConfig.ServerHost`                    | `string` | `null` | Subsonic server hostname |
-| `SubsonicConfig.ServerPort`                    | `int` | `80` | Subsonic server port |
-| `SubsonicConfig.Username`                      | `string` | `null` | Subsonic username |
-| `SubsonicConfig.Password`                      | `string` | `null` | Subsonic password |
-| `SubsonicConfig.UseToken`                      | `bool` | `true` | Use token auth instead of password |
-| `SmocConfiguration.SongCacheSizeBytes`         | `long` | `536870912` | Max song cache size in bytes |
-| `SmocConfiguration.AlbumCoverCacheSizeBytes`   | `long` | `104857600` | Max album cover cache size in bytes |
-| `SmocConfiguration.SongCacheMaxElements`       | `int` | `0` | Max songs to cache (0 = no limit) |
-| `SmocConfiguration.AlbumCoverCacheMaxElements` | `int` | `0` | Max album covers to cache (0 = no limit) |
-| `SmocConfiguration.LogLevel`                   | `LogLevel` | `Information` | Minimum log level |
-| `SmocConfiguration.EnableLoudnessNormalization` | `bool` | `true` | Enable track loudness normalization |
-| `SmocConfiguration.LoudnessNormalizationMode`   | `LoudnessNormalizationMode` | `Full` | Loudness normalization mode (`Full`, `AttenuateOnly`) |
-| `ListenHistory.Enabled`                        | `bool` | `true` | Enable listen history tracking |
-| `ListenHistory.MinimumPositionSeconds`         | `int` | `30` | Min seconds for 'listened' status |
-| `ListenHistory.MinimumFraction`                | `double` | `0.5` | Min fraction for 'listened' status |
-| `Theme`                                        | `string` | `default` | Name of the theme to use |
-
-#### Custom Themes
-If specifying a custom theme (as in the example config above), you will need to specify styling for all schemes.
-
-<details>
-<summary><strong>Example Theme</strong> (Click to expand)</summary>
-
-```json
-{
-    "Theme": "gruvbox-custom",
-    "Themes": [
-        {
-            "gruvbox-custom": {
-                "Schemes": [
-                    {
-                        "Accent": {
-                            "Normal": {
-                                "Foreground": "#ebdbb2",
-                                "Background": "#00000000"
-                            },
-                            "Focus": {
-                                "Foreground": "#ebdbb2",
-                                "Background": "#639494"
-                            },
-                            "Active": {
-                                "Foreground": "#ebdbb2",
-                                "Background": "#394e4e"
-                            }
-                        }
-                    },
-                    {
-                        "Base": {
-                            "Normal": {
-                                "Foreground": "#ebdbb2",
-                                "Background": "#00000000"
-                            }
-                        }
-                    },
-                    {
-                        "TableCurrentTrack": {
-                            "Normal": {
-                                "Foreground": "#ebdbb2",
-                                "Background": "#394e4e",
-                                "Style": "Bold"
-                            },
-                            "Focus": {
-                                "Foreground": "#ebdbb2",
-                                "Background": "#639494",
-                                "Style": "Bold"
-                            },
-                            "Active": {
-                                "Foreground": "#ebdbb2",
-                                "Background": "#394e4e",
-                                "Style": "Bold"
-                            }
-                        }
-                    },
-                    {
-                        "TableNormalTracks": {
-                            "Normal": {
-                                "Foreground": "#ebdbb2",
-                                "Background": "#00000000"
-                            },
-                            "Focus": {
-                                "Foreground": "#ebdbb2",
-                                "Background": "#639494"
-                            },
-                            "Active": {
-                                "Foreground": "#ebdbb2",
-                                "Background": "#394e4e"
-                            }
-                        }
-                    },
-                    {
-                        "Menu": {
-                            "Normal": {
-                                "Foreground": "#ebdbb2",
-                                "Background": "#3a3a3a"
-                            },
-                            "Focus": {
-                                "Foreground": "#ebdbb2",
-                                "Background": "#639494"
-                            },
-                            "Active": {
-                                "Foreground": "#ebdbb2",
-                                "Background": "#394e4e"
-                            }
-                        }
-                    },
-                    {
-                        "StatusBar": {
-                            "Normal": {
-                                "Foreground": "#949494",
-                                "Background": "#3a3a3a"
-                            }
-                        }
-                    },
-                    {
-                        "StatusBar_Mode": {
-                            "Normal": {
-                                "Foreground": "#262626",
-                                "Background": "#949494",
-                                "Style": "Bold"
-                            }
-                        }
-                    },
-                    {
-                        "CommandLine": {
-                            "Normal": {
-                                "Foreground": "#ebdbb2",
-                                "Background": "#00000000"
-                            },
-                            "Editable": {
-                                "Foreground": "#ebdbb2",
-                                "Background": "#00000000"
-                            }
-                        }
-                    },
-                    {
-                        "CommandLineError": {
-                            "Normal": {
-                                "Foreground": "#262626",
-                                "Background": "#d75f5f",
-                                "Style": "Bold"
-                            }
-                        }
-                    }
-                ]
-            }
-        }
-    ]
-}
-```
-</details>
+| Section | Key | Type | Default | Description |
+| :--- | :--- | :--- | :------ | :---------- |
+| `SmocConfiguration` | `ActiveService` | `StreamingService` | `YouTubeMusic` | Active service (`YouTubeMusic`, `Subsonic`, `SoundCloud`) |
+| `SmocConfiguration` | `LogLevel` | `LogLevel` | `Information` | Minimum log level (`Trace`, `Debug`, `Information`, `Warning`, `Error`, `Critical`, `None`) |
+| `SmocConfiguration` | `SongCacheSizeBytes` | `long` | `536870912` | Max song cache size in bytes (0 = no limit, default 512MB) |
+| `SmocConfiguration` | `SongCacheMaxElements` | `int` | `0` | Max songs to cache (0 = no limit) |
+| `SmocConfiguration` | `AlbumCoverCacheSizeBytes` | `long` | `104857600` | Max album cover cache size in bytes (0 = no limit, default 100MB) |
+| `SmocConfiguration` | `AlbumCoverCacheMaxElements` | `int` | `0` | Max album covers to cache (0 = no limit) |
+| `SmocConfiguration` | `VisualizerFps` | `int` | `24` | Refresh rate for the audio frequency spectrum visualizer (FPS) |
+| `SmocConfiguration` | `EnableLoudnessNormalization` | `bool` | `true` | Enable track loudness normalization |
+| `SmocConfiguration` | `LoudnessNormalizationMode` | `LoudnessNormalizationMode` | `Full` | Loudness normalization mode (`Full`, `AttenuateOnly`) |
+| `SubsonicConfig` | `ServerScheme` | `string` | `http` | Subsonic API URI scheme (`http`, `https`) |
+| `SubsonicConfig` | `ServerHost` | `string` | `null` | Subsonic server hostname |
+| `SubsonicConfig` | `ServerPort` | `int` | `80` | Subsonic server port |
+| `SubsonicConfig` | `Username` | `string` | `null` | Subsonic username |
+| `SubsonicConfig` | `Password` | `string` | `null` | Subsonic password |
+| `SubsonicConfig` | `UseToken` | `bool` | `true` | Use token auth instead of password |
+| `ListenHistoryConfig` | `Enabled` | `bool` | `true` | Enable listen history tracking |
+| `ListenHistoryConfig` | `MinimumPositionSeconds` | `int` | `30` | Min seconds for 'listened' status |
+| `ListenHistoryConfig` | `MinimumFraction` | `double` | `0.5` | Min fraction for 'listened' status |
+| `SoundCloudConfig` | `ClientId` | `string` | `null` | SoundCloud client ID |
+| `SoundCloudConfig` | `AuthToken` | `string` | `null` | SoundCloud authentication token |
+| `YouTubeMusicConfig` | `PlayerId` | `string` | `null` | Custom YouTube Music player ID |
 
 ## 🤝 Contributing
 
