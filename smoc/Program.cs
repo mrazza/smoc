@@ -1,8 +1,6 @@
 using System.Collections;
 using System.CommandLine;
-using System.Globalization;
 using System.Text.Json;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Smoc.Configuration;
 using Smoc.Services.Caching;
@@ -55,9 +53,6 @@ public static class Program {
              .BindAppSettings<SubsonicConfig>("SubsonicConfig", s => SubsonicConfig.Defaults = s)
              .BindAppSettings<YouTubeMusicConfig>("YouTubeMusicConfig", s => YouTubeMusicConfig.Defaults = s);
 
-      // Support flat dotted keys (e.g. { "SmocConfiguration.LogLevel": "Warning" }) from user config files
-      BindFlatKeys(builder.Configuration);
-
       builder.ApplyToStaticFacades();
       AppSchemes.RegisterDefaultSchemes();
 
@@ -97,37 +92,6 @@ public static class Program {
     } finally {
       Logging.Information("SMoC exiting...");
     }
-  }
-
-  /// <summary>
-  /// Binds flat dotted configuration keys to the settings facades for backwards compatibility.
-  /// </summary>
-  public static void BindFlatKeys(IConfiguration config) {
-    if (Enum.TryParse<LogLevel>(config["SmocConfiguration.LogLevel"], true, out var logLevel)) SmocConfiguration.Defaults.LogLevel = logLevel;
-    if (Enum.TryParse<StreamingService>(config["SmocConfiguration.ActiveService"], true, out var service)) SmocConfiguration.Defaults.ActiveService = service;
-    if (long.TryParse(config["SmocConfiguration.SongCacheSizeBytes"], out var songCacheSize)) SmocConfiguration.Defaults.SongCacheSizeBytes = songCacheSize;
-    if (int.TryParse(config["SmocConfiguration.SongCacheMaxElements"], out var songCacheMax)) SmocConfiguration.Defaults.SongCacheMaxElements = songCacheMax;
-    if (long.TryParse(config["SmocConfiguration.AlbumCoverCacheSizeBytes"], out var artCacheSize)) SmocConfiguration.Defaults.AlbumCoverCacheSizeBytes = artCacheSize;
-    if (int.TryParse(config["SmocConfiguration.AlbumCoverCacheMaxElements"], out var artCacheMax)) SmocConfiguration.Defaults.AlbumCoverCacheMaxElements = artCacheMax;
-    if (int.TryParse(config["SmocConfiguration.VisualizerFps"], out var fps)) SmocConfiguration.Defaults.VisualizerFps = fps;
-    if (bool.TryParse(config["SmocConfiguration.EnableLoudnessNormalization"], out var norm)) SmocConfiguration.Defaults.EnableLoudnessNormalization = norm;
-    if (Enum.TryParse<LoudnessNormalizationMode>(config["SmocConfiguration.LoudnessNormalizationMode"], true, out var normMode)) SmocConfiguration.Defaults.LoudnessNormalizationMode = normMode;
-
-    if (bool.TryParse(config["ListenHistoryConfig.Enabled"], out var enabled)) ListenHistoryConfig.Defaults.Enabled = enabled;
-    if (int.TryParse(config["ListenHistoryConfig.MinimumPositionSeconds"], out var minSec)) ListenHistoryConfig.Defaults.MinimumPositionSeconds = minSec;
-    if (double.TryParse(config["ListenHistoryConfig.MinimumFraction"], CultureInfo.InvariantCulture, out var minFrac)) ListenHistoryConfig.Defaults.MinimumFraction = minFrac;
-
-    if (config["SoundCloudConfig.ClientId"] is { } clientId) SoundCloudConfig.Defaults.ClientId = clientId;
-    if (config["SoundCloudConfig.AuthToken"] is { } authToken) SoundCloudConfig.Defaults.AuthToken = authToken;
-
-    if (config["SubsonicConfig.ServerHost"] is { } flatHost) SubsonicConfig.Defaults.ServerHost = flatHost;
-    if (int.TryParse(config["SubsonicConfig.ServerPort"], out var flatPort)) SubsonicConfig.Defaults.ServerPort = flatPort;
-    if (config["SubsonicConfig.ServerScheme"] is { } flatScheme) SubsonicConfig.Defaults.ServerScheme = flatScheme;
-    if (config["SubsonicConfig.Username"] is { } flatUser) SubsonicConfig.Defaults.Username = flatUser;
-    if (config["SubsonicConfig.Password"] is { } flatPass) SubsonicConfig.Defaults.Password = flatPass;
-    if (bool.TryParse(config["SubsonicConfig.UseToken"], out var flatToken)) SubsonicConfig.Defaults.UseToken = flatToken;
-
-    if (config["YouTubeMusicConfig.PlayerId"] is { } flatPlayerId) YouTubeMusicConfig.Defaults.PlayerId = flatPlayerId;
   }
 
   /// <summary>

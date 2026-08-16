@@ -1,7 +1,4 @@
-using System.Text;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using Smoc;
 using Smoc.Configuration;
 using Terminal.Gui.Configuration;
 using Xunit;
@@ -9,39 +6,6 @@ using Xunit;
 namespace smoc.Tests.Configuration;
 
 public class ConfigurationBindingTest {
-  [Fact]
-  public void Bind_SmocConfiguration_FromFlatKeys() {
-    var json = """
-    {
-      "SmocConfiguration.LogLevel": "Debug",
-      "SmocConfiguration.ActiveService": "Subsonic",
-      "SmocConfiguration.SongCacheSizeBytes": 1000000,
-      "SmocConfiguration.SongCacheMaxElements": 50,
-      "SmocConfiguration.AlbumCoverCacheSizeBytes": 2000000,
-      "SmocConfiguration.AlbumCoverCacheMaxElements": 100,
-      "SmocConfiguration.VisualizerFps": 60,
-      "SmocConfiguration.EnableLoudnessNormalization": false,
-      "SmocConfiguration.LoudnessNormalizationMode": "AttenuateOnly"
-    }
-    """;
-
-    var config = new ConfigurationBuilder()
-        .AddJsonStream(new MemoryStream(Encoding.UTF8.GetBytes(json)))
-        .Build();
-
-    Program.BindFlatKeys(config);
-
-    Assert.Equal(LogLevel.Debug, SmocConfiguration.Defaults.LogLevel);
-    Assert.Equal(StreamingService.Subsonic, SmocConfiguration.Defaults.ActiveService);
-    Assert.Equal(1000000, SmocConfiguration.Defaults.SongCacheSizeBytes);
-    Assert.Equal(50, SmocConfiguration.Defaults.SongCacheMaxElements);
-    Assert.Equal(2000000, SmocConfiguration.Defaults.AlbumCoverCacheSizeBytes);
-    Assert.Equal(100, SmocConfiguration.Defaults.AlbumCoverCacheMaxElements);
-    Assert.Equal(60, SmocConfiguration.Defaults.VisualizerFps);
-    Assert.False(SmocConfiguration.Defaults.EnableLoudnessNormalization);
-    Assert.Equal(LoudnessNormalizationMode.AttenuateOnly, SmocConfiguration.Defaults.LoudnessNormalizationMode);
-  }
-
   [Fact]
   public void Bind_SmocConfiguration_FromSection_UsingTuiConfigurationBuilder() {
     var json = """
