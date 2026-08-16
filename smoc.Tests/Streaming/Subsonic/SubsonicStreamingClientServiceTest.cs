@@ -577,9 +577,9 @@ public class SubsonicStreamingClientServiceTest {
 
   [Fact]
   public void Create_InitializesCorrectly_WithValidConfig() {
-    SubsonicConfig.ServerHost = "example.com";
-    SubsonicConfig.Username = "user";
-    SubsonicConfig.Password = "pass";
+    SubsonicConfig.Defaults.ServerHost = "example.com";
+    SubsonicConfig.Defaults.Username = "user";
+    SubsonicConfig.Defaults.Password = "pass";
     
     var client = SubsonicStreamingClient.Create(new NoCachingCacheService(), new NoCachingCacheService());
     Assert.NotNull(client);
@@ -587,9 +587,9 @@ public class SubsonicStreamingClientServiceTest {
 
   [Fact]
   public void Create_ThrowsIfHostNotConfigured() {
-    SubsonicConfig.ServerHost = null;
-    SubsonicConfig.Username = "user";
-    SubsonicConfig.Password = "pass";
+    SubsonicConfig.Defaults.ServerHost = null;
+    SubsonicConfig.Defaults.Username = "user";
+    SubsonicConfig.Defaults.Password = "pass";
     
     var ex = Assert.Throws<InvalidOperationException>(() => SubsonicStreamingClient.Create(new NoCachingCacheService(), new NoCachingCacheService()));
     Assert.Contains("Subsonic Server Host not configured", ex.Message);
@@ -597,9 +597,9 @@ public class SubsonicStreamingClientServiceTest {
 
   [Fact]
   public void Create_ThrowsIfUsernameNotConfigured() {
-    SubsonicConfig.ServerHost = "example.com";
-    SubsonicConfig.Username = null;
-    SubsonicConfig.Password = "pass";
+    SubsonicConfig.Defaults.ServerHost = "example.com";
+    SubsonicConfig.Defaults.Username = null;
+    SubsonicConfig.Defaults.Password = "pass";
     
     var ex = Assert.Throws<InvalidOperationException>(() => SubsonicStreamingClient.Create(new NoCachingCacheService(), new NoCachingCacheService()));
     Assert.Contains("Subsonic Username not configured", ex.Message);
@@ -607,9 +607,9 @@ public class SubsonicStreamingClientServiceTest {
 
   [Fact]
   public void Create_ThrowsIfPasswordNotConfigured() {
-    SubsonicConfig.ServerHost = "example.com";
-    SubsonicConfig.Username = "user";
-    SubsonicConfig.Password = null;
+    SubsonicConfig.Defaults.ServerHost = "example.com";
+    SubsonicConfig.Defaults.Username = "user";
+    SubsonicConfig.Defaults.Password = null;
     
     var ex = Assert.Throws<InvalidOperationException>(() => SubsonicStreamingClient.Create(new NoCachingCacheService(), new NoCachingCacheService()));
     Assert.Contains("Subsonic Password not configured", ex.Message);

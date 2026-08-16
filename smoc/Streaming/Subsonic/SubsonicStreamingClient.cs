@@ -44,12 +44,12 @@ public class SubsonicStreamingClient : IStreamingClient {
   /// <returns>A new <see cref="SubsonicStreamingClient"/>.</returns>
   public static SubsonicStreamingClient Create(ICacheService songCacheService, ICacheService albumArtCacheService) {
     return new SubsonicStreamingClient(
-      SubsonicConfig.ServerScheme,
-      SubsonicConfig.ServerHost ?? throw new InvalidOperationException("Subsonic Server Host not configured"),
-      SubsonicConfig.ServerPort,
-      SubsonicConfig.Username ?? throw new InvalidOperationException("Subsonic Username not configured"),
-      SubsonicConfig.Password ?? throw new InvalidOperationException("Subsonic Password not configured"),
-      SubsonicConfig.UseToken,
+      SubsonicConfig.Defaults.ServerScheme,
+      SubsonicConfig.Defaults.ServerHost ?? throw new InvalidOperationException("Subsonic Server Host not configured"),
+      SubsonicConfig.Defaults.ServerPort,
+      SubsonicConfig.Defaults.Username ?? throw new InvalidOperationException("Subsonic Username not configured"),
+      SubsonicConfig.Defaults.Password ?? throw new InvalidOperationException("Subsonic Password not configured"),
+      SubsonicConfig.Defaults.UseToken,
       songCacheService,
       albumArtCacheService
     );

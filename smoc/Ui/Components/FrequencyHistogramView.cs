@@ -156,13 +156,13 @@ public sealed class FrequencyHistogramView : View {
       return;
     }
 
-    _timerFps = Math.Clamp(SmocConfiguration.VisualizerFps, 1, 60);
+    _timerFps = Math.Clamp(SmocConfiguration.Defaults.VisualizerFps, 1, 60);
     double intervalMs = 1000.0 / _timerFps;
 
     _timerToken = App.AddTimeout(TimeSpan.FromMilliseconds(intervalMs), () => {
       UpdateVisualization();
 
-      int desiredFps = Math.Clamp(SmocConfiguration.VisualizerFps, 1, 60);
+      int desiredFps = Math.Clamp(SmocConfiguration.Defaults.VisualizerFps, 1, 60);
 
       if (_timerToken == null) {
         // If something cleared the token during processing, we need to cancel this timer to avoid orphaned timers running indefinitely.

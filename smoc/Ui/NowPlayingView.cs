@@ -232,7 +232,7 @@ public sealed class NowPlayingView : View {
       return;
     }
 
-    SmocConfiguration.VisualizerFps = fps;
+    SmocConfiguration.Defaults.VisualizerFps = fps;
   }
 
   private bool? OnHotKey(ICommandContext? ctx) {

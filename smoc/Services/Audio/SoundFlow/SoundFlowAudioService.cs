@@ -61,8 +61,8 @@ public sealed class SoundFlowAudioService : IAudioService {
     cancellationToken.ThrowIfCancellationRequested();
 
     float trackGain = 1.0f;
-    if (SmocConfiguration.EnableLoudnessNormalization && loudnessDb.HasValue) {
-      bool attenuateOnly = SmocConfiguration.LoudnessNormalizationMode == LoudnessNormalizationMode.AttenuateOnly;
+    if (SmocConfiguration.Defaults.EnableLoudnessNormalization && loudnessDb.HasValue) {
+      bool attenuateOnly = SmocConfiguration.Defaults.LoudnessNormalizationMode == LoudnessNormalizationMode.AttenuateOnly;
       trackGain = AudioMath.CalculateNormalizationGain(loudnessDb.Value, attenuateOnly);
     }
 

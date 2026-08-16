@@ -126,15 +126,15 @@ public class FrequencyHistogramViewTest {
   }
 
   /// <summary>
-  /// Verifies that when <see cref="SmocConfiguration.VisualizerFps"/> changes dynamically,
+  /// Verifies that when <see cref="SmocConfiguration.Defaults.VisualizerFps"/> changes dynamically,
   /// the timer is recreated with the correct new interval.
   /// </summary>
   [Fact]
   public void VisualizerFps_DynamicChange_RecreatesTimerWithNewInterval() {
-    int originalFps = SmocConfiguration.VisualizerFps;
+    int originalFps = SmocConfiguration.Defaults.VisualizerFps;
     try {
       // 1. Initialize to 10 FPS (100ms interval)
-      SmocConfiguration.VisualizerFps = 10;
+      SmocConfiguration.Defaults.VisualizerFps = 10;
       _mockPlaybackQueue.SetupGet(q => q.PlaybackState).Returns(PlaybackState.Playing);
       _mockPlaybackQueue.SetupGet(q => q.SpectrumData).Returns([]);
 
@@ -169,7 +169,7 @@ public class FrequencyHistogramViewTest {
       Assert.Contains(amplitudesAfter100ms, amp => amp > 0f);
 
       // Now change the configuration FPS dynamically to 2 FPS (500ms interval)
-      SmocConfiguration.VisualizerFps = 2;
+      SmocConfiguration.Defaults.VisualizerFps = 2;
 
       // Advance by 101ms to reach the scheduled next tick (at t = 200ms)
       // When this tick fires, it detects the FPS change (10 -> 2)
@@ -196,7 +196,7 @@ public class FrequencyHistogramViewTest {
       Assert.NotEqual(copyAmplitudes, amplitudesAfter700ms);
     } finally {
       // Restore configuration
-      SmocConfiguration.VisualizerFps = originalFps;
+      SmocConfiguration.Defaults.VisualizerFps = originalFps;
     }
   }
 }
