@@ -19,7 +19,7 @@ public static class AppSchemes {
       if (_isInitialized) return;
 
       SchemeManager.AddScheme("Accent", new Scheme {
-        Normal = new Terminal.Gui.Drawing.Attribute(new Color("#ebdbb2"), new Color(0, 0, 0, 0)),
+        Normal = new Terminal.Gui.Drawing.Attribute(new Color("#ebdbb2"), Color.None),
         Focus = new Terminal.Gui.Drawing.Attribute(new Color("#ebdbb2"), new Color("#639494")),
         Active = new Terminal.Gui.Drawing.Attribute(new Color("#ebdbb2"), new Color("#394e4e"))
       });
@@ -35,13 +35,13 @@ public static class AppSchemes {
       });
 
       SchemeManager.AddScheme("TableHeaders", new Scheme {
-        Normal = new Terminal.Gui.Drawing.Attribute(new Color("#ebdbb2"), new Color(0, 0, 0, 0)),
-        Focus = new Terminal.Gui.Drawing.Attribute(new Color("#ebdbb2"), new Color(0, 0, 0, 0)),
-        Active = new Terminal.Gui.Drawing.Attribute(new Color("#ebdbb2"), new Color(0, 0, 0, 0))
+        Normal = new Terminal.Gui.Drawing.Attribute(new Color("#ebdbb2"), Color.None),
+        Focus = new Terminal.Gui.Drawing.Attribute(new Color("#ebdbb2"), Color.None),
+        Active = new Terminal.Gui.Drawing.Attribute(new Color("#ebdbb2"), Color.None)
       });
 
       SchemeManager.AddScheme("TableNormalTracks", new Scheme {
-        Normal = new Terminal.Gui.Drawing.Attribute(new Color("#ebdbb2"), new Color(0, 0, 0, 0)),
+        Normal = new Terminal.Gui.Drawing.Attribute(new Color("#ebdbb2"), Color.None),
         Focus = new Terminal.Gui.Drawing.Attribute(new Color("#ebdbb2"), new Color("#639494")),
         Active = new Terminal.Gui.Drawing.Attribute(new Color("#ebdbb2"), new Color("#394e4e"))
       });
@@ -61,8 +61,8 @@ public static class AppSchemes {
       });
 
       SchemeManager.AddScheme("CommandLine", new Scheme {
-        Normal = new Terminal.Gui.Drawing.Attribute(new Color("#ebdbb2"), new Color(0, 0, 0, 0)),
-        Editable = new Terminal.Gui.Drawing.Attribute(new Color("#ebdbb2"), new Color(0, 0, 0, 0))
+        Normal = new Terminal.Gui.Drawing.Attribute(new Color("#ebdbb2"), Color.None),
+        Editable = new Terminal.Gui.Drawing.Attribute(new Color("#ebdbb2"), Color.None)
       });
 
       SchemeManager.AddScheme("CommandLineError", new Scheme {
