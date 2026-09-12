@@ -1,3 +1,6 @@
+using System.Collections.Generic;
+using Smoc.Services;
+using Sharpcaster.Models.Media;
 using Moq;
 using Sharpcaster.Models;
 using Smoc.Services.Audio.Cast;
@@ -97,5 +100,54 @@ public class CastAudioServiceTest {
 
     _mockClient.Verify(c => c.DisconnectAsync(), Times.Once);
     _mockClient.Verify(c => c.Dispose(), Times.Once);
+  }
+
+  [Fact]
+  public async Task OnSongEnded_AutomaticallyTransitionsToNextPreloadedTrack() {
+    var loadedMediaTitles = new List<string>();
+    _mockClient.Setup(c => c.LoadAsync(It.IsAny<Media>())).Returns((Media m) => {
+      loadedMediaTitles.Add(m.Metadata?.Title ?? string.Empty);
+      return Task.CompletedTask;
+    });
+
+    var sut = new CastAudioService(_device, _mockProxyService.Object, _mockClient.Object);
+    var mockStreaming = new Mock<IStreamingClient>();
+    var song1 = EntityTestFactory.GenerateSong(id: "1", postfix: "1");
+    var song2 = EntityTestFactory.GenerateSong(id: "2", postfix: "2");
+
+    mockStreaming.Setup(c => c.GetSongStreamAsync(song1.Id, It.IsAny<CancellationToken>()))
+      .ReturnsAsync(new SongStream(song1.Id, "mp3", new MemoryStream()));
+    mockStreaming.Setup(c => c.GetSongStreamAsync(song2.Id, It.IsAny<CancellationToken>()))
+      .ReturnsAsync(new SongStream(song2.Id, "mp3", new MemoryStream()));
+
+    _mockProxyService.Setup(p => p.StartProxy(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<string>()))
+      .Returns((Stream s, string c, string h) => $"http://proxy/{Guid.NewGuid()}");
+
+    var fakeWindow = new smoc.Tests.Fakes.FakeMainWindow();
+    using var queue = new StandardPlaybackQueueService(fakeWindow, mockStreaming.Object, sut);
+
+    queue.QueueNext(new[] { song1, song2 });
+    await queue.Play();
+
+    // Allow preloading task to complete
+    await Task.Delay(100, TestContext.Current.CancellationToken);
+
+    Assert.Equal(song1, queue.CurrentSong);
+    Assert.Equal(PlaybackState.Playing, queue.PlaybackState);
+    Assert.Equal(new[] { song1.Title }, loadedMediaTitles);
+
+    // Simulate Chromecast finishing song 1
+    _mockClient.Raise(c => c.MediaStatusChanged += null, _mockClient.Object, new MediaStatus {
+      PlayerState = PlayerStateType.Idle,
+      IdleReason = "FINISHED"
+    });
+
+    // Allow track transition to complete
+    await Task.Delay(200, TestContext.Current.CancellationToken);
+
+    Assert.Equal(song2, queue.CurrentSong);
+    Assert.Equal(PlaybackState.Playing, queue.PlaybackState);
+    Assert.Equal(new[] { song1.Title, song2.Title }, loadedMediaTitles);
+    _mockClient.Verify(c => c.StopAsync(), Times.Never);
   }
 }

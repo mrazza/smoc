@@ -26,6 +26,7 @@ public sealed class CastPlaybackService : IPlaybackService {
   private readonly CancellationTokenSource _disposeCts = new();
   private Task _lastCommandTask = Task.CompletedTask;
   private PlaybackState _state = PlaybackState.Stopped;
+  private bool _hasStarted;
 
   private TimeSpan _statusPosition = TimeSpan.Zero;
   private long _startTimestamp;
@@ -148,6 +149,11 @@ public sealed class CastPlaybackService : IPlaybackService {
   /// <inheritdoc/>
   public void Play() {
     EnqueueCommand(async () => {
+      _hasStarted = true;
+      if (_state == PlaybackState.Playing) {
+        return;
+      }
+
       if (_state == PlaybackState.Stopped) {
         await _client.LoadAsync(new Media {
           ContentUrl = _url,
@@ -168,6 +174,10 @@ public sealed class CastPlaybackService : IPlaybackService {
   /// <inheritdoc/>
   public void Pause() {
     EnqueueCommand(async () => {
+      if (_state == PlaybackState.Paused || _state == PlaybackState.Stopped) {
+        return;
+      }
+
       await _client.PauseAsync().ConfigureAwait(false);
       StopProgressTracking(resetPosition: false);
       UpdateState(PlaybackState.Paused);
@@ -178,6 +188,10 @@ public sealed class CastPlaybackService : IPlaybackService {
   /// <inheritdoc/>
   public void Stop() {
     EnqueueCommand(async () => {
+      if (_state == PlaybackState.Stopped) {
+        return;
+      }
+
       await _client.StopAsync().ConfigureAwait(false);
       StopProgressTracking(resetPosition: true);
       UpdateState(PlaybackState.Stopped);
@@ -267,6 +281,14 @@ public sealed class CastPlaybackService : IPlaybackService {
   }
 
   private void OnMediaStatusChanged(object? sender, MediaStatus e) {
+    if (!_hasStarted) {
+      return;
+    }
+
+    if (e.Media?.ContentUrl != null && !string.Equals(e.Media.ContentUrl, _url, StringComparison.OrdinalIgnoreCase)) {
+      return;
+    }
+
     lock (_progressLock) {
       _statusPosition = TimeSpan.FromSeconds(e.CurrentTime);
       if (_state == PlaybackState.Playing) {
@@ -295,11 +317,13 @@ public sealed class CastPlaybackService : IPlaybackService {
       StopProgressTracking(resetPosition: true);
     }
 
-    if (e.IdleReason?.ToString() == "FINISHED") {
+    var wasPlaying = _state == PlaybackState.Playing;
+    UpdateState(newState);
+
+    if (wasPlaying && (string.Equals(e.IdleReason, "FINISHED", StringComparison.OrdinalIgnoreCase) ||
+        (e.PlayerState == PlayerStateType.Idle && (e.IdleReason == null || string.Equals(e.IdleReason, "FINISHED", StringComparison.OrdinalIgnoreCase))))) {
       SongEnded?.Invoke(this, EventArgs.Empty);
     }
-
-    UpdateState(newState);
   }
 
   /// <inheritdoc/>

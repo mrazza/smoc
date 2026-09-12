@@ -74,6 +74,9 @@ public class CastPlaybackServiceTest {
   public async Task StopThenPlay_ExecutesCommandsInStrictSequentialOrder() {
     using var sut = new CastPlaybackService(_mockClient.Object, _song, _stream, _url, _mockProxyService.Object);
 
+    sut.Play();
+    await sut.WaitForPendingCommandsAsync();
+
     var executionLog = new List<string>();
     var stopTcs = new TaskCompletionSource();
 
@@ -113,6 +116,9 @@ public class CastPlaybackServiceTest {
 
     _mockClient.Setup(c => c.StopAsync()).ThrowsAsync(new InvalidOperationException("Network failure"));
     _mockClient.Setup(c => c.LoadAsync(It.IsAny<Media>())).Returns(Task.CompletedTask);
+
+    sut.Play();
+    await sut.WaitForPendingCommandsAsync();
 
     sut.Stop();
     sut.Play();
@@ -203,16 +209,35 @@ public class CastPlaybackServiceTest {
   }
 
   [Fact]
-  public void MediaStatus_Finished_FiresSongEndedEvent() {
+  public async Task MediaStatus_Finished_FiresSongEndedEvent() {
     using var sut = new CastPlaybackService(_mockClient.Object, _song, _stream, _url, _mockProxyService.Object);
     bool songEndedFired = false;
     sut.SongEnded += (sender, args) => songEndedFired = true;
+
+    sut.Play();
+    await sut.WaitForPendingCommandsAsync();
 
     _mockClient.Raise(c => c.MediaStatusChanged += null, _mockClient.Object, new MediaStatus {
       IdleReason = "FINISHED"
     });
 
     Assert.True(songEndedFired);
+  }
+
+  [Fact]
+  public void MediaStatus_IgnoredWhenServiceNotStarted() {
+    using var sut = new CastPlaybackService(_mockClient.Object, _song, _stream, _url, _mockProxyService.Object);
+    bool songEndedFired = false;
+    sut.SongEnded += (sender, args) => songEndedFired = true;
+
+    // Simulate device finishing another track before this service has played
+    _mockClient.Raise(c => c.MediaStatusChanged += null, _mockClient.Object, new MediaStatus {
+      PlayerState = PlayerStateType.Idle,
+      IdleReason = "FINISHED"
+    });
+
+    Assert.False(songEndedFired);
+    Assert.Equal(Smoc.Services.PlaybackState.Stopped, sut.PlaybackState);
   }
 
   [Fact]
