@@ -1,50 +1,46 @@
-using Terminal.Gui.Configuration;
-
 namespace Smoc.Configuration;
 
 /// <summary>
 /// Configuration for Tidal.
 /// </summary>
-public static class TidalConfig {
+public class TidalConfig {
   /// <summary>
   /// Gets or sets the Tidal Client ID.
   /// </summary>
-  [ConfigurationProperty(Scope = typeof(SettingsScope))]
-  public static string? ClientId { get; set; } = null;
+  public string? ClientId { get; set; } = null;
 
   /// <summary>
   /// Gets or sets the Tidal Client Secret.
   /// </summary>
-  [ConfigurationProperty(Scope = typeof(SettingsScope))]
-  public static string? ClientSecret { get; set; } = null;
+  public string? ClientSecret { get; set; } = null;
 
   /// <summary>
   /// Gets or sets the Tidal access token.
   /// </summary>
-  [ConfigurationProperty(Scope = typeof(SettingsScope))]
-  public static string? AccessToken { get; set; } = null;
+  public string? AccessToken { get; set; } = null;
 
   /// <summary>
   /// Gets or sets the Tidal refresh token.
   /// </summary>
-  [ConfigurationProperty(Scope = typeof(SettingsScope))]
-  public static string? RefreshToken { get; set; } = null;
+  public string? RefreshToken { get; set; } = null;
 
   /// <summary>
-  /// Gets or sets the Tidal token expiry time.
+  /// Gets or sets the Tidal token expiry timestamp in epoch seconds.
   /// </summary>
-  [ConfigurationProperty(Scope = typeof(SettingsScope))]
-  public static DateTime? TokenExpiry { get; set; } = null;
+  public long? TokenExpiry { get; set; } = null;
 
   /// <summary>
-  /// Gets or sets the Tidal country code.
+  /// Gets or sets the Tidal audio quality setting (e.g. LOW, HIGH, LOSSLESS, HI_RES).
   /// </summary>
-  [ConfigurationProperty(Scope = typeof(SettingsScope))]
-  public static string CountryCode { get; set; } = "US";
+  public string Quality { get; set; } = "LOSSLESS";
 
   /// <summary>
-  /// Gets or sets the Tidal audio quality.
+  /// Gets or sets the Tidal ISO country code.
   /// </summary>
-  [ConfigurationProperty(Scope = typeof(SettingsScope))]
-  public static string AudioQuality { get; set; } = "LOSSLESS";
+  public string CountryCode { get; set; } = "US";
+
+  /// <summary>
+  /// The static facade instance containing the current effective values.
+  /// </summary>
+  public static TidalConfig Defaults { get; set; } = new();
 }
