@@ -57,9 +57,9 @@ public class CastAudioServiceTest {
   public async Task ConnectAsync_CallsClientEnsureConnectedAndLaunched() {
     var sut = new CastAudioService(_device, _mockProxyService.Object, _mockClient.Object);
 
-    await sut.ConnectAsync();
+    await sut.ConnectAsync(TestContext.Current.CancellationToken);
 
-    _mockClient.Verify(c => c.EnsureConnectedAndLaunchedAsync(_device, "CC1AD845"), Times.Once);
+    _mockClient.Verify(c => c.EnsureConnectedAndLaunchedAsync(_device, "CC1AD845", It.IsAny<CancellationToken>()), Times.Once);
   }
 
   [Fact]
@@ -69,7 +69,7 @@ public class CastAudioServiceTest {
     sut.Volume = 0.8f;
 
     Assert.Equal(0.8f, sut.Volume);
-    _mockClient.Verify(c => c.SetVolumeAsync(0.8f), Times.Once);
+    _mockClient.Verify(c => c.SetVolumeAsync(0.8f, It.IsAny<CancellationToken>()), Times.Once);
   }
 
   [Theory]
@@ -97,14 +97,14 @@ public class CastAudioServiceTest {
 
     sut.Dispose();
 
-    _mockClient.Verify(c => c.DisconnectAsync(), Times.Once);
+    _mockClient.Verify(c => c.DisconnectAsync(It.IsAny<CancellationToken>()), Times.Once);
     _mockClient.Verify(c => c.Dispose(), Times.Once);
   }
 
   [Fact]
   public async Task OnSongEnded_AutomaticallyTransitionsToNextPreloadedTrack() {
     var loadedMediaTitles = new List<string>();
-    _mockClient.Setup(c => c.LoadAsync(It.IsAny<Media>())).Returns((Media m) => {
+    _mockClient.Setup(c => c.LoadAsync(It.IsAny<Media>(), It.IsAny<CancellationToken>())).Returns((Media m, CancellationToken ct) => {
       loadedMediaTitles.Add(m.Metadata?.Title ?? string.Empty);
       return Task.CompletedTask;
     });

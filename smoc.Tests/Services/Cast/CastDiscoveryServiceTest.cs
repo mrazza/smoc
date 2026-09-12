@@ -24,20 +24,20 @@ public class CastDiscoveryServiceTest : IDisposable {
 
   [Fact]
   public async Task EnsureInitialDiscoveryCompletedAsync_CompletesSafelyWhenNotStarted() {
-    await _sut.EnsureInitialDiscoveryCompletedAsync();
+    await _sut.EnsureInitialDiscoveryCompletedAsync(TestContext.Current.CancellationToken);
     Assert.Empty(_sut.DiscoveredDevices);
   }
 
   [Fact]
   public async Task StartDiscoveryAsync_InitiatesScan() {
-    var task = _sut.StartDiscoveryAsync();
+    var task = _sut.StartDiscoveryAsync(TestContext.Current.CancellationToken);
     Assert.NotNull(task);
-    await _sut.EnsureInitialDiscoveryCompletedAsync();
+    await _sut.EnsureInitialDiscoveryCompletedAsync(TestContext.Current.CancellationToken);
   }
 
   [Fact]
   public async Task ScanAsync_ReturnsEnumerableOfDevices() {
-    var devices = await _sut.ScanAsync(TimeSpan.FromMilliseconds(100));
+    var devices = await _sut.ScanAsync(TimeSpan.FromMilliseconds(100), TestContext.Current.CancellationToken);
     Assert.NotNull(devices);
   }
 

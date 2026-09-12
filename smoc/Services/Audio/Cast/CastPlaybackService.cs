@@ -1,18 +1,19 @@
+using Terminal.Gui.App;
+using Sharpcaster.Models;
 using Sharpcaster.Models.Media;
 using Smoc.Services.Cast;
 using Smoc.Streaming;
 using Smoc.Services.Audio;
-using System;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using Terminal.Gui.App;
+using System;
 
 namespace Smoc.Services.Audio.Cast;
 
 /// <summary>
-/// Playback service for a single song on a Google Cast device.
+/// Playback service that streams audio to a Google Cast device.
 /// </summary>
 public sealed class CastPlaybackService : IPlaybackService {
   private readonly IChromecastClient _client;
@@ -21,9 +22,10 @@ public sealed class CastPlaybackService : IPlaybackService {
   private readonly string _url;
   private readonly IStreamingProxyService _proxyService;
   private readonly string _contentType;
-  private readonly Func<Task>? _ensureConnection;
-  private readonly object _commandLock = new();
+  private readonly Func<CancellationToken, Task>? _ensureConnection;
+  private readonly object _stateLock = new();
   private readonly object _progressLock = new();
+  private readonly object _commandLock = new();
   private readonly CancellationTokenSource _disposeCts = new();
   private Task _lastCommandTask = Task.CompletedTask;
   private PlaybackState _state = PlaybackState.Stopped;
@@ -61,7 +63,7 @@ public sealed class CastPlaybackService : IPlaybackService {
     string url,
     IStreamingProxyService proxyService,
     string contentType = "audio/mpeg",
-    Func<Task>? ensureConnection = null) {
+    Func<CancellationToken, Task>? ensureConnection = null) {
     _client = client;
     _song = song;
     _stream = stream;
@@ -71,6 +73,27 @@ public sealed class CastPlaybackService : IPlaybackService {
     _ensureConnection = ensureConnection;
 
     _client.MediaStatusChanged += OnMediaStatusChanged;
+  }
+
+  /// <summary>
+  /// Initializes a new instance of the <see cref="CastPlaybackService"/> class with a parameterless connection delegate.
+  /// </summary>
+  /// <param name="client">The Cast client.</param>
+  /// <param name="song">The song to play.</param>
+  /// <param name="stream">The stream of the song.</param>
+  /// <param name="url">The URL where the stream is proxied.</param>
+  /// <param name="proxyService">The proxy service.</param>
+  /// <param name="contentType">The content type of the stream.</param>
+  /// <param name="ensureConnection">Delegate to ensure device connectivity.</param>
+  public CastPlaybackService(
+    IChromecastClient client,
+    Song song,
+    Stream stream,
+    string url,
+    IStreamingProxyService proxyService,
+    string contentType,
+    Func<Task> ensureConnection)
+    : this(client, song, stream, url, proxyService, contentType, _ => ensureConnection()) {
   }
 
   /// <inheritdoc/>
@@ -107,9 +130,15 @@ public sealed class CastPlaybackService : IPlaybackService {
   /// <inheritdoc/>
   public Song Song => _song;
 
-  /// <summary>
-  /// Enqueues an asynchronous operation to run sequentially after all previous commands complete.
-  /// </summary>
+  /// <inheritdoc/>
+  public PlaybackState State {
+    get {
+      lock (_stateLock) {
+        return _state;
+      }
+    }
+  }
+
   private void EnqueueCommand(Func<Task> action, string operationName) {
     lock (_commandLock) {
       if (_disposeCts.IsCancellationRequested) {
@@ -122,7 +151,7 @@ public sealed class CastPlaybackService : IPlaybackService {
         }
 
         try {
-          await prevTask.ConfigureAwait(false);
+          await prevTask;
         } catch {
           // Swallow previous exception to preserve pipeline ordering
         }
@@ -132,9 +161,9 @@ public sealed class CastPlaybackService : IPlaybackService {
         }
 
         try {
-          await action().ConfigureAwait(false);
+          await action();
         } catch (Exception ex) when (ex is not OperationCanceledException) {
-          Logging.Error($"Error executing Cast playback command '{operationName}': {ex.Message}");
+          Logging.Error($"Error executing Cast playback command \"{operationName}\": {ex.Message}");
         }
       }, TaskScheduler.Default).Unwrap();
     }
@@ -159,7 +188,7 @@ public sealed class CastPlaybackService : IPlaybackService {
       }
 
       if (_ensureConnection != null) {
-        await _ensureConnection().ConfigureAwait(false);
+        await _ensureConnection(_disposeCts.Token);
       }
 
       if (_state == PlaybackState.Stopped) {
@@ -170,9 +199,9 @@ public sealed class CastPlaybackService : IPlaybackService {
             Title = _song.Title,
             Artist = _song.Artist.Name
           }
-        }).ConfigureAwait(false);
+        }, _disposeCts.Token);
       } else {
-        await _client.PlayAsync().ConfigureAwait(false);
+        await _client.PlayAsync(_disposeCts.Token);
       }
       UpdateState(PlaybackState.Playing);
       StartProgressTracking();
@@ -186,7 +215,7 @@ public sealed class CastPlaybackService : IPlaybackService {
         return;
       }
 
-      await _client.PauseAsync().ConfigureAwait(false);
+      await _client.PauseAsync(_disposeCts.Token);
       StopProgressTracking(resetPosition: false);
       UpdateState(PlaybackState.Paused);
       PositionChanged?.Invoke(this, CurrentTime);
@@ -200,7 +229,7 @@ public sealed class CastPlaybackService : IPlaybackService {
         return;
       }
 
-      await _client.StopAsync().ConfigureAwait(false);
+      await _client.StopAsync(_disposeCts.Token);
       StopProgressTracking(resetPosition: true);
       UpdateState(PlaybackState.Stopped);
       PositionChanged?.Invoke(this, TimeSpan.Zero);
@@ -210,7 +239,7 @@ public sealed class CastPlaybackService : IPlaybackService {
   /// <inheritdoc/>
   public void Seek(TimeSpan position) {
     EnqueueCommand(async () => {
-      await _client.SeekAsync(position.TotalSeconds).ConfigureAwait(false);
+      await _client.SeekAsync(position.TotalSeconds, _disposeCts.Token);
       lock (_progressLock) {
         _statusPosition = position;
         if (_state == PlaybackState.Playing) {
@@ -237,13 +266,13 @@ public sealed class CastPlaybackService : IPlaybackService {
         using var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(500));
         int pollCounter = 0;
         try {
-          while (!token.IsCancellationRequested && await timer.WaitForNextTickAsync(token).ConfigureAwait(false)) {
+          while (!token.IsCancellationRequested && await timer.WaitForNextTickAsync(token)) {
             if (_state == PlaybackState.Playing) {
               PositionChanged?.Invoke(this, CurrentTime);
 
               if (++pollCounter >= 20) {
                 pollCounter = 0;
-                _ = PollMediaStatusAsync();
+                _ = PollMediaStatusAsync(token);
               }
             }
           }
@@ -256,23 +285,26 @@ public sealed class CastPlaybackService : IPlaybackService {
 
   private void StopProgressTracking(bool resetPosition) {
     lock (_progressLock) {
-      if (!resetPosition && _startTimestamp > 0 && _state == PlaybackState.Playing) {
+      _progressCts?.Cancel();
+      _progressCts?.Dispose();
+      _progressCts = null;
+      _progressLoopTask = null;
+
+      if (_state == PlaybackState.Playing && _startTimestamp > 0) {
         var elapsedSeconds = (Stopwatch.GetTimestamp() - _startTimestamp) / (double)Stopwatch.Frequency;
-        _statusPosition = _statusPosition + TimeSpan.FromSeconds(elapsedSeconds);
-        if (_statusPosition > Duration) {
-          _statusPosition = Duration;
-        }
-      } else if (resetPosition) {
-        _statusPosition = TimeSpan.Zero;
+        _statusPosition += TimeSpan.FromSeconds(elapsedSeconds);
       }
       _startTimestamp = 0;
-      _progressCts?.Cancel();
+
+      if (resetPosition) {
+        _statusPosition = TimeSpan.Zero;
+      }
     }
   }
 
-  private async Task PollMediaStatusAsync() {
+  private async Task PollMediaStatusAsync(CancellationToken cancellationToken) {
     try {
-      var status = await _client.GetMediaStatusAsync().ConfigureAwait(false);
+      var status = await _client.GetMediaStatusAsync(cancellationToken);
       if (status != null) {
         OnMediaStatusChanged(this, status);
       }
@@ -281,77 +313,77 @@ public sealed class CastPlaybackService : IPlaybackService {
     }
   }
 
-  private void UpdateState(PlaybackState newState) {
-    if (_state != newState) {
-      _state = newState;
-      PlaybackStateChanged?.Invoke(this, _state);
-    }
-  }
-
   private void OnMediaStatusChanged(object? sender, MediaStatus e) {
     if (!_hasStarted) {
       return;
     }
 
-    if (e.Media?.ContentUrl != null && !string.Equals(e.Media.ContentUrl, _url, StringComparison.OrdinalIgnoreCase)) {
+    if (e.Media?.ContentUrl != null &&
+        !string.Equals(e.Media.ContentUrl, _url, StringComparison.OrdinalIgnoreCase)) {
       return;
     }
 
     lock (_progressLock) {
-      _statusPosition = TimeSpan.FromSeconds(e.CurrentTime);
-      if (_state == PlaybackState.Playing) {
-        _startTimestamp = Stopwatch.GetTimestamp();
+      if (e.CurrentTime > 0) {
+        _statusPosition = TimeSpan.FromSeconds(e.CurrentTime);
+        if (_state == PlaybackState.Playing) {
+          _startTimestamp = Stopwatch.GetTimestamp();
+        }
       }
-      if (e.Media?.Duration != null) {
+      if (e.Media?.Duration != null && e.Media.Duration.Value > 0) {
         _duration = TimeSpan.FromSeconds(e.Media.Duration.Value);
       }
     }
 
     PositionChanged?.Invoke(this, CurrentTime);
 
-    var playerState = e.PlayerState.ToString();
-    var newState = playerState switch {
-      "Playing" => PlaybackState.Playing,
-      "Paused" => PlaybackState.Paused,
-      "Buffering" => PlaybackState.Playing,
-      _ => PlaybackState.Stopped
-    };
-
-    if (newState == PlaybackState.Playing) {
-      StartProgressTracking();
-    } else if (newState == PlaybackState.Paused) {
-      StopProgressTracking(resetPosition: false);
-    } else {
-      StopProgressTracking(resetPosition: true);
+    var wasPlaying = false;
+    lock (_stateLock) {
+      wasPlaying = _state == PlaybackState.Playing;
     }
 
-    var wasPlaying = _state == PlaybackState.Playing;
-    UpdateState(newState);
+    PlaybackState? newState = e.PlayerState switch {
+      PlayerStateType.Playing => PlaybackState.Playing,
+      PlayerStateType.Paused => PlaybackState.Paused,
+      PlayerStateType.Idle => PlaybackState.Stopped,
+      PlayerStateType.Buffering => PlaybackState.Playing,
+      _ => null
+    };
 
-    if (wasPlaying && (string.Equals(e.IdleReason, "FINISHED", StringComparison.OrdinalIgnoreCase) ||
-        (e.PlayerState == PlayerStateType.Idle && (e.IdleReason == null || string.Equals(e.IdleReason, "FINISHED", StringComparison.OrdinalIgnoreCase))))) {
+    if (newState.HasValue) {
+      UpdateState(newState.Value);
+    }
+
+    if (wasPlaying && string.Equals(e.IdleReason, "FINISHED", StringComparison.OrdinalIgnoreCase)) {
       SongEnded?.Invoke(this, EventArgs.Empty);
+    }
+  }
+
+  private void UpdateState(PlaybackState newState) {
+    bool changed;
+    lock (_stateLock) {
+      changed = _state != newState;
+      _state = newState;
+    }
+    if (changed) {
+      PlaybackStateChanged?.Invoke(this, newState);
     }
   }
 
   /// <inheritdoc/>
   public void Dispose() {
-    lock (_commandLock) {
-      _disposeCts.Cancel();
-    }
-
-    StopProgressTracking(resetPosition: true);
-    _progressCts?.Dispose();
+    _disposeCts.Cancel();
+    StopProgressTracking(resetPosition: false);
+    _client.MediaStatusChanged -= OnMediaStatusChanged;
 
     try {
       _lastCommandTask.Wait(TimeSpan.FromSeconds(2));
     } catch {
-      // Ignore cancellation or timeouts during shutdown
+      // Ignore timeout or cancellation on dispose
     }
 
-    _client.MediaStatusChanged -= OnMediaStatusChanged;
-    _stream.Dispose();
     _proxyService.StopProxy(_url);
+    _stream.Dispose();
     _disposeCts.Dispose();
   }
 }

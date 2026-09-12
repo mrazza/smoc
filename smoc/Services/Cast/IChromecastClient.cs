@@ -1,6 +1,7 @@
 using Sharpcaster.Models;
 using Sharpcaster.Models.Media;
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Smoc.Services.Cast;
@@ -20,67 +21,77 @@ public interface IChromecastClient : IDisposable {
   /// </summary>
   /// <param name="receiver">The receiver to connect to.</param>
   /// <param name="applicationId">The ID of the application to launch.</param>
+  /// <param name="cancellationToken">A token to cancel the operation.</param>
   /// <returns>A task representing the asynchronous operation.</returns>
-  Task EnsureConnectedAndLaunchedAsync(ChromecastReceiver receiver, string applicationId);
+  Task EnsureConnectedAndLaunchedAsync(ChromecastReceiver receiver, string applicationId, CancellationToken cancellationToken = default);
 
   /// <summary>
   /// Connects to a Chromecast receiver.
   /// </summary>
   /// <param name="receiver">The receiver to connect to.</param>
+  /// <param name="cancellationToken">A token to cancel the operation.</param>
   /// <returns>A task representing the asynchronous operation.</returns>
-  Task ConnectChromecast(ChromecastReceiver receiver);
+  Task ConnectChromecast(ChromecastReceiver receiver, CancellationToken cancellationToken = default);
 
   /// <summary>
   /// Disconnects from the currently connected device.
   /// </summary>
+  /// <param name="cancellationToken">A token to cancel the operation.</param>
   /// <returns>A task representing the asynchronous operation.</returns>
-  Task DisconnectAsync();
+  Task DisconnectAsync(CancellationToken cancellationToken = default);
 
   /// <summary>
   /// Launches an application on the connected device.
   /// </summary>
   /// <param name="applicationId">The ID of the application to launch.</param>
+  /// <param name="cancellationToken">A token to cancel the operation.</param>
   /// <returns>A task representing the asynchronous operation.</returns>
-  Task LaunchApplicationAsync(string applicationId);
+  Task LaunchApplicationAsync(string applicationId, CancellationToken cancellationToken = default);
 
   /// <summary>
   /// Sets the volume level of the connected device.
   /// </summary>
   /// <param name="level">The volume level (0.0 to 1.0).</param>
+  /// <param name="cancellationToken">A token to cancel the operation.</param>
   /// <returns>A task representing the asynchronous operation.</returns>
-  Task SetVolumeAsync(float level);
+  Task SetVolumeAsync(float level, CancellationToken cancellationToken = default);
 
   /// <summary>
   /// Loads media on the connected device.
   /// </summary>
   /// <param name="media">The media to load.</param>
+  /// <param name="cancellationToken">A token to cancel the operation.</param>
   /// <returns>A task representing the asynchronous operation.</returns>
-  Task LoadAsync(Media media);
+  Task LoadAsync(Media media, CancellationToken cancellationToken = default);
 
   /// <summary>
   /// Starts playback on the connected device.
   /// </summary>
+  /// <param name="cancellationToken">A token to cancel the operation.</param>
   /// <returns>A task representing the asynchronous operation.</returns>
-  Task PlayAsync();
+  Task PlayAsync(CancellationToken cancellationToken = default);
 
   /// <summary>
   /// Pauses playback on the connected device.
   /// </summary>
+  /// <param name="cancellationToken">A token to cancel the operation.</param>
   /// <returns>A task representing the asynchronous operation.</returns>
-  Task PauseAsync();
+  Task PauseAsync(CancellationToken cancellationToken = default);
 
   /// <summary>
   /// Stops playback on the connected device.
   /// </summary>
+  /// <param name="cancellationToken">A token to cancel the operation.</param>
   /// <returns>A task representing the asynchronous operation.</returns>
-  Task StopAsync();
+  Task StopAsync(CancellationToken cancellationToken = default);
 
   /// <summary>
   /// Seeks to a specific position in the media.
   /// </summary>
   /// <param name="seconds">The position to seek to, in seconds.</param>
+  /// <param name="cancellationToken">A token to cancel the operation.</param>
   /// <returns>A task representing the asynchronous operation.</returns>
-  Task SeekAsync(double seconds);
+  Task SeekAsync(double seconds, CancellationToken cancellationToken = default);
 
   /// <summary>
   /// Gets or sets the volume level of the connected device.
@@ -90,6 +101,7 @@ public interface IChromecastClient : IDisposable {
   /// <summary>
   /// Requests the current media status from the connected device.
   /// </summary>
+  /// <param name="cancellationToken">A token to cancel the operation.</param>
   /// <returns>A task representing the asynchronous operation, returning the current media status or null.</returns>
-  Task<MediaStatus?> GetMediaStatusAsync();
+  Task<MediaStatus?> GetMediaStatusAsync(CancellationToken cancellationToken = default);
 }

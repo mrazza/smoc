@@ -43,7 +43,7 @@ public class CastPlaybackServiceTest {
     await sut.WaitForPendingCommandsAsync();
 
     Assert.Equal(Smoc.Services.PlaybackState.Playing, sut.PlaybackState);
-    _mockClient.Verify(c => c.LoadAsync(It.IsAny<Media>()), Times.Once);
+    _mockClient.Verify(c => c.LoadAsync(It.IsAny<Media>(), It.IsAny<CancellationToken>()), Times.Once);
   }
 
   [Fact]
@@ -55,7 +55,7 @@ public class CastPlaybackServiceTest {
     await sut.WaitForPendingCommandsAsync();
 
     Assert.Equal(Smoc.Services.PlaybackState.Paused, sut.PlaybackState);
-    _mockClient.Verify(c => c.PauseAsync(), Times.Once);
+    _mockClient.Verify(c => c.PauseAsync(It.IsAny<CancellationToken>()), Times.Once);
   }
 
   [Fact]
@@ -67,7 +67,7 @@ public class CastPlaybackServiceTest {
     await sut.WaitForPendingCommandsAsync();
 
     Assert.Equal(Smoc.Services.PlaybackState.Stopped, sut.PlaybackState);
-    _mockClient.Verify(c => c.StopAsync(), Times.Once);
+    _mockClient.Verify(c => c.StopAsync(It.IsAny<CancellationToken>()), Times.Once);
   }
 
   [Fact]
@@ -82,14 +82,14 @@ public class CastPlaybackServiceTest {
 
     var stopStartedTcs = new TaskCompletionSource();
 
-    _mockClient.Setup(c => c.StopAsync()).Returns(async () => {
+    _mockClient.Setup(c => c.StopAsync(It.IsAny<CancellationToken>())).Returns(async () => {
       executionLog.Add("StopStarted");
       stopStartedTcs.SetResult();
       await stopTcs.Task;
       executionLog.Add("StopFinished");
     });
 
-    _mockClient.Setup(c => c.LoadAsync(It.IsAny<Media>())).Returns(() => {
+    _mockClient.Setup(c => c.LoadAsync(It.IsAny<Media>(), It.IsAny<CancellationToken>())).Returns(() => {
       executionLog.Add("PlayStarted");
       return Task.CompletedTask;
     });
@@ -114,8 +114,8 @@ public class CastPlaybackServiceTest {
   public async Task FaultedCommand_DoesNotBreakSubsequentCommands() {
     using var sut = new CastPlaybackService(_mockClient.Object, _song, _stream, _url, _mockProxyService.Object);
 
-    _mockClient.Setup(c => c.StopAsync()).ThrowsAsync(new InvalidOperationException("Network failure"));
-    _mockClient.Setup(c => c.LoadAsync(It.IsAny<Media>())).Returns(Task.CompletedTask);
+    _mockClient.Setup(c => c.StopAsync(It.IsAny<CancellationToken>())).ThrowsAsync(new InvalidOperationException("Network failure"));
+    _mockClient.Setup(c => c.LoadAsync(It.IsAny<Media>(), It.IsAny<CancellationToken>())).Returns(Task.CompletedTask);
 
     sut.Play();
     await sut.WaitForPendingCommandsAsync();
@@ -125,8 +125,8 @@ public class CastPlaybackServiceTest {
 
     await sut.WaitForPendingCommandsAsync();
 
-    _mockClient.Verify(c => c.StopAsync(), Times.Once);
-    _mockClient.Verify(c => c.LoadAsync(It.IsAny<Media>()), Times.Once);
+    _mockClient.Verify(c => c.StopAsync(It.IsAny<CancellationToken>()), Times.Once);
+    _mockClient.Verify(c => c.LoadAsync(It.IsAny<Media>(), It.IsAny<CancellationToken>()), Times.Once);
     Assert.Equal(Smoc.Services.PlaybackState.Playing, sut.PlaybackState);
   }
 
@@ -205,7 +205,7 @@ public class CastPlaybackServiceTest {
     sut.Play();
     await sut.WaitForPendingCommandsAsync();
 
-    _mockClient.Verify(c => c.PlayAsync(), Times.Once);
+    _mockClient.Verify(c => c.PlayAsync(It.IsAny<CancellationToken>()), Times.Once);
   }
 
   [Fact]
@@ -272,7 +272,7 @@ public class CastPlaybackServiceTest {
     await sut.WaitForPendingCommandsAsync();
 
     Assert.True(ensureConnectionInvoked);
-    _mockClient.Verify(c => c.LoadAsync(It.IsAny<Media>()), Times.Once);
+    _mockClient.Verify(c => c.LoadAsync(It.IsAny<Media>(), It.IsAny<CancellationToken>()), Times.Once);
   }
 
   [Fact]

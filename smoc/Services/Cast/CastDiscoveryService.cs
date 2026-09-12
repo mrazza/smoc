@@ -3,6 +3,7 @@ using Sharpcaster.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Smoc.Services.Cast;
@@ -14,6 +15,7 @@ public sealed class CastDiscoveryService : ICastDiscoveryService {
   private readonly ChromecastLocator _locator;
   private readonly List<ChromecastReceiver> _discoveredDevices = new();
   private readonly object _devicesLock = new();
+  private readonly CancellationTokenSource _disposeCts = new();
   private Task? _initialDiscoveryTask;
 
   /// <inheritdoc/>
@@ -37,20 +39,21 @@ public sealed class CastDiscoveryService : ICastDiscoveryService {
   }
 
   /// <inheritdoc/>
-  public Task StartDiscoveryAsync() {
+  public Task StartDiscoveryAsync(CancellationToken cancellationToken = default) {
     lock (_devicesLock) {
       if (_initialDiscoveryTask == null || _initialDiscoveryTask.IsFaulted) {
         _initialDiscoveryTask = ScanInternalAsync(
           quickTimeout: TimeSpan.FromMilliseconds(500),
           mediumTimeout: TimeSpan.FromSeconds(1),
-          fullTimeout: TimeSpan.FromSeconds(2));
+          fullTimeout: TimeSpan.FromSeconds(2),
+          cancellationToken: cancellationToken);
       }
       return _initialDiscoveryTask;
     }
   }
 
   /// <inheritdoc/>
-  public async Task EnsureInitialDiscoveryCompletedAsync() {
+  public async Task EnsureInitialDiscoveryCompletedAsync(CancellationToken cancellationToken = default) {
     Task? task;
     lock (_devicesLock) {
       task = _initialDiscoveryTask;
@@ -58,7 +61,9 @@ public sealed class CastDiscoveryService : ICastDiscoveryService {
 
     if (task != null) {
       try {
-        await task.ConfigureAwait(false);
+        await task.WaitAsync(cancellationToken);
+      } catch (OperationCanceledException) {
+        throw;
       } catch {
         // Suppress scan exceptions to allow subsequent fallback logic
       }
@@ -66,19 +71,22 @@ public sealed class CastDiscoveryService : ICastDiscoveryService {
   }
 
   /// <inheritdoc/>
-  public async Task<IEnumerable<ChromecastReceiver>> ScanAsync(TimeSpan? timeout = null) {
+  public async Task<IEnumerable<ChromecastReceiver>> ScanAsync(TimeSpan? timeout = null, CancellationToken cancellationToken = default) {
     var scanTimeout = timeout ?? TimeSpan.FromSeconds(2);
     return await ScanInternalAsync(
       quickTimeout: TimeSpan.FromMilliseconds(500),
       mediumTimeout: scanTimeout,
-      fullTimeout: scanTimeout).ConfigureAwait(false);
+      fullTimeout: scanTimeout,
+      cancellationToken: cancellationToken);
   }
 
   private async Task<IEnumerable<ChromecastReceiver>> ScanInternalAsync(
     TimeSpan quickTimeout,
     TimeSpan mediumTimeout,
-    TimeSpan fullTimeout) {
-    var receivers = await _locator.FindReceiversAsync(quickTimeout, mediumTimeout, fullTimeout).ConfigureAwait(false);
+    TimeSpan fullTimeout,
+    CancellationToken cancellationToken = default) {
+    using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_disposeCts.Token, cancellationToken);
+    var receivers = await _locator.FindReceiversAsync(quickTimeout, mediumTimeout, fullTimeout).WaitAsync(linkedCts.Token);
     var newlyDiscovered = new List<ChromecastReceiver>();
     foreach (var device in receivers) {
       if (AddDevice(device)) {
@@ -110,5 +118,7 @@ public sealed class CastDiscoveryService : ICastDiscoveryService {
   /// <inheritdoc/>
   public void Dispose() {
     _locator.ChromecastReceiverFound -= OnReceiverFound;
+    _disposeCts.Cancel();
+    _disposeCts.Dispose();
   }
 }

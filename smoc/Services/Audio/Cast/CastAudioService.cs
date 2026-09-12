@@ -10,24 +10,31 @@ using System;
 namespace Smoc.Services.Audio.Cast;
 
 /// <summary>
-/// Audio service for playing media on a Google Cast device.
+/// Audio service that plays audio on a Google Cast device.
 /// </summary>
 public sealed class CastAudioService : IAudioService {
-  private const string DefaultMediaReceiverAppId = "CC1AD845";
+  /// <summary>
+  /// The default media receiver application ID.
+  /// </summary>
+  public const string DefaultMediaReceiverAppId = "CC1AD845";
 
   private readonly ChromecastReceiver _device;
-  private readonly IChromecastClient _client;
   private readonly IStreamingProxyService _proxyService;
+  private readonly IChromecastClient _client;
   private readonly SemaphoreSlim _connectionLock = new(1, 1);
-  private float _volume = 0.5f;
+  private readonly CancellationTokenSource _disposeCts = new();
+  private float _volume = 1.0f;
 
   /// <summary>
   /// Initializes a new instance of the <see cref="CastAudioService"/> class.
   /// </summary>
-  /// <param name="device">The Cast device to play on.</param>
+  /// <param name="device">The target Chromecast receiver.</param>
   /// <param name="proxyService">The streaming proxy service.</param>
-  /// <param name="client">An optional Cast client; if null, a default one will be created.</param>
-  public CastAudioService(ChromecastReceiver device, IStreamingProxyService proxyService, IChromecastClient? client = null) {
+  /// <param name="client">Optional Chromecast client wrapper.</param>
+  public CastAudioService(
+    ChromecastReceiver device,
+    IStreamingProxyService proxyService,
+    IChromecastClient? client = null) {
     _device = device;
     _proxyService = proxyService;
     _client = client ?? new ChromecastClientWrapper();
@@ -39,61 +46,76 @@ public sealed class CastAudioService : IAudioService {
     get => _volume;
     set {
       _volume = value;
-      _ = _client.SetVolumeAsync(_volume);
+      _ = _client.SetVolumeAsync(_volume, _disposeCts.Token);
     }
   }
 
   /// <summary>
-  /// Ensures that the device is connected and the Default Media Receiver is launched.
+  /// Ensures that the client is connected to the receiver and the default media receiver app is running.
   /// </summary>
+  /// <param name="cancellationToken">A token to cancel the operation.</param>
   /// <returns>A task representing the asynchronous operation.</returns>
-  public async Task EnsureConnectedAsync() {
-    await _connectionLock.WaitAsync().ConfigureAwait(false);
+  public async Task EnsureConnectedAsync(CancellationToken cancellationToken = default) {
+    using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(_disposeCts.Token, cancellationToken);
+    await _connectionLock.WaitAsync(linkedCts.Token);
     try {
-      await _client.EnsureConnectedAndLaunchedAsync(_device, DefaultMediaReceiverAppId).ConfigureAwait(false);
+      await _client.EnsureConnectedAndLaunchedAsync(_device, DefaultMediaReceiverAppId, linkedCts.Token);
     } finally {
       _connectionLock.Release();
     }
   }
 
   /// <summary>
-  /// Connects to the Cast device.
+  /// Connects to the Chromecast device and launches the default media receiver.
   /// </summary>
+  /// <param name="cancellationToken">A token to cancel the operation.</param>
   /// <returns>A task representing the asynchronous operation.</returns>
-  public async Task ConnectAsync() {
-    await EnsureConnectedAsync().ConfigureAwait(false);
+  public async Task ConnectAsync(CancellationToken cancellationToken = default) {
+    await EnsureConnectedAsync(cancellationToken);
   }
 
+  /// <summary>
+  /// Creates a new playback service for the given stream and codec.
+  /// </summary>
+  public IPlaybackService MakePlaybackService(
+    Song song,
+    Stream stream,
+    string codec,
+    CancellationToken cancellationToken = default) =>
+    MakePlaybackService(song, stream, codec, null, cancellationToken);
+
   /// <inheritdoc/>
-  public IPlaybackService MakePlaybackService(Song song, Stream stream, string codec, CancellationToken cancellationToken = default) {
-    return MakePlaybackService(song, stream, codec, null, cancellationToken);
+  public IPlaybackService MakePlaybackService(
+    Song song,
+    Stream stream,
+    string codec,
+    float? loudnessDb,
+    CancellationToken cancellationToken = default) {
+    var mimeType = MapContentTypeToMimeType(codec);
+    var url = _proxyService.StartProxy(stream, mimeType);
+    return new CastPlaybackService(_client, song, stream, url, _proxyService, mimeType, EnsureConnectedAsync);
   }
 
-  /// <inheritdoc/>
-  public IPlaybackService MakePlaybackService(Song song, Stream stream, string codec, float? loudnessDb, CancellationToken cancellationToken = default) {
-    cancellationToken.ThrowIfCancellationRequested();
-    var contentType = codec switch {
-      "mp3" => "audio/mpeg",
-      "flac" => "audio/flac",
-      "m4a" => "audio/mp4",
-      "aac" => "audio/aac",
-      "ogg" => "audio/ogg",
-      "wav" => "audio/wav",
-      _ => "audio/mpeg"
-    };
-
-    var url = _proxyService.StartProxy(stream, contentType);
-    return new CastPlaybackService(_client, song, stream, url, _proxyService, contentType, EnsureConnectedAsync);
+  internal static string MapContentTypeToMimeType(string contentType) {
+    var lower = contentType.ToLowerInvariant();
+    if (lower.Contains("flac")) return "audio/flac";
+    if (lower.Contains("m4a") || lower.Contains("mp4")) return "audio/mp4";
+    if (lower.Contains("aac")) return "audio/aac";
+    if (lower.Contains("ogg")) return "audio/ogg";
+    if (lower.Contains("wav")) return "audio/wav";
+    return "audio/mpeg";
   }
 
   /// <inheritdoc/>
   public void Dispose() {
+    _disposeCts.Cancel();
     _connectionLock.Dispose();
     try {
       _client.DisconnectAsync().Wait(TimeSpan.FromSeconds(1));
     } catch {
-      // Suppress exceptions during disposal
+      // Suppress exceptions on dispose
     }
     _client.Dispose();
+    _disposeCts.Dispose();
   }
 }

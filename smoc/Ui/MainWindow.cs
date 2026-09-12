@@ -1,3 +1,4 @@
+using Terminal.Gui.App;
 using Sharpcaster.Models;
 using System.Reflection;
 using Smoc.Configuration;
@@ -27,6 +28,7 @@ public sealed class MainWindow : Runnable, IMainWindow {
   private readonly IPlaybackTrackingService _playbackTrackingService;
   private readonly ICastDiscoveryService _castDiscoveryService;
   private readonly IStreamingProxyService _streamingProxyService;
+  private readonly CancellationTokenSource _disposeCts = new();
 
   private Mode? _currentMode;
   private View? _preCommandFocusedView;
@@ -49,7 +51,15 @@ public sealed class MainWindow : Runnable, IMainWindow {
 
     _castDiscoveryService = new CastDiscoveryService();
     _streamingProxyService = new StreamingProxyService();
-    _ = _castDiscoveryService.StartDiscoveryAsync();
+    _ = Task.Run(async () => {
+      try {
+        await _castDiscoveryService.StartDiscoveryAsync(_disposeCts.Token);
+      } catch (OperationCanceledException) {
+        // Normal cancellation
+      } catch (Exception ex) {
+        Logging.Error($"Initial Cast discovery error: {ex.Message}");
+      }
+    });
 
     if (ListenHistoryConfig.Defaults.Enabled) {
       _playbackQueueService.PositionChanged += (_, position) => {
@@ -91,7 +101,7 @@ public sealed class MainWindow : Runnable, IMainWindow {
       try {
         var parts = CommandService.GetArgs(args);
         if (parts.Length == 0) {
-          await _castDiscoveryService.EnsureInitialDiscoveryCompletedAsync();
+          await _castDiscoveryService.EnsureInitialDiscoveryCompletedAsync(_disposeCts.Token);
           var devices = new List<string> { "local" };
           devices.AddRange(_castDiscoveryService.DiscoveredDevices.Select(d => d.Name));
           _commandLine.DisplayError($"Available outputs: {string.Join(", ", devices)}");
@@ -101,7 +111,7 @@ public sealed class MainWindow : Runnable, IMainWindow {
         var target = parts[0];
         if (target.Equals("refresh", StringComparison.OrdinalIgnoreCase)) {
           _commandLine.DisplayError("Scanning for Cast devices...");
-          await _castDiscoveryService.ScanAsync();
+          await _castDiscoveryService.ScanAsync(cancellationToken: _disposeCts.Token);
           var refreshedDevices = new List<string> { "local" };
           refreshedDevices.AddRange(_castDiscoveryService.DiscoveredDevices.Select(d => d.Name));
           _commandLine.DisplayError($"Available outputs: {string.Join(", ", refreshedDevices)}");
@@ -112,12 +122,12 @@ public sealed class MainWindow : Runnable, IMainWindow {
           await _playbackQueueService.SetAudioServiceAsync(new SoundFlowAudioService());
           _commandLine.DisplayError("Switched to local output");
         } else {
-          await _castDiscoveryService.EnsureInitialDiscoveryCompletedAsync();
+          await _castDiscoveryService.EnsureInitialDiscoveryCompletedAsync(_disposeCts.Token);
 
           var device = FindDevice(target);
           if (device == null) {
             _commandLine.DisplayError($"Scanning for '{target}'...");
-            await _castDiscoveryService.ScanAsync(TimeSpan.FromSeconds(2));
+            await _castDiscoveryService.ScanAsync(TimeSpan.FromSeconds(2), _disposeCts.Token);
             device = FindDevice(target);
           }
 
@@ -193,6 +203,8 @@ public sealed class MainWindow : Runnable, IMainWindow {
   }
 
   protected override void Dispose(bool disposing) {
+    _disposeCts.Cancel();
+    _disposeCts.Dispose();
     _commandService.UnregisterCommand("q");
     _commandService.UnregisterCommand("output");
     _commandService.UnregisterCompleter("output");
