@@ -6,6 +6,9 @@ using Terminal.Gui.App;
 
 namespace Smoc.Services;
 
+/// <summary>
+/// Standard implementation of <see cref="IPlaybackQueueService"/>.
+/// </summary>
 public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
   private IAudioService _audioService;
   private readonly IMainWindow _mainWindow;
@@ -356,9 +359,9 @@ public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
   }
 
   /// <inheritdoc/>
-  /// <inheritdoc/>
   public async Task SetAudioServiceAsync(IAudioService audioService) {
     var wasPlaying = PlaybackState == PlaybackState.Playing;
+    var wasPaused = PlaybackState == PlaybackState.Paused;
     var currentTime = CurrentTime;
 
     Stop();
@@ -371,9 +374,12 @@ public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
     _audioService = audioService;
     oldAudioService?.Dispose();
 
-    if (wasPlaying) {
+    if (_playbackQueue.Count > 0 && (wasPlaying || wasPaused)) {
       await Play();
       SeekTo(currentTime);
+      if (wasPaused) {
+        Pause();
+      }
     }
   }
 

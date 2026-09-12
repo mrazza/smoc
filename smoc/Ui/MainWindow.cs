@@ -87,29 +87,33 @@ public sealed class MainWindow : Runnable, IMainWindow {
     });
 
     _commandService.RegisterCommand("output", async (_, args) => {
-      var parts = CommandService.GetArgs(args);
-      if (parts.Length == 0) {
-        var devices = new List<string> { "local" };
-        devices.AddRange(_castDiscoveryService.DiscoveredDevices.Select(d => d.Name));
-        _commandLine.DisplayError($"Available outputs: {string.Join(", ", devices)}");
-        return;
-      }
-
-      var target = parts[0];
-      if (target.Equals("local", StringComparison.OrdinalIgnoreCase)) {
-        await _playbackQueueService.SetAudioServiceAsync(new SoundFlowAudioService());
-        _commandLine.DisplayError("Switched to local output");
-      } else {
-        var device = _castDiscoveryService.DiscoveredDevices.FirstOrDefault(d => d.Name.Contains(target, StringComparison.OrdinalIgnoreCase));
-        if (device == null) {
-          _commandLine.DisplayError($"Device not found: {target}");
+      try {
+        var parts = CommandService.GetArgs(args);
+        if (parts.Length == 0) {
+          var devices = new List<string> { "local" };
+          devices.AddRange(_castDiscoveryService.DiscoveredDevices.Select(d => d.Name));
+          _commandLine.DisplayError($"Available outputs: {string.Join(", ", devices)}");
           return;
         }
 
-        var castService = new CastAudioService(device, _streamingProxyService);
-        await castService.ConnectAsync();
-        await _playbackQueueService.SetAudioServiceAsync(castService);
-        _commandLine.DisplayError($"Switched to {device.Name}");
+        var target = parts[0];
+        if (target.Equals("local", StringComparison.OrdinalIgnoreCase)) {
+          await _playbackQueueService.SetAudioServiceAsync(new SoundFlowAudioService());
+          _commandLine.DisplayError("Switched to local output");
+        } else {
+          var device = _castDiscoveryService.DiscoveredDevices.FirstOrDefault(d => d.Name.Contains(target, StringComparison.OrdinalIgnoreCase));
+          if (device == null) {
+            _commandLine.DisplayError($"Device not found: {target}");
+            return;
+          }
+
+          var castService = new CastAudioService(device, _streamingProxyService);
+          await castService.ConnectAsync();
+          await _playbackQueueService.SetAudioServiceAsync(castService);
+          _commandLine.DisplayError($"Switched to {device.Name}");
+        }
+      } catch (Exception ex) {
+        _commandLine.DisplayError($"Output switch error: {ex.Message}");
       }
     });
 
@@ -166,6 +170,7 @@ public sealed class MainWindow : Runnable, IMainWindow {
   protected override void Dispose(bool disposing) {
     _commandService.UnregisterCommand("q");
     _commandService.UnregisterCommand("output");
+    _commandService.UnregisterCompleter("output");
     _castDiscoveryService.Dispose();
     _streamingProxyService.Dispose();
     base.Dispose(disposing);

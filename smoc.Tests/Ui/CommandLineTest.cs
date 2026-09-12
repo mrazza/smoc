@@ -138,13 +138,9 @@ public class CommandLineTest {
     context.Add(commandLine);
     
     context.KeyDown(Key.T).KeyDown(Key.E).KeyDown(Key.Tab);
-    
-    // The text should now be ":test/"
-    // We can't easily check the text of the internal TextField without reflection or adding a getter,
-    // but we can check if it didn't advance focus and let the screenshot differ catch it if we wanted a golden.
-    // However, for this task, I'll just verify the behavior via the command line text if I can.
-    // Let's add a public getter for the text or just rely on the fact that it handled the key.
+
     Assert.True(commandLine.HasFocus);
+    Assert.Equal(":test/", commandLine.CommandText);
   }
 
 }

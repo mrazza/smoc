@@ -22,6 +22,11 @@ public sealed class CommandLine : View {
   private object? _errorTimeoutTracker;
 
   /// <summary>
+  /// Gets the current text entered in the command line text field.
+  /// </summary>
+  public string CommandText => _commandTextField.Text;
+
+  /// <summary>
   /// Occurs when the command input is cancelled (e.g. via Esc).
   /// </summary>
   public event EventHandler? CommandCancelled;

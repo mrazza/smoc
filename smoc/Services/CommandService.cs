@@ -77,6 +77,14 @@ public sealed class CommandService {
   }
 
   /// <summary>
+  /// Unregisters a completion handler.
+  /// </summary>
+  /// <param name="command">The command name.</param>
+  public void UnregisterCompleter(string command) {
+    completers.Remove(command);
+  }
+
+  /// <summary>
   /// Gets completions for a given command line.
   /// </summary>
   /// <param name="command">The full command line string.</param>
