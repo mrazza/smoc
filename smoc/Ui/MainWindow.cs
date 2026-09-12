@@ -1,3 +1,4 @@
+using Sharpcaster.Models;
 using System.Reflection;
 using Smoc.Configuration;
 using Smoc.Services;
@@ -81,7 +82,7 @@ public sealed class MainWindow : Runnable, IMainWindow {
     });
 
     _commandService.RegisterCompleter("output", (_, args) => {
-      var devices = new List<string> { "local" };
+      var devices = new List<string> { "local", "refresh" };
       devices.AddRange(_castDiscoveryService.DiscoveredDevices.Select(d => d.Name));
       return devices.Where(d => d.StartsWith(args, StringComparison.OrdinalIgnoreCase));
     });
@@ -90,6 +91,7 @@ public sealed class MainWindow : Runnable, IMainWindow {
       try {
         var parts = CommandService.GetArgs(args);
         if (parts.Length == 0) {
+          await _castDiscoveryService.EnsureInitialDiscoveryCompletedAsync();
           var devices = new List<string> { "local" };
           devices.AddRange(_castDiscoveryService.DiscoveredDevices.Select(d => d.Name));
           _commandLine.DisplayError($"Available outputs: {string.Join(", ", devices)}");
@@ -97,11 +99,28 @@ public sealed class MainWindow : Runnable, IMainWindow {
         }
 
         var target = parts[0];
+        if (target.Equals("refresh", StringComparison.OrdinalIgnoreCase)) {
+          _commandLine.DisplayError("Scanning for Cast devices...");
+          await _castDiscoveryService.ScanAsync();
+          var refreshedDevices = new List<string> { "local" };
+          refreshedDevices.AddRange(_castDiscoveryService.DiscoveredDevices.Select(d => d.Name));
+          _commandLine.DisplayError($"Available outputs: {string.Join(", ", refreshedDevices)}");
+          return;
+        }
+
         if (target.Equals("local", StringComparison.OrdinalIgnoreCase)) {
           await _playbackQueueService.SetAudioServiceAsync(new SoundFlowAudioService());
           _commandLine.DisplayError("Switched to local output");
         } else {
-          var device = _castDiscoveryService.DiscoveredDevices.FirstOrDefault(d => d.Name.Contains(target, StringComparison.OrdinalIgnoreCase));
+          await _castDiscoveryService.EnsureInitialDiscoveryCompletedAsync();
+
+          var device = FindDevice(target);
+          if (device == null) {
+            _commandLine.DisplayError($"Scanning for '{target}'...");
+            await _castDiscoveryService.ScanAsync(TimeSpan.FromSeconds(2));
+            device = FindDevice(target);
+          }
+
           if (device == null) {
             _commandLine.DisplayError($"Device not found: {target}");
             return;
@@ -165,6 +184,12 @@ public sealed class MainWindow : Runnable, IMainWindow {
   /// <inheritdoc/>
   public void DisplayError(string message) {
     _commandLine.DisplayError(message);
+  }
+
+  private ChromecastReceiver? FindDevice(string target) {
+    return _castDiscoveryService.DiscoveredDevices.FirstOrDefault(d =>
+      d.Name.Contains(target, StringComparison.OrdinalIgnoreCase) ||
+      (d.DeviceUri != null && d.DeviceUri.Host.Equals(target, StringComparison.OrdinalIgnoreCase)));
   }
 
   protected override void Dispose(bool disposing) {

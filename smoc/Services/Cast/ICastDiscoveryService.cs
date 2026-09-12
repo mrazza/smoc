@@ -26,6 +26,19 @@ public interface ICastDiscoveryService : IDisposable {
   void StopDiscovery();
 
   /// <summary>
+  /// Actively scans for Google Cast devices on the network.
+  /// </summary>
+  /// <param name="timeout">Optional scan timeout duration.</param>
+  /// <returns>A task representing the asynchronous operation, returning newly discovered devices.</returns>
+  Task<IEnumerable<ChromecastReceiver>> ScanAsync(TimeSpan? timeout = null);
+
+  /// <summary>
+  /// Ensures that the initial startup discovery scan has completed.
+  /// </summary>
+  /// <returns>A task representing the asynchronous operation.</returns>
+  Task EnsureInitialDiscoveryCompletedAsync();
+
+  /// <summary>
   /// Gets the list of currently discovered Google Cast devices.
   /// </summary>
   IEnumerable<ChromecastReceiver> DiscoveredDevices { get; }
