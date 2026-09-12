@@ -21,6 +21,7 @@ public sealed class CastPlaybackService : IPlaybackService {
   private readonly string _url;
   private readonly IStreamingProxyService _proxyService;
   private readonly string _contentType;
+  private readonly Func<Task>? _ensureConnection;
   private readonly object _commandLock = new();
   private readonly object _progressLock = new();
   private readonly CancellationTokenSource _disposeCts = new();
@@ -52,19 +53,22 @@ public sealed class CastPlaybackService : IPlaybackService {
   /// <param name="url">The URL where the stream is proxied.</param>
   /// <param name="proxyService">The proxy service.</param>
   /// <param name="contentType">The content type of the stream.</param>
+  /// <param name="ensureConnection">Optional delegate to ensure device connectivity and receiver application launch before playing.</param>
   public CastPlaybackService(
     IChromecastClient client,
     Song song,
     Stream stream,
     string url,
     IStreamingProxyService proxyService,
-    string contentType = "audio/mpeg") {
+    string contentType = "audio/mpeg",
+    Func<Task>? ensureConnection = null) {
     _client = client;
     _song = song;
     _stream = stream;
     _url = url;
     _proxyService = proxyService;
     _contentType = contentType;
+    _ensureConnection = ensureConnection;
 
     _client.MediaStatusChanged += OnMediaStatusChanged;
   }
@@ -152,6 +156,10 @@ public sealed class CastPlaybackService : IPlaybackService {
       _hasStarted = true;
       if (_state == PlaybackState.Playing) {
         return;
+      }
+
+      if (_ensureConnection != null) {
+        await _ensureConnection().ConfigureAwait(false);
       }
 
       if (_state == PlaybackState.Stopped) {

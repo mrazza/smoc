@@ -15,6 +15,15 @@ public interface IChromecastClient : IDisposable {
   event EventHandler<MediaStatus>? MediaStatusChanged;
 
   /// <summary>
+  /// Ensures that the client is connected to the receiver and the specified application is running.
+  /// If disconnected or if the application has timed out to the backdrop screen, reconnects and relaunches.
+  /// </summary>
+  /// <param name="receiver">The receiver to connect to.</param>
+  /// <param name="applicationId">The ID of the application to launch.</param>
+  /// <returns>A task representing the asynchronous operation.</returns>
+  Task EnsureConnectedAndLaunchedAsync(ChromecastReceiver receiver, string applicationId);
+
+  /// <summary>
   /// Connects to a Chromecast receiver.
   /// </summary>
   /// <param name="receiver">The receiver to connect to.</param>

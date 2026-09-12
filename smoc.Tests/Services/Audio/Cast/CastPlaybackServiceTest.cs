@@ -252,6 +252,30 @@ public class CastPlaybackServiceTest {
   }
 
   [Fact]
+  public async Task Play_InvokesEnsureConnection_BeforeLoadingMedia() {
+    bool ensureConnectionInvoked = false;
+    Func<Task> ensureConn = () => {
+      ensureConnectionInvoked = true;
+      return Task.CompletedTask;
+    };
+
+    using var sut = new CastPlaybackService(
+      _mockClient.Object,
+      _song,
+      _stream,
+      _url,
+      _mockProxyService.Object,
+      "audio/mpeg",
+      ensureConn);
+
+    sut.Play();
+    await sut.WaitForPendingCommandsAsync();
+
+    Assert.True(ensureConnectionInvoked);
+    _mockClient.Verify(c => c.LoadAsync(It.IsAny<Media>()), Times.Once);
+  }
+
+  [Fact]
   public void Dispose_StopsProxyAndDisposesStream() {
     var sut = new CastPlaybackService(_mockClient.Object, _song, _stream, _url, _mockProxyService.Object);
 

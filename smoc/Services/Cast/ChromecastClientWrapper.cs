@@ -11,6 +11,14 @@ namespace Smoc.Services.Cast;
 /// </summary>
 public sealed class ChromecastClientWrapper : IChromecastClient {
   private readonly ChromecastClient _client = new();
+  private bool _isConnected;
+
+  /// <summary>
+  /// Initializes a new instance of the <see cref="ChromecastClientWrapper"/> class.
+  /// </summary>
+  public ChromecastClientWrapper() {
+    _client.Disconnected += (_, _) => _isConnected = false;
+  }
 
   /// <inheritdoc/>
   public event EventHandler<MediaStatus>? MediaStatusChanged {
@@ -30,10 +38,46 @@ public sealed class ChromecastClientWrapper : IChromecastClient {
   }
 
   /// <inheritdoc/>
-  public Task ConnectChromecast(ChromecastReceiver receiver) => _client.ConnectChromecast(receiver);
+  public async Task EnsureConnectedAndLaunchedAsync(ChromecastReceiver receiver, string applicationId) {
+    if (!_isConnected) {
+      await _client.ConnectChromecast(receiver).ConfigureAwait(false);
+      _isConnected = true;
+    }
+
+    try {
+      var status = await _client.ReceiverChannel.GetChromecastStatusAsync().ConfigureAwait(false);
+      var isRunning = false;
+      if (status?.Applications != null) {
+        foreach (var app in status.Applications) {
+          if (string.Equals(app.AppId, applicationId, StringComparison.OrdinalIgnoreCase)) {
+            isRunning = true;
+            break;
+          }
+        }
+      }
+
+      if (!isRunning) {
+        await _client.LaunchApplicationAsync(applicationId).ConfigureAwait(false);
+      }
+    } catch {
+      _isConnected = false;
+      await _client.ConnectChromecast(receiver).ConfigureAwait(false);
+      _isConnected = true;
+      await _client.LaunchApplicationAsync(applicationId).ConfigureAwait(false);
+    }
+  }
 
   /// <inheritdoc/>
-  public Task DisconnectAsync() => _client.DisconnectAsync();
+  public async Task ConnectChromecast(ChromecastReceiver receiver) {
+    await _client.ConnectChromecast(receiver).ConfigureAwait(false);
+    _isConnected = true;
+  }
+
+  /// <inheritdoc/>
+  public async Task DisconnectAsync() {
+    _isConnected = false;
+    await _client.DisconnectAsync().ConfigureAwait(false);
+  }
 
   /// <inheritdoc/>
   public Task LaunchApplicationAsync(string applicationId) => _client.LaunchApplicationAsync(applicationId);

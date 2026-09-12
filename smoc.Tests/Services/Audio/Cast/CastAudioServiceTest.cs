@@ -54,13 +54,12 @@ public class CastAudioServiceTest {
   }
 
   [Fact]
-  public async Task ConnectAsync_CallsClientConnectAndLaunch() {
+  public async Task ConnectAsync_CallsClientEnsureConnectedAndLaunched() {
     var sut = new CastAudioService(_device, _mockProxyService.Object, _mockClient.Object);
 
     await sut.ConnectAsync();
 
-    _mockClient.Verify(c => c.ConnectChromecast(_device), Times.Once);
-    _mockClient.Verify(c => c.LaunchApplicationAsync(It.IsAny<string>()), Times.Once);
+    _mockClient.Verify(c => c.EnsureConnectedAndLaunchedAsync(_device, "CC1AD845"), Times.Once);
   }
 
   [Fact]

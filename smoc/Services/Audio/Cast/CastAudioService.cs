@@ -13,9 +13,12 @@ namespace Smoc.Services.Audio.Cast;
 /// Audio service for playing media on a Google Cast device.
 /// </summary>
 public sealed class CastAudioService : IAudioService {
+  private const string DefaultMediaReceiverAppId = "CC1AD845";
+
   private readonly ChromecastReceiver _device;
   private readonly IChromecastClient _client;
   private readonly IStreamingProxyService _proxyService;
+  private readonly SemaphoreSlim _connectionLock = new(1, 1);
   private float _volume = 0.5f;
 
   /// <summary>
@@ -41,12 +44,24 @@ public sealed class CastAudioService : IAudioService {
   }
 
   /// <summary>
+  /// Ensures that the device is connected and the Default Media Receiver is launched.
+  /// </summary>
+  /// <returns>A task representing the asynchronous operation.</returns>
+  public async Task EnsureConnectedAsync() {
+    await _connectionLock.WaitAsync().ConfigureAwait(false);
+    try {
+      await _client.EnsureConnectedAndLaunchedAsync(_device, DefaultMediaReceiverAppId).ConfigureAwait(false);
+    } finally {
+      _connectionLock.Release();
+    }
+  }
+
+  /// <summary>
   /// Connects to the Cast device.
   /// </summary>
   /// <returns>A task representing the asynchronous operation.</returns>
   public async Task ConnectAsync() {
-    await _client.ConnectChromecast(_device);
-    await _client.LaunchApplicationAsync("CC1AD845"); // Default Media Receiver
+    await EnsureConnectedAsync().ConfigureAwait(false);
   }
 
   /// <inheritdoc/>
@@ -68,11 +83,12 @@ public sealed class CastAudioService : IAudioService {
     };
 
     var url = _proxyService.StartProxy(stream, contentType);
-    return new CastPlaybackService(_client, song, stream, url, _proxyService, contentType);
+    return new CastPlaybackService(_client, song, stream, url, _proxyService, contentType, EnsureConnectedAsync);
   }
 
   /// <inheritdoc/>
   public void Dispose() {
+    _connectionLock.Dispose();
     _client.DisconnectAsync().ConfigureAwait(false);
     _client.Dispose();
   }
