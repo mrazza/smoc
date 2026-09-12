@@ -122,7 +122,7 @@ public sealed class CastPlaybackService : IPlaybackService {
         }
 
         try {
-          await prevTask;
+          await prevTask.ConfigureAwait(false);
         } catch {
           // Swallow previous exception to preserve pipeline ordering
         }
@@ -132,7 +132,7 @@ public sealed class CastPlaybackService : IPlaybackService {
         }
 
         try {
-          await action();
+          await action().ConfigureAwait(false);
         } catch (Exception ex) when (ex is not OperationCanceledException) {
           Logging.Error($"Error executing Cast playback command '{operationName}': {ex.Message}");
         }
@@ -159,7 +159,7 @@ public sealed class CastPlaybackService : IPlaybackService {
       }
 
       if (_ensureConnection != null) {
-        await _ensureConnection();
+        await _ensureConnection().ConfigureAwait(false);
       }
 
       if (_state == PlaybackState.Stopped) {
@@ -170,9 +170,9 @@ public sealed class CastPlaybackService : IPlaybackService {
             Title = _song.Title,
             Artist = _song.Artist.Name
           }
-        });
+        }).ConfigureAwait(false);
       } else {
-        await _client.PlayAsync();
+        await _client.PlayAsync().ConfigureAwait(false);
       }
       UpdateState(PlaybackState.Playing);
       StartProgressTracking();
@@ -186,7 +186,7 @@ public sealed class CastPlaybackService : IPlaybackService {
         return;
       }
 
-      await _client.PauseAsync();
+      await _client.PauseAsync().ConfigureAwait(false);
       StopProgressTracking(resetPosition: false);
       UpdateState(PlaybackState.Paused);
       PositionChanged?.Invoke(this, CurrentTime);
@@ -200,7 +200,7 @@ public sealed class CastPlaybackService : IPlaybackService {
         return;
       }
 
-      await _client.StopAsync();
+      await _client.StopAsync().ConfigureAwait(false);
       StopProgressTracking(resetPosition: true);
       UpdateState(PlaybackState.Stopped);
       PositionChanged?.Invoke(this, TimeSpan.Zero);
@@ -210,7 +210,7 @@ public sealed class CastPlaybackService : IPlaybackService {
   /// <inheritdoc/>
   public void Seek(TimeSpan position) {
     EnqueueCommand(async () => {
-      await _client.SeekAsync(position.TotalSeconds);
+      await _client.SeekAsync(position.TotalSeconds).ConfigureAwait(false);
       lock (_progressLock) {
         _statusPosition = position;
         if (_state == PlaybackState.Playing) {
@@ -237,7 +237,7 @@ public sealed class CastPlaybackService : IPlaybackService {
         using var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(500));
         int pollCounter = 0;
         try {
-          while (!token.IsCancellationRequested && await timer.WaitForNextTickAsync(token)) {
+          while (!token.IsCancellationRequested && await timer.WaitForNextTickAsync(token).ConfigureAwait(false)) {
             if (_state == PlaybackState.Playing) {
               PositionChanged?.Invoke(this, CurrentTime);
 
@@ -272,7 +272,7 @@ public sealed class CastPlaybackService : IPlaybackService {
 
   private async Task PollMediaStatusAsync() {
     try {
-      var status = await _client.GetMediaStatusAsync();
+      var status = await _client.GetMediaStatusAsync().ConfigureAwait(false);
       if (status != null) {
         OnMediaStatusChanged(this, status);
       }

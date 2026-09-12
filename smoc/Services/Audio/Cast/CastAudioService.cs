@@ -48,9 +48,9 @@ public sealed class CastAudioService : IAudioService {
   /// </summary>
   /// <returns>A task representing the asynchronous operation.</returns>
   public async Task EnsureConnectedAsync() {
-    await _connectionLock.WaitAsync();
+    await _connectionLock.WaitAsync().ConfigureAwait(false);
     try {
-      await _client.EnsureConnectedAndLaunchedAsync(_device, DefaultMediaReceiverAppId);
+      await _client.EnsureConnectedAndLaunchedAsync(_device, DefaultMediaReceiverAppId).ConfigureAwait(false);
     } finally {
       _connectionLock.Release();
     }
@@ -61,7 +61,7 @@ public sealed class CastAudioService : IAudioService {
   /// </summary>
   /// <returns>A task representing the asynchronous operation.</returns>
   public async Task ConnectAsync() {
-    await EnsureConnectedAsync();
+    await EnsureConnectedAsync().ConfigureAwait(false);
   }
 
   /// <inheritdoc/>

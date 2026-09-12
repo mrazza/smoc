@@ -58,7 +58,7 @@ public sealed class CastDiscoveryService : ICastDiscoveryService {
 
     if (task != null) {
       try {
-        await task;
+        await task.ConfigureAwait(false);
       } catch {
         // Suppress scan exceptions to allow subsequent fallback logic
       }
@@ -71,14 +71,14 @@ public sealed class CastDiscoveryService : ICastDiscoveryService {
     return await ScanInternalAsync(
       quickTimeout: TimeSpan.FromMilliseconds(500),
       mediumTimeout: scanTimeout,
-      fullTimeout: scanTimeout);
+      fullTimeout: scanTimeout).ConfigureAwait(false);
   }
 
   private async Task<IEnumerable<ChromecastReceiver>> ScanInternalAsync(
     TimeSpan quickTimeout,
     TimeSpan mediumTimeout,
     TimeSpan fullTimeout) {
-    var receivers = await _locator.FindReceiversAsync(quickTimeout, mediumTimeout, fullTimeout);
+    var receivers = await _locator.FindReceiversAsync(quickTimeout, mediumTimeout, fullTimeout).ConfigureAwait(false);
     var newlyDiscovered = new List<ChromecastReceiver>();
     foreach (var device in receivers) {
       if (AddDevice(device)) {
