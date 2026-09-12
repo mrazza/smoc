@@ -49,7 +49,7 @@ public sealed class MainWindow : Runnable, IMainWindow {
 
     _castDiscoveryService = new CastDiscoveryService();
     _streamingProxyService = new StreamingProxyService();
-    _castDiscoveryService.StartDiscoveryAsync().ConfigureAwait(false);
+    _ = _castDiscoveryService.StartDiscoveryAsync();
 
     if (ListenHistoryConfig.Defaults.Enabled) {
       _playbackQueueService.PositionChanged += (_, position) => {

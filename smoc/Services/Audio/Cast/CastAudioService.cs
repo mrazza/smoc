@@ -39,7 +39,7 @@ public sealed class CastAudioService : IAudioService {
     get => _volume;
     set {
       _volume = value;
-      _client.SetVolumeAsync(_volume).ConfigureAwait(false);
+      _ = _client.SetVolumeAsync(_volume);
     }
   }
 
@@ -48,9 +48,9 @@ public sealed class CastAudioService : IAudioService {
   /// </summary>
   /// <returns>A task representing the asynchronous operation.</returns>
   public async Task EnsureConnectedAsync() {
-    await _connectionLock.WaitAsync().ConfigureAwait(false);
+    await _connectionLock.WaitAsync();
     try {
-      await _client.EnsureConnectedAndLaunchedAsync(_device, DefaultMediaReceiverAppId).ConfigureAwait(false);
+      await _client.EnsureConnectedAndLaunchedAsync(_device, DefaultMediaReceiverAppId);
     } finally {
       _connectionLock.Release();
     }
@@ -61,7 +61,7 @@ public sealed class CastAudioService : IAudioService {
   /// </summary>
   /// <returns>A task representing the asynchronous operation.</returns>
   public async Task ConnectAsync() {
-    await EnsureConnectedAsync().ConfigureAwait(false);
+    await EnsureConnectedAsync();
   }
 
   /// <inheritdoc/>
@@ -89,7 +89,11 @@ public sealed class CastAudioService : IAudioService {
   /// <inheritdoc/>
   public void Dispose() {
     _connectionLock.Dispose();
-    _client.DisconnectAsync().ConfigureAwait(false);
+    try {
+      _client.DisconnectAsync().Wait(TimeSpan.FromSeconds(1));
+    } catch {
+      // Suppress exceptions during disposal
+    }
     _client.Dispose();
   }
 }

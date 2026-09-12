@@ -40,12 +40,12 @@ public sealed class ChromecastClientWrapper : IChromecastClient {
   /// <inheritdoc/>
   public async Task EnsureConnectedAndLaunchedAsync(ChromecastReceiver receiver, string applicationId) {
     if (!_isConnected) {
-      await _client.ConnectChromecast(receiver).ConfigureAwait(false);
+      await _client.ConnectChromecast(receiver);
       _isConnected = true;
     }
 
     try {
-      var status = await _client.ReceiverChannel.GetChromecastStatusAsync().ConfigureAwait(false);
+      var status = await _client.ReceiverChannel.GetChromecastStatusAsync();
       var isRunning = false;
       if (status?.Applications != null) {
         foreach (var app in status.Applications) {
@@ -57,26 +57,26 @@ public sealed class ChromecastClientWrapper : IChromecastClient {
       }
 
       if (!isRunning) {
-        await _client.LaunchApplicationAsync(applicationId).ConfigureAwait(false);
+        await _client.LaunchApplicationAsync(applicationId);
       }
     } catch {
       _isConnected = false;
-      await _client.ConnectChromecast(receiver).ConfigureAwait(false);
+      await _client.ConnectChromecast(receiver);
       _isConnected = true;
-      await _client.LaunchApplicationAsync(applicationId).ConfigureAwait(false);
+      await _client.LaunchApplicationAsync(applicationId);
     }
   }
 
   /// <inheritdoc/>
   public async Task ConnectChromecast(ChromecastReceiver receiver) {
-    await _client.ConnectChromecast(receiver).ConfigureAwait(false);
+    await _client.ConnectChromecast(receiver);
     _isConnected = true;
   }
 
   /// <inheritdoc/>
   public async Task DisconnectAsync() {
     _isConnected = false;
-    await _client.DisconnectAsync().ConfigureAwait(false);
+    await _client.DisconnectAsync();
   }
 
   /// <inheritdoc/>
