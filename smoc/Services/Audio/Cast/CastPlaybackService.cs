@@ -125,19 +125,16 @@ public sealed class CastPlaybackService : IPlaybackService {
     : 0;
 
   /// <inheritdoc/>
-  public PlaybackState PlaybackState => _state;
-
-  /// <inheritdoc/>
-  public Song Song => _song;
-
-  /// <inheritdoc/>
-  public PlaybackState State {
+  public PlaybackState PlaybackState {
     get {
       lock (_stateLock) {
         return _state;
       }
     }
   }
+
+  /// <inheritdoc/>
+  public Song Song => _song;
 
   private void EnqueueCommand(Func<Task> action, string operationName) {
     lock (_commandLock) {
@@ -324,7 +321,7 @@ public sealed class CastPlaybackService : IPlaybackService {
     }
 
     lock (_progressLock) {
-      if (e.CurrentTime > 0) {
+      if (e.CurrentTime >= 0) {
         _statusPosition = TimeSpan.FromSeconds(e.CurrentTime);
         if (_state == PlaybackState.Playing) {
           _startTimestamp = Stopwatch.GetTimestamp();
@@ -352,6 +349,9 @@ public sealed class CastPlaybackService : IPlaybackService {
 
     if (newState.HasValue) {
       UpdateState(newState.Value);
+      if (newState.Value == PlaybackState.Stopped) {
+        StopProgressTracking(resetPosition: true);
+      }
     }
 
     if (wasPlaying && string.Equals(e.IdleReason, "FINISHED", StringComparison.OrdinalIgnoreCase)) {

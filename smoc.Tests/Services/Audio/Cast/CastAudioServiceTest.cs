@@ -72,6 +72,17 @@ public class CastAudioServiceTest {
     _mockClient.Verify(c => c.SetVolumeAsync(0.8f, It.IsAny<CancellationToken>()), Times.Once);
   }
 
+  [Fact]
+  public void Volume_ClampsBetweenZeroAndOne() {
+    var sut = new CastAudioService(_device, _mockProxyService.Object, _mockClient.Object);
+
+    sut.Volume = 1.8f;
+    Assert.Equal(1.0f, sut.Volume);
+
+    sut.Volume = -0.4f;
+    Assert.Equal(0.0f, sut.Volume);
+  }
+
   [Theory]
   [InlineData("flac", "audio/flac")]
   [InlineData("m4a", "audio/mp4")]

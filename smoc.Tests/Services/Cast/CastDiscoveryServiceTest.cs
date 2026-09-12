@@ -41,6 +41,19 @@ public class CastDiscoveryServiceTest : IDisposable {
     Assert.NotNull(devices);
   }
 
+  [Fact]
+  public async Task StartDiscoveryAsync_WhenCanceled_InitiatesNewScan() {
+    using var cts = new CancellationTokenSource();
+    cts.Cancel();
+
+    var task1 = _sut.StartDiscoveryAsync(cts.Token);
+    Assert.True(task1.IsCanceled);
+
+    var task2 = _sut.StartDiscoveryAsync(TestContext.Current.CancellationToken);
+    Assert.NotSame(task1, task2);
+    await _sut.EnsureInitialDiscoveryCompletedAsync(TestContext.Current.CancellationToken);
+  }
+
   public void Dispose() {
     _sut.Dispose();
   }

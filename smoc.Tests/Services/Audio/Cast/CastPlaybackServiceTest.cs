@@ -241,6 +241,28 @@ public class CastPlaybackServiceTest {
   }
 
   [Fact]
+  public async Task MediaStatus_IdleState_ResetsCurrentTimeAndStopsTracking() {
+    using var sut = new CastPlaybackService(_mockClient.Object, _song, _stream, _url, _mockProxyService.Object);
+
+    sut.Play();
+    await sut.WaitForPendingCommandsAsync();
+
+    _mockClient.Raise(c => c.MediaStatusChanged += null, _mockClient.Object, new MediaStatus {
+      PlayerState = PlayerStateType.Playing,
+      CurrentTime = 42.0
+    });
+    Assert.True(sut.CurrentTime >= TimeSpan.FromSeconds(42));
+
+    _mockClient.Raise(c => c.MediaStatusChanged += null, _mockClient.Object, new MediaStatus {
+      PlayerState = PlayerStateType.Idle,
+      IdleReason = "FINISHED"
+    });
+
+    Assert.Equal(Smoc.Services.PlaybackState.Stopped, sut.PlaybackState);
+    Assert.Equal(TimeSpan.Zero, sut.CurrentTime);
+  }
+
+  [Fact]
   public void SpectrumData_ReturnsEmptyArrayAndCanSetIsSpectrumActive() {
     using var sut = new CastPlaybackService(_mockClient.Object, _song, _stream, _url, _mockProxyService.Object);
 

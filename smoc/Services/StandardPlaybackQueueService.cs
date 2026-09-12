@@ -363,6 +363,7 @@ public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
     var wasPlaying = PlaybackState == PlaybackState.Playing;
     var wasPaused = PlaybackState == PlaybackState.Paused;
     var currentTime = CurrentTime;
+    var previousVolume = _audioService.Volume;
 
     Stop();
     _playbackService.Replace(null!);
@@ -372,6 +373,7 @@ public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
 
     var oldAudioService = _audioService;
     _audioService = audioService;
+    _audioService.Volume = previousVolume;
     oldAudioService?.Dispose();
 
     if (_playbackQueue.Count > 0 && (wasPlaying || wasPaused)) {

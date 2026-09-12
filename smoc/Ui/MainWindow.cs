@@ -93,7 +93,9 @@ public sealed class MainWindow : Runnable, IMainWindow {
 
     _commandService.RegisterCompleter("output", (_, args) => {
       var devices = new List<string> { "local", "refresh" };
-      devices.AddRange(_castDiscoveryService.DiscoveredDevices.Select(d => d.Name));
+      devices.AddRange(_castDiscoveryService.DiscoveredDevices
+        .Select(d => d.Name)
+        .Where(name => !string.IsNullOrWhiteSpace(name))!);
       return devices.Where(d => d.StartsWith(args, StringComparison.OrdinalIgnoreCase));
     });
 
@@ -103,7 +105,9 @@ public sealed class MainWindow : Runnable, IMainWindow {
         if (parts.Length == 0) {
           await _castDiscoveryService.EnsureInitialDiscoveryCompletedAsync(_disposeCts.Token);
           var devices = new List<string> { "local" };
-          devices.AddRange(_castDiscoveryService.DiscoveredDevices.Select(d => d.Name));
+          devices.AddRange(_castDiscoveryService.DiscoveredDevices
+            .Select(d => d.Name)
+            .Where(name => !string.IsNullOrWhiteSpace(name))!);
           _commandLine.DisplayError($"Available outputs: {string.Join(", ", devices)}");
           return;
         }
@@ -113,7 +117,9 @@ public sealed class MainWindow : Runnable, IMainWindow {
           _commandLine.DisplayError("Scanning for Cast devices...");
           await _castDiscoveryService.ScanAsync(cancellationToken: _disposeCts.Token);
           var refreshedDevices = new List<string> { "local" };
-          refreshedDevices.AddRange(_castDiscoveryService.DiscoveredDevices.Select(d => d.Name));
+          refreshedDevices.AddRange(_castDiscoveryService.DiscoveredDevices
+            .Select(d => d.Name)
+            .Where(name => !string.IsNullOrWhiteSpace(name))!);
           _commandLine.DisplayError($"Available outputs: {string.Join(", ", refreshedDevices)}");
           return;
         }
@@ -197,9 +203,16 @@ public sealed class MainWindow : Runnable, IMainWindow {
   }
 
   private ChromecastReceiver? FindDevice(string target) {
-    return _castDiscoveryService.DiscoveredDevices.FirstOrDefault(d =>
-      d.Name.Contains(target, StringComparison.OrdinalIgnoreCase) ||
+    var devices = _castDiscoveryService.DiscoveredDevices;
+    var exactMatch = devices.FirstOrDefault(d =>
+      (!string.IsNullOrEmpty(d.Name) && d.Name.Equals(target, StringComparison.OrdinalIgnoreCase)) ||
       (d.DeviceUri != null && d.DeviceUri.Host.Equals(target, StringComparison.OrdinalIgnoreCase)));
+    if (exactMatch != null) {
+      return exactMatch;
+    }
+
+    return devices.FirstOrDefault(d =>
+      !string.IsNullOrEmpty(d.Name) && d.Name.Contains(target, StringComparison.OrdinalIgnoreCase));
   }
 
   protected override void Dispose(bool disposing) {

@@ -45,8 +45,12 @@ public sealed class CastAudioService : IAudioService {
   public float Volume {
     get => _volume;
     set {
-      _volume = value;
-      _ = _client.SetVolumeAsync(_volume, _disposeCts.Token);
+      _volume = Math.Clamp(value, 0.0f, 1.0f);
+      _ = _client.SetVolumeAsync(_volume, _disposeCts.Token).ContinueWith(t => {
+        if (t.IsFaulted && t.Exception != null) {
+          Terminal.Gui.App.Logging.Error($"Failed to set Cast volume: {t.Exception.InnerException?.Message ?? t.Exception.Message}");
+        }
+      }, TaskScheduler.Default);
     }
   }
 
@@ -61,7 +65,11 @@ public sealed class CastAudioService : IAudioService {
     try {
       await _client.EnsureConnectedAndLaunchedAsync(_device, DefaultMediaReceiverAppId, linkedCts.Token);
     } finally {
-      _connectionLock.Release();
+      try {
+        _connectionLock.Release();
+      } catch (ObjectDisposedException) {
+        // Ignored if service disposed during connection attempt
+      }
     }
   }
 
@@ -109,13 +117,13 @@ public sealed class CastAudioService : IAudioService {
   /// <inheritdoc/>
   public void Dispose() {
     _disposeCts.Cancel();
-    _connectionLock.Dispose();
     try {
       _client.DisconnectAsync().Wait(TimeSpan.FromSeconds(1));
     } catch {
       // Suppress exceptions on dispose
     }
     _client.Dispose();
+    _connectionLock.Dispose();
     _disposeCts.Dispose();
   }
 }

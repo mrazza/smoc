@@ -97,7 +97,7 @@ public sealed class CommandService {
     }
     var args = argCutoff > 0 ? command[(argCutoff + 1)..] : string.Empty;
 
-    if (completers.TryGetValue(commandName, out var handler)) {
+    if (argCutoff >= 0 && completers.TryGetValue(commandName, out var handler)) {
       return handler(commandName, args);
     }
 

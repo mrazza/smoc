@@ -1043,6 +1043,8 @@ public class StandardPlaybackQueueServiceTest {
     var fakePlayerService2 = new FakePlaybackService(song);
     var mockAudioService2 = new Mock<IAudioService>();
 
+    _mockAudioService.SetupProperty(a => a.Volume, 0.4f);
+    mockAudioService2.SetupProperty(a => a.Volume, 1.0f);
     _mockAudioService.Setup(a => a.MakePlaybackService(song, It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
       .Returns(fakePlayerService1);
     mockAudioService2.Setup(a => a.MakePlaybackService(song, It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -1059,6 +1061,7 @@ public class StandardPlaybackQueueServiceTest {
 
     Assert.Equal(PlaybackState.Playing, fakePlayerService2.PlaybackState);
     Assert.Equal(TimeSpan.FromSeconds(30), fakePlayerService2.CurrentTime);
+    Assert.Equal(0.4f, mockAudioService2.Object.Volume);
     _mockAudioService.Verify(a => a.Dispose(), Times.Once);
   }
 

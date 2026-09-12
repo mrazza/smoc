@@ -131,6 +131,16 @@ public class CommandServiceTest {
   }
 
   [Fact]
+  public void GetCompletions_CommandWithoutSlash_ReturnsCommandNameNotArgs() {
+    var commandService = new CommandService();
+    commandService.RegisterCommand("output", (cmd, __) => { });
+    commandService.RegisterCompleter("output", (cmd, args) => ["local", "refresh"]);
+
+    var completions = commandService.GetCompletions("output");
+    Assert.Equal(["output"], completions);
+  }
+
+  [Fact]
   public void UnregisterCompleter_RemovesCompleter() {
     var commandService = new CommandService();
     commandService.RegisterCommand("fruit", (cmd, __) => { });

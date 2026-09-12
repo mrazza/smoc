@@ -41,7 +41,7 @@ public sealed class CastDiscoveryService : ICastDiscoveryService {
   /// <inheritdoc/>
   public Task StartDiscoveryAsync(CancellationToken cancellationToken = default) {
     lock (_devicesLock) {
-      if (_initialDiscoveryTask == null || _initialDiscoveryTask.IsFaulted) {
+      if (_initialDiscoveryTask == null || _initialDiscoveryTask.IsFaulted || _initialDiscoveryTask.IsCanceled) {
         _initialDiscoveryTask = ScanInternalAsync(
           quickTimeout: TimeSpan.FromMilliseconds(500),
           mediumTimeout: TimeSpan.FromSeconds(1),
@@ -101,14 +101,19 @@ public sealed class CastDiscoveryService : ICastDiscoveryService {
   }
 
   private bool AddDevice(ChromecastReceiver device) {
+    ChromecastReceiver? toNotify = null;
     lock (_devicesLock) {
       if (!_discoveredDevices.Any(d => d.DeviceUri == device.DeviceUri)) {
         _discoveredDevices.Add(device);
-        DeviceFound?.Invoke(this, device);
-        return true;
+        toNotify = device;
       }
-      return false;
     }
+
+    if (toNotify != null) {
+      DeviceFound?.Invoke(this, toNotify);
+      return true;
+    }
+    return false;
   }
 
   /// <inheritdoc/>

@@ -240,7 +240,9 @@ public sealed class StreamingProxyService : IStreamingProxyService {
         response.OutputStream.Close();
       }
     } catch (Exception ex) when (ex is not OperationCanceledException) {
-      Logging.Error($"StreamingProxy error: {ex.Message}");
+      if (ex is not (HttpListenerException or IOException or ObjectDisposedException)) {
+        Logging.Error($"StreamingProxy error: {ex.Message}");
+      }
     } finally {
       try {
         context.Response.Close();
