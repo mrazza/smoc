@@ -8,6 +8,7 @@ using Smoc.Streaming;
 using Smoc.Streaming.Subsonic;
 using Smoc.Streaming.YouTubeMusic;
 using Smoc.Streaming.SoundCloud;
+using Smoc.Streaming.Spotify;
 using Smoc.Ui;
 using Terminal.Gui;
 using Terminal.Gui.App;
@@ -50,6 +51,7 @@ public static class Program {
       builder.BindAppSettings<SmocConfiguration>("SmocConfiguration", s => SmocConfiguration.Defaults = s)
              .BindAppSettings<ListenHistoryConfig>("ListenHistoryConfig", s => ListenHistoryConfig.Defaults = s)
              .BindAppSettings<SoundCloudConfig>("SoundCloudConfig", s => SoundCloudConfig.Defaults = s)
+             .BindAppSettings<SpotifyConfig>("SpotifyConfig", s => SpotifyConfig.Defaults = s)
              .BindAppSettings<SubsonicConfig>("SubsonicConfig", s => SubsonicConfig.Defaults = s)
              .BindAppSettings<YouTubeMusicConfig>("YouTubeMusicConfig", s => YouTubeMusicConfig.Defaults = s);
 
@@ -113,6 +115,10 @@ public static class Program {
       case StreamingService.Subsonic:
         Logging.Information("Creating Subsonic streaming client...");
         return SubsonicStreamingClient.Create(songCache, artCache);
+
+      case StreamingService.Spotify:
+        Logging.Information("Creating Spotify streaming client...");
+        return SpotifyStreamingClient.Create(songCache, artCache);
 
       case StreamingService.SoundCloud:
         Logging.Information("Creating SoundCloud streaming client...");

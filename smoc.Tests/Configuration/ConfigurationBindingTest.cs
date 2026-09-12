@@ -5,7 +5,13 @@ using Xunit;
 
 namespace smoc.Tests.Configuration;
 
+/// <summary>
+/// Unit tests for configuration binding using <see cref="TuiConfigurationBuilder"/>.
+/// </summary>
 public class ConfigurationBindingTest {
+  /// <summary>
+  /// Tests binding of <see cref="SmocConfiguration"/>.
+  /// </summary>
   [Fact]
   public void Bind_SmocConfiguration_FromSection_UsingTuiConfigurationBuilder() {
     var json = """
@@ -39,6 +45,9 @@ public class ConfigurationBindingTest {
     Assert.Equal(LoudnessNormalizationMode.Full, SmocConfiguration.Defaults.LoudnessNormalizationMode);
   }
 
+  /// <summary>
+  /// Tests binding of provider-specific configuration POCOs.
+  /// </summary>
   [Fact]
   public void Bind_OtherConfigs_UsingTuiConfigurationBuilder() {
     var json = """
@@ -51,6 +60,13 @@ public class ConfigurationBindingTest {
       "SoundCloudConfig": {
         "ClientId": "sc-id",
         "AuthToken": "sc-token"
+      },
+      "SpotifyConfig": {
+        "ClientId": "sp-id",
+        "ClientSecret": "sp-secret",
+        "Username": "sp-user",
+        "Password": "sp-pass",
+        "CacheDirectory": "/tmp/spotify-cache"
       },
       "SubsonicConfig": {
         "ServerHost": "subsonic.local",
@@ -70,6 +86,7 @@ public class ConfigurationBindingTest {
     builder.RuntimeConfig = json;
     builder.BindAppSettings<ListenHistoryConfig>("ListenHistoryConfig", s => ListenHistoryConfig.Defaults = s)
            .BindAppSettings<SoundCloudConfig>("SoundCloudConfig", s => SoundCloudConfig.Defaults = s)
+           .BindAppSettings<SpotifyConfig>("SpotifyConfig", s => SpotifyConfig.Defaults = s)
            .BindAppSettings<SubsonicConfig>("SubsonicConfig", s => SubsonicConfig.Defaults = s)
            .BindAppSettings<YouTubeMusicConfig>("YouTubeMusicConfig", s => YouTubeMusicConfig.Defaults = s);
 
@@ -79,6 +96,12 @@ public class ConfigurationBindingTest {
 
     Assert.Equal("sc-id", SoundCloudConfig.Defaults.ClientId);
     Assert.Equal("sc-token", SoundCloudConfig.Defaults.AuthToken);
+
+    Assert.Equal("sp-id", SpotifyConfig.Defaults.ClientId);
+    Assert.Equal("sp-secret", SpotifyConfig.Defaults.ClientSecret);
+    Assert.Equal("sp-user", SpotifyConfig.Defaults.Username);
+    Assert.Equal("sp-pass", SpotifyConfig.Defaults.Password);
+    Assert.Equal("/tmp/spotify-cache", SpotifyConfig.Defaults.CacheDirectory);
 
     Assert.Equal("subsonic.local", SubsonicConfig.Defaults.ServerHost);
     Assert.Equal(4040, SubsonicConfig.Defaults.ServerPort);
