@@ -1,4 +1,5 @@
 using smoc.Tests.TestInfra;
+using Smoc.Services;
 using Smoc.Ui;
 using Terminal.Gui.Input;
 using Terminal.Gui.Views;
@@ -125,6 +126,21 @@ public class CommandLineTest {
     Assert.True(commandLine.HasFocus);
     context.KeyDown(Key.Tab);
     Assert.True(commandLine.HasFocus);
+  }
+
+  [Fact]
+  public void TabPressed_WithCompletions_CompletesText() {
+    var commandService = new CommandService();
+    commandService.RegisterCommand("test", (_, __) => { });
+    
+    using var context = NewContext();
+    var commandLine = new CommandLine(commandService);
+    context.Add(commandLine);
+    
+    context.KeyDown(Key.T).KeyDown(Key.E).KeyDown(Key.Tab);
+
+    Assert.True(commandLine.HasFocus);
+    Assert.Equal(":test/", commandLine.CommandText);
   }
 
 }
