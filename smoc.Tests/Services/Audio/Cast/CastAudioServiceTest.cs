@@ -59,4 +59,43 @@ public class CastAudioServiceTest {
     _mockClient.Verify(c => c.ConnectChromecast(_device), Times.Once);
     _mockClient.Verify(c => c.LaunchApplicationAsync(It.IsAny<string>()), Times.Once);
   }
+
+  [Fact]
+  public void Volume_GetAndSet_UpdatesVolumeAndInvokesClient() {
+    var sut = new CastAudioService(_device, _mockProxyService.Object, _mockClient.Object);
+
+    sut.Volume = 0.8f;
+
+    Assert.Equal(0.8f, sut.Volume);
+    _mockClient.Verify(c => c.SetVolumeAsync(0.8f), Times.Once);
+  }
+
+  [Theory]
+  [InlineData("flac", "audio/flac")]
+  [InlineData("m4a", "audio/mp4")]
+  [InlineData("aac", "audio/aac")]
+  [InlineData("ogg", "audio/ogg")]
+  [InlineData("wav", "audio/wav")]
+  [InlineData("unknown", "audio/mpeg")]
+  public void MakePlaybackService_MapsCodecsToCorrectMimeType(string codec, string expectedMimeType) {
+    var sut = new CastAudioService(_device, _mockProxyService.Object, _mockClient.Object);
+    var song = EntityTestFactory.GenerateSong();
+    var stream = new MemoryStream();
+
+    _mockProxyService.Setup(p => p.StartProxy(stream, expectedMimeType)).Returns("http://proxy/stream");
+
+    sut.MakePlaybackService(song, stream, codec, TestContext.Current.CancellationToken);
+
+    _mockProxyService.Verify(p => p.StartProxy(stream, expectedMimeType), Times.Once);
+  }
+
+  [Fact]
+  public void Dispose_DisconnectsAndDisposesClient() {
+    var sut = new CastAudioService(_device, _mockProxyService.Object, _mockClient.Object);
+
+    sut.Dispose();
+
+    _mockClient.Verify(c => c.DisconnectAsync(), Times.Once);
+    _mockClient.Verify(c => c.Dispose(), Times.Once);
+  }
 }

@@ -187,6 +187,46 @@ public class CastPlaybackServiceTest {
   }
 
   [Fact]
+  public async Task Play_WhenPaused_InvokesPlayAsync() {
+    using var sut = new CastPlaybackService(_mockClient.Object, _song, _stream, _url, _mockProxyService.Object);
+
+    sut.Play();
+    await sut.WaitForPendingCommandsAsync();
+
+    sut.Pause();
+    await sut.WaitForPendingCommandsAsync();
+
+    sut.Play();
+    await sut.WaitForPendingCommandsAsync();
+
+    _mockClient.Verify(c => c.PlayAsync(), Times.Once);
+  }
+
+  [Fact]
+  public void MediaStatus_Finished_FiresSongEndedEvent() {
+    using var sut = new CastPlaybackService(_mockClient.Object, _song, _stream, _url, _mockProxyService.Object);
+    bool songEndedFired = false;
+    sut.SongEnded += (sender, args) => songEndedFired = true;
+
+    _mockClient.Raise(c => c.MediaStatusChanged += null, _mockClient.Object, new MediaStatus {
+      IdleReason = "FINISHED"
+    });
+
+    Assert.True(songEndedFired);
+  }
+
+  [Fact]
+  public void SpectrumData_ReturnsEmptyArrayAndCanSetIsSpectrumActive() {
+    using var sut = new CastPlaybackService(_mockClient.Object, _song, _stream, _url, _mockProxyService.Object);
+
+    Assert.Empty(sut.SpectrumData);
+    Assert.False(sut.IsSpectrumActive);
+
+    sut.IsSpectrumActive = true;
+    Assert.True(sut.IsSpectrumActive);
+  }
+
+  [Fact]
   public void Dispose_StopsProxyAndDisposesStream() {
     var sut = new CastPlaybackService(_mockClient.Object, _song, _stream, _url, _mockProxyService.Object);
 

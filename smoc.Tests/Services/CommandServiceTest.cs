@@ -129,4 +129,19 @@ public class CommandServiceTest {
     var completions = commandService.GetCompletions("unknown/args");
     Assert.Empty(completions);
   }
+
+  [Fact]
+  public void UnregisterCompleter_RemovesCompleter() {
+    var commandService = new CommandService();
+    commandService.RegisterCommand("fruit", (cmd, __) => { });
+    commandService.RegisterCompleter("fruit", (cmd, args) => ["apple", "banana"]);
+
+    var completionsBefore = commandService.GetCompletions("fruit/a");
+    Assert.Equal(["apple", "banana"], completionsBefore);
+
+    commandService.UnregisterCompleter("fruit");
+
+    var completionsAfter = commandService.GetCompletions("fruit/a");
+    Assert.Empty(completionsAfter);
+  }
 }

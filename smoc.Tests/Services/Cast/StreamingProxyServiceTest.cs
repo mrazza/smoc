@@ -99,6 +99,140 @@ public class StreamingProxyServiceTest : IDisposable {
     Assert.Equal(new byte[] { 2, 3, 4, 5 }, responseData);
   }
 
+  [Fact]
+  public async Task HandleRequest_PostMethod_ReturnsMethodNotAllowed() {
+    var stream = new MemoryStream(new byte[] { 1, 2, 3 });
+    var url = _sut.StartProxy(stream, "audio/mpeg");
+
+    var response = await _httpClient.PostAsync(url, new StringContent("test"), TestContext.Current.CancellationToken);
+    Assert.Equal(HttpStatusCode.MethodNotAllowed, response.StatusCode);
+  }
+
+  [Fact]
+  public async Task HandleRequest_InvalidStreamId_ReturnsNotFound() {
+    var stream = new MemoryStream(new byte[] { 1, 2, 3 });
+    var url = _sut.StartProxy(stream, "audio/mpeg");
+    var nonExistentUrl = url + "-non-existent";
+
+    var response = await _httpClient.GetAsync(nonExistentUrl, TestContext.Current.CancellationToken);
+    Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+  }
+
+  [Fact]
+  public async Task HandleRequest_HeadMethod_ReturnsHeadersWithZeroBody() {
+    var data = new byte[] { 1, 2, 3, 4, 5 };
+    var stream = new MemoryStream(data);
+    var url = _sut.StartProxy(stream, "audio/mpeg");
+
+    var request = new HttpRequestMessage(HttpMethod.Head, url);
+    var response = await _httpClient.SendAsync(request, TestContext.Current.CancellationToken);
+
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    Assert.Equal("audio/mpeg", response.Content.Headers.ContentType?.MediaType);
+    var body = await response.Content.ReadAsByteArrayAsync(TestContext.Current.CancellationToken);
+    Assert.Empty(body);
+  }
+
+  [Fact]
+  public async Task HandleRequest_InvalidRange_ReturnsRangeNotSatisfiable() {
+    var data = new byte[] { 1, 2, 3 };
+    var stream = new MemoryStream(data);
+    var url = _sut.StartProxy(stream, "audio/mpeg");
+
+    var request = new HttpRequestMessage(HttpMethod.Get, url);
+    request.Headers.Range = new RangeHeaderValue(100, 200);
+
+    var response = await _httpClient.SendAsync(request, TestContext.Current.CancellationToken);
+    Assert.Equal(HttpStatusCode.RequestedRangeNotSatisfiable, response.StatusCode);
+  }
+
+  [Fact]
+  public async Task StopProxy_RemovesStreamEndpoint() {
+    var stream = new MemoryStream(new byte[] { 1, 2, 3 });
+    var url = _sut.StartProxy(stream, "audio/mpeg");
+
+    _sut.StopProxy(url);
+
+    var response = await _httpClient.GetAsync(url, TestContext.Current.CancellationToken);
+    Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+  }
+
+  [Fact]
+  public void StartProxy_WithTargetHost_ResolvesLocalIpViaUdpProbe() {
+    var stream = new MemoryStream(new byte[] { 1, 2, 3 });
+    var url = _sut.StartProxy(stream, "audio/mpeg", "8.8.8.8");
+
+    Assert.NotNull(url);
+    Assert.StartsWith("http://", url);
+    Assert.Equal(url, _sut.CurrentProxyUrl);
+  }
+
+  [Fact]
+  public async Task Proxy_ServesSuffixByteRange() {
+    var data = new byte[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
+    var stream = new MemoryStream(data);
+    var url = _sut.StartProxy(stream, "audio/mpeg");
+
+    var request = new HttpRequestMessage(HttpMethod.Get, url);
+    request.Headers.Range = new RangeHeaderValue(null, 3); // bytes=-3 (last 3 bytes)
+
+    var response = await _httpClient.SendAsync(request, TestContext.Current.CancellationToken);
+    Assert.Equal(HttpStatusCode.PartialContent, response.StatusCode);
+    Assert.Equal("bytes 7-9/10", response.Content.Headers.ContentRange?.ToString());
+
+    var responseData = await response.Content.ReadAsByteArrayAsync(TestContext.Current.CancellationToken);
+    Assert.Equal(new byte[] { 7, 8, 9 }, responseData);
+  }
+
+  [Fact]
+  public async Task Proxy_ServesFromOffsetToByteEnd() {
+    var data = new byte[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
+    var stream = new MemoryStream(data);
+    var url = _sut.StartProxy(stream, "audio/mpeg");
+
+    var request = new HttpRequestMessage(HttpMethod.Get, url);
+    request.Headers.Range = new RangeHeaderValue(7, null); // bytes=7-
+
+    var response = await _httpClient.SendAsync(request, TestContext.Current.CancellationToken);
+    Assert.Equal(HttpStatusCode.PartialContent, response.StatusCode);
+    Assert.Equal("bytes 7-9/10", response.Content.Headers.ContentRange?.ToString());
+
+    var responseData = await response.Content.ReadAsByteArrayAsync(TestContext.Current.CancellationToken);
+    Assert.Equal(new byte[] { 7, 8, 9 }, responseData);
+  }
+
+  [Fact]
+  public async Task Proxy_ServesNonSeekableStream_WithChunkedTransfer() {
+    var data = new byte[] { 1, 2, 3, 4, 5 };
+    using var memStream = new MemoryStream(data);
+    using var nonSeekableStream = new NonSeekableStreamWrapper(memStream);
+    var url = _sut.StartProxy(nonSeekableStream, "audio/mpeg");
+
+    var response = await _httpClient.GetAsync(url, TestContext.Current.CancellationToken);
+    Assert.True(response.IsSuccessStatusCode);
+    Assert.True(response.Headers.TransferEncodingChunked ?? false);
+
+    var responseData = await response.Content.ReadAsByteArrayAsync(TestContext.Current.CancellationToken);
+    Assert.Equal(data, responseData);
+  }
+
+  private sealed class NonSeekableStreamWrapper(Stream inner) : Stream {
+    public override bool CanRead => inner.CanRead;
+    public override bool CanSeek => false;
+    public override bool CanWrite => inner.CanWrite;
+    public override long Length => throw new NotSupportedException();
+    public override long Position {
+      get => throw new NotSupportedException();
+      set => throw new NotSupportedException();
+    }
+    public override void Flush() => inner.Flush();
+    public override int Read(byte[] buffer, int offset, int count) => inner.Read(buffer, offset, count);
+    public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default) => inner.ReadAsync(buffer, cancellationToken);
+    public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+    public override void SetLength(long value) => throw new NotSupportedException();
+    public override void Write(byte[] buffer, int offset, int count) => inner.Write(buffer, offset, count);
+  }
+
   public void Dispose() {
     _sut.Dispose();
     _httpClient.Dispose();
