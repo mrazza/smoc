@@ -3,6 +3,7 @@ using Smoc.Services.Cast;
 using Smoc.Streaming;
 using Smoc.Services.Audio;
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -21,11 +22,16 @@ public sealed class CastPlaybackService : IPlaybackService {
   private readonly IStreamingProxyService _proxyService;
   private readonly string _contentType;
   private readonly object _commandLock = new();
+  private readonly object _progressLock = new();
   private readonly CancellationTokenSource _disposeCts = new();
   private Task _lastCommandTask = Task.CompletedTask;
   private PlaybackState _state = PlaybackState.Stopped;
-  private TimeSpan _currentTime = TimeSpan.Zero;
+
+  private TimeSpan _statusPosition = TimeSpan.Zero;
+  private long _startTimestamp;
   private TimeSpan _duration = TimeSpan.Zero;
+  private CancellationTokenSource? _progressCts;
+  private Task? _progressLoopTask;
 
   /// <inheritdoc/>
   public event EventHandler? SongEnded;
@@ -69,13 +75,26 @@ public sealed class CastPlaybackService : IPlaybackService {
   public bool IsSpectrumActive { get; set; }
 
   /// <inheritdoc/>
-  public TimeSpan CurrentTime => _currentTime;
+  public TimeSpan CurrentTime {
+    get {
+      lock (_progressLock) {
+        if (_state == PlaybackState.Playing && _startTimestamp > 0) {
+          var elapsedSeconds = (Stopwatch.GetTimestamp() - _startTimestamp) / (double)Stopwatch.Frequency;
+          var calculated = _statusPosition + TimeSpan.FromSeconds(elapsedSeconds);
+          return calculated < Duration ? calculated : Duration;
+        }
+        return _statusPosition;
+      }
+    }
+  }
 
   /// <inheritdoc/>
   public TimeSpan Duration => _duration > TimeSpan.Zero ? _duration : _song.Duration;
 
   /// <inheritdoc/>
-  public float Progress => Duration.TotalSeconds > 0 ? (float)(_currentTime.TotalSeconds / Duration.TotalSeconds) : 0;
+  public float Progress => Duration.TotalSeconds > 0
+    ? (float)(CurrentTime.TotalSeconds / Duration.TotalSeconds)
+    : 0;
 
   /// <inheritdoc/>
   public PlaybackState PlaybackState => _state;
@@ -142,6 +161,7 @@ public sealed class CastPlaybackService : IPlaybackService {
         await _client.PlayAsync().ConfigureAwait(false);
       }
       UpdateState(PlaybackState.Playing);
+      StartProgressTracking();
     }, "Play");
   }
 
@@ -149,7 +169,9 @@ public sealed class CastPlaybackService : IPlaybackService {
   public void Pause() {
     EnqueueCommand(async () => {
       await _client.PauseAsync().ConfigureAwait(false);
+      StopProgressTracking(resetPosition: false);
       UpdateState(PlaybackState.Paused);
+      PositionChanged?.Invoke(this, CurrentTime);
     }, "Pause");
   }
 
@@ -157,7 +179,9 @@ public sealed class CastPlaybackService : IPlaybackService {
   public void Stop() {
     EnqueueCommand(async () => {
       await _client.StopAsync().ConfigureAwait(false);
+      StopProgressTracking(resetPosition: true);
       UpdateState(PlaybackState.Stopped);
+      PositionChanged?.Invoke(this, TimeSpan.Zero);
     }, "Stop");
   }
 
@@ -165,7 +189,74 @@ public sealed class CastPlaybackService : IPlaybackService {
   public void Seek(TimeSpan position) {
     EnqueueCommand(async () => {
       await _client.SeekAsync(position.TotalSeconds).ConfigureAwait(false);
+      lock (_progressLock) {
+        _statusPosition = position;
+        if (_state == PlaybackState.Playing) {
+          _startTimestamp = Stopwatch.GetTimestamp();
+        }
+      }
+      PositionChanged?.Invoke(this, position);
     }, "Seek");
+  }
+
+  private void StartProgressTracking() {
+    lock (_progressLock) {
+      _startTimestamp = Stopwatch.GetTimestamp();
+      if (_progressLoopTask != null && !_progressLoopTask.IsCompleted) {
+        return;
+      }
+
+      _progressCts?.Cancel();
+      _progressCts?.Dispose();
+      _progressCts = new CancellationTokenSource();
+      var token = _progressCts.Token;
+
+      _progressLoopTask = Task.Run(async () => {
+        using var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(500));
+        int pollCounter = 0;
+        try {
+          while (!token.IsCancellationRequested && await timer.WaitForNextTickAsync(token).ConfigureAwait(false)) {
+            if (_state == PlaybackState.Playing) {
+              PositionChanged?.Invoke(this, CurrentTime);
+
+              if (++pollCounter >= 20) {
+                pollCounter = 0;
+                _ = PollMediaStatusAsync();
+              }
+            }
+          }
+        } catch (OperationCanceledException) {
+          // Normal cancellation
+        }
+      }, CancellationToken.None);
+    }
+  }
+
+  private void StopProgressTracking(bool resetPosition) {
+    lock (_progressLock) {
+      if (!resetPosition && _startTimestamp > 0 && _state == PlaybackState.Playing) {
+        var elapsedSeconds = (Stopwatch.GetTimestamp() - _startTimestamp) / (double)Stopwatch.Frequency;
+        _statusPosition = _statusPosition + TimeSpan.FromSeconds(elapsedSeconds);
+        if (_statusPosition > Duration) {
+          _statusPosition = Duration;
+        }
+      } else if (resetPosition) {
+        _statusPosition = TimeSpan.Zero;
+      }
+      _startTimestamp = 0;
+      _progressCts?.Cancel();
+    }
+  }
+
+  private async Task PollMediaStatusAsync() {
+    try {
+      var status = await _client.GetMediaStatusAsync().ConfigureAwait(false);
+      if (status != null) {
+        OnMediaStatusChanged(this, status);
+      }
+    } catch {
+      // Ignore polling errors
+    }
   }
 
   private void UpdateState(PlaybackState newState) {
@@ -176,12 +267,17 @@ public sealed class CastPlaybackService : IPlaybackService {
   }
 
   private void OnMediaStatusChanged(object? sender, MediaStatus e) {
-    _currentTime = TimeSpan.FromSeconds(e.CurrentTime);
-    if (e.Media?.Duration != null) {
-      _duration = TimeSpan.FromSeconds(e.Media.Duration.Value);
+    lock (_progressLock) {
+      _statusPosition = TimeSpan.FromSeconds(e.CurrentTime);
+      if (_state == PlaybackState.Playing) {
+        _startTimestamp = Stopwatch.GetTimestamp();
+      }
+      if (e.Media?.Duration != null) {
+        _duration = TimeSpan.FromSeconds(e.Media.Duration.Value);
+      }
     }
 
-    PositionChanged?.Invoke(this, _currentTime);
+    PositionChanged?.Invoke(this, CurrentTime);
 
     var playerState = e.PlayerState.ToString();
     var newState = playerState switch {
@@ -190,6 +286,14 @@ public sealed class CastPlaybackService : IPlaybackService {
       "Buffering" => PlaybackState.Playing,
       _ => PlaybackState.Stopped
     };
+
+    if (newState == PlaybackState.Playing) {
+      StartProgressTracking();
+    } else if (newState == PlaybackState.Paused) {
+      StopProgressTracking(resetPosition: false);
+    } else {
+      StopProgressTracking(resetPosition: true);
+    }
 
     if (e.IdleReason?.ToString() == "FINISHED") {
       SongEnded?.Invoke(this, EventArgs.Empty);
@@ -203,6 +307,9 @@ public sealed class CastPlaybackService : IPlaybackService {
     lock (_commandLock) {
       _disposeCts.Cancel();
     }
+
+    StopProgressTracking(resetPosition: true);
+    _progressCts?.Dispose();
 
     try {
       _lastCommandTask.Wait(TimeSpan.FromSeconds(2));

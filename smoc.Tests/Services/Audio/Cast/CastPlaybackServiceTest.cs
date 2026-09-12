@@ -125,6 +125,68 @@ public class CastPlaybackServiceTest {
   }
 
   [Fact]
+  public async Task CurrentTime_AdvancesWhilePlaying() {
+    using var sut = new CastPlaybackService(_mockClient.Object, _song, _stream, _url, _mockProxyService.Object);
+
+    sut.Play();
+    await sut.WaitForPendingCommandsAsync();
+
+    // Wait a short duration for the progress tracking timer to advance
+    await Task.Delay(100, TestContext.Current.CancellationToken);
+
+    Assert.True(sut.CurrentTime > TimeSpan.Zero, "CurrentTime should advance while in Playing state.");
+    Assert.True(sut.Progress > 0, "Progress should be greater than zero.");
+  }
+
+  [Fact]
+  public async Task CurrentTime_FreezesOnPause() {
+    using var sut = new CastPlaybackService(_mockClient.Object, _song, _stream, _url, _mockProxyService.Object);
+
+    sut.Play();
+    await sut.WaitForPendingCommandsAsync();
+    await Task.Delay(100, TestContext.Current.CancellationToken);
+
+    sut.Pause();
+    await sut.WaitForPendingCommandsAsync();
+
+    var pausedTime = sut.CurrentTime;
+    await Task.Delay(100, TestContext.Current.CancellationToken);
+
+    Assert.Equal(pausedTime, sut.CurrentTime);
+  }
+
+  [Fact]
+  public async Task CurrentTime_CalibratesOnMediaStatusChanged() {
+    using var sut = new CastPlaybackService(_mockClient.Object, _song, _stream, _url, _mockProxyService.Object);
+
+    sut.Play();
+    await sut.WaitForPendingCommandsAsync();
+
+    // Trigger MediaStatusChanged event from client with specific currentTime
+    _mockClient.Raise(c => c.MediaStatusChanged += null, _mockClient.Object, new MediaStatus {
+      CurrentTime = 42.5,
+      PlayerState = PlayerStateType.Playing,
+      Media = new Media { Duration = 180.0 }
+    });
+
+    Assert.True(sut.CurrentTime >= TimeSpan.FromSeconds(42.5));
+    Assert.Equal(TimeSpan.FromSeconds(180.0), sut.Duration);
+  }
+
+  [Fact]
+  public async Task Seek_UpdatesCurrentTime() {
+    using var sut = new CastPlaybackService(_mockClient.Object, _song, _stream, _url, _mockProxyService.Object);
+
+    sut.Play();
+    await sut.WaitForPendingCommandsAsync();
+
+    sut.Seek(TimeSpan.FromSeconds(60));
+    await sut.WaitForPendingCommandsAsync();
+
+    Assert.True(sut.CurrentTime >= TimeSpan.FromSeconds(60));
+  }
+
+  [Fact]
   public void Dispose_StopsProxyAndDisposesStream() {
     var sut = new CastPlaybackService(_mockClient.Object, _song, _stream, _url, _mockProxyService.Object);
 

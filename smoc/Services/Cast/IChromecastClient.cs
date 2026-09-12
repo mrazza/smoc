@@ -77,4 +77,10 @@ public interface IChromecastClient : IDisposable {
   /// Gets or sets the volume level of the connected device.
   /// </summary>
   float Volume { get; set; }
+
+  /// <summary>
+  /// Requests the current media status from the connected device.
+  /// </summary>
+  /// <returns>A task representing the asynchronous operation, returning the current media status or null.</returns>
+  Task<MediaStatus?> GetMediaStatusAsync();
 }

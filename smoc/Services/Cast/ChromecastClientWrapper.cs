@@ -54,5 +54,14 @@ public sealed class ChromecastClientWrapper : IChromecastClient {
   public Task SeekAsync(double seconds) => _client.MediaChannel.SeekAsync(seconds);
 
   /// <inheritdoc/>
+  public async Task<MediaStatus?> GetMediaStatusAsync() {
+    try {
+      return await _client.MediaChannel.GetMediaStatusAsync();
+    } catch {
+      return null;
+    }
+  }
+
+  /// <inheritdoc/>
   public void Dispose() => _client.Dispose();
 }
