@@ -5,9 +5,11 @@ using Microsoft.Extensions.Logging;
 using Smoc.Configuration;
 using Smoc.Services.Caching;
 using Smoc.Streaming;
-using Smoc.Streaming.Subsonic;
-using Smoc.Streaming.YouTubeMusic;
 using Smoc.Streaming.SoundCloud;
+using Smoc.Streaming.Subsonic;
+using Smoc.Streaming.Tidal;
+using Smoc.Streaming.Tidal.Models;
+using Smoc.Streaming.YouTubeMusic;
 using Smoc.Ui;
 using Terminal.Gui;
 using Terminal.Gui.App;
@@ -23,6 +25,7 @@ public static class Program {
   private static readonly string _configPath = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) + "/.config/smoc/config.json";
   private static readonly string _cookiesPath = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) + "/.config/smoc/cookies.txt";
   private static readonly string _tokensPath = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) + "/.config/smoc/tokens.json";
+  private static readonly string _tidalTokensPath = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) + "/.config/smoc/tidal_tokens.json";
   private static readonly string _logPath = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) + "/.config/smoc/log_{Date}.txt";
   public static readonly string ProductName = "SMoC";
 
@@ -40,6 +43,20 @@ public static class Program {
       File.WriteAllText(_tokensPath, JsonSerializer.Serialize(tokens));
     });
 
+    Command authTidalCommand = new Command("--auth-tidal", "Authenticate with Tidal using OAuth device flow.");
+    rootCommand.Subcommands.Add(authTidalCommand);
+    authTidalCommand.SetAction(async (_) => {
+      if (File.Exists(_configPath)) {
+        var configFile = File.ReadAllText(_configPath);
+        var configBuilder = new TuiConfigurationBuilder(ProductName) { RuntimeConfig = configFile };
+        configBuilder.BindAppSettings<TidalConfig>("TidalConfig", s => TidalConfig.Defaults = s);
+        configBuilder.ApplyToStaticFacades();
+      }
+
+      var clientId = TidalConfig.Defaults.ClientId;
+      await TidalStreamingClient.AuthenticateInteractiveAsync(clientId, _tidalTokensPath);
+    });
+
     rootCommand.SetAction((_) => {
       var builder = new TuiConfigurationBuilder(ProductName);
       if (File.Exists(_configPath)) {
@@ -48,12 +65,36 @@ public static class Program {
       }
 
       builder.BindAppSettings<SmocConfiguration>("SmocConfiguration", s => SmocConfiguration.Defaults = s)
-             .BindAppSettings<ListenHistoryConfig>("ListenHistoryConfig", s => ListenHistoryConfig.Defaults = s)
-             .BindAppSettings<SoundCloudConfig>("SoundCloudConfig", s => SoundCloudConfig.Defaults = s)
-             .BindAppSettings<SubsonicConfig>("SubsonicConfig", s => SubsonicConfig.Defaults = s)
-             .BindAppSettings<YouTubeMusicConfig>("YouTubeMusicConfig", s => YouTubeMusicConfig.Defaults = s);
+        .BindAppSettings<ListenHistoryConfig>("ListenHistoryConfig", s => ListenHistoryConfig.Defaults = s)
+        .BindAppSettings<SoundCloudConfig>("SoundCloudConfig", s => SoundCloudConfig.Defaults = s)
+        .BindAppSettings<SubsonicConfig>("SubsonicConfig", s => SubsonicConfig.Defaults = s)
+        .BindAppSettings<TidalConfig>("TidalConfig", s => TidalConfig.Defaults = s)
+        .BindAppSettings<YouTubeMusicConfig>("YouTubeMusicConfig", s => YouTubeMusicConfig.Defaults = s);
 
       builder.ApplyToStaticFacades();
+
+      if (File.Exists(_tidalTokensPath)) {
+        try {
+          var savedTokens = JsonSerializer.Deserialize<TidalTokens>(File.ReadAllText(_tidalTokensPath));
+          if (savedTokens != null) {
+            if (string.IsNullOrEmpty(TidalConfig.Defaults.AccessToken)) {
+              TidalConfig.Defaults.AccessToken = savedTokens.AccessToken;
+            }
+            if (string.IsNullOrEmpty(TidalConfig.Defaults.RefreshToken)) {
+              TidalConfig.Defaults.RefreshToken = savedTokens.RefreshToken;
+            }
+            if (TidalConfig.Defaults.TokenExpiry == null) {
+              TidalConfig.Defaults.TokenExpiry = savedTokens.TokenExpiry;
+            }
+            if (string.IsNullOrEmpty(TidalConfig.Defaults.ClientId)) {
+              TidalConfig.Defaults.ClientId = savedTokens.ClientId;
+            }
+          }
+        } catch {
+          // Ignore corrupted tokens file
+        }
+      }
+
       AppSchemes.RegisterDefaultSchemes();
 
       Application.SetDefaultKeyBinding(Terminal.Gui.Input.Command.Quit, new Terminal.Gui.Input.PlatformKeyBinding() {
@@ -117,6 +158,10 @@ public static class Program {
       case StreamingService.SoundCloud:
         Logging.Information("Creating SoundCloud streaming client...");
         return SoundCloudStreamingClient.Create(songCache, artCache);
+
+      case StreamingService.Tidal:
+        Logging.Information("Creating Tidal streaming client...");
+        return TidalStreamingClient.Create(songCache, artCache);
 
       case StreamingService.YouTubeMusic:
         Logging.Information("Creating YouTube Music streaming client...");
