@@ -38,7 +38,7 @@ public class InMemoryCacheService : ICacheService {
       var cleanTask = CleanDictionary(cancellationToken);
       await Task.WhenAll(resultTask, cleanTask);
       var result = resultTask.Result;
-      using (MemoryStream cachedStream = new()) {
+      using (MemoryStream cachedStream = result.CanSeek ? new((int)result.Length) : new()) {
         await result.CopyToAsync(cachedStream, cancellationToken);
         _cache[key] = new CacheValue(DateTime.UtcNow, cachedStream.ToArray());
       }

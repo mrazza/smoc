@@ -75,7 +75,7 @@ public sealed class SoundFlowPlaybackService : IPlaybackService {
         for (int i = 0; i < raw.Length; i++) {
           _cachedSpectrumData[i] = raw[i] * gain;
         }
-        return _cachedSpectrumData.ToArray();
+        return _cachedSpectrumData;
       }
     }
   }
@@ -91,10 +91,13 @@ public sealed class SoundFlowPlaybackService : IPlaybackService {
   /// <inheritdoc/>
   public float Progress {
     get {
-      if (_soundPlayer.Duration <= 0 || float.IsNaN(_soundPlayer.Duration)) {
+      var time = _soundPlayer.Time;
+      var duration = _soundPlayer.Duration;
+      if (duration <= 0 || float.IsNaN(duration) || float.IsInfinity(duration) ||
+          time <= 0 || float.IsNaN(time) || float.IsInfinity(time)) {
         return 0f;
       }
-      return Math.Clamp(_soundPlayer.Time / _soundPlayer.Duration, 0f, 1f);
+      return Math.Clamp(time / duration, 0f, 1f);
     }
   }
 

@@ -341,4 +341,33 @@ public class TempFileCacheServiceTest : IDisposable {
     Assert.True(File.Exists(normalFile), "Normal file within limit should be kept");
     Assert.True(File.Exists(tmpFile), ".tmp file should not be counted or evicted");
   }
+
+  /// <summary>
+  /// Verifies that keys longer than 255 characters succeed and produce a bounded filename.
+  /// </summary>
+  [Theory]
+  [CombinatorialData]
+  public async Task GetOrAddAsync_WithKeyLongerThan255Chars_SucceedsAndBoundsFilename(CachePersistence cachePersistence) {
+    var testDirectory = InitDirectory(cachePersistence);
+    var config = new CacheConfig();
+    var service = new TempFileCacheService(_subDirectory, config, cachePersistence);
+    string key = new('a', 300);
+    string expectedContent = "bounded filename content";
+
+    using var resultStream = await service.GetOrAddAsync(
+      key,
+      _ => Task.FromResult<Stream>(new MemoryStream(Encoding.UTF8.GetBytes(expectedContent))),
+      TestContext.Current.CancellationToken);
+
+    Assert.NotNull(resultStream);
+    using var reader = new StreamReader(resultStream);
+    string content = await reader.ReadToEndAsync(TestContext.Current.CancellationToken);
+    Assert.Equal(expectedContent, content);
+
+    var files = Directory.GetFiles(testDirectory);
+    Assert.Single(files);
+    var fileName = Path.GetFileName(files[0]);
+    Assert.True(fileName.Length <= 129);
+    Assert.StartsWith(new string('a', 64) + "_", fileName);
+  }
 }

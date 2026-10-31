@@ -122,7 +122,7 @@ public class PlaylistView : View {
 
       token.ThrowIfCancellationRequested();
 
-      InvokeUi(() => {
+      App!.Invoke(() => {
         if (songs.Count == 0) {
           ResetSongsTable();
           return;
@@ -136,7 +136,7 @@ public class PlaylistView : View {
       Logging.Debug("Loading url playlist cancelled");
     } catch (Exception ex) {
       Logging.Error($"Error loading url: {ex.Message}");
-      InvokeUi(() => {
+      App!.Invoke(() => {
         ResetSongsTable(Messages.SONG_LOAD_ERROR);
         _mainWindow.DisplayError("error loading url");
       });
@@ -161,7 +161,7 @@ public class PlaylistView : View {
 
       token.ThrowIfCancellationRequested();
 
-      InvokeUi(() => {
+      App!.Invoke(() => {
         if (songs.Count == 0) {
           ResetSongsTable();
           return;
@@ -175,7 +175,7 @@ public class PlaylistView : View {
       Logging.Debug("Loading liked playlist cancelled");
     } catch (Exception ex) {
       Logging.Error($"Error loading liked playlist: {ex.Message}");
-      InvokeUi(() => {
+      App!.Invoke(() => {
         ResetSongsTable(Messages.SONG_LOAD_ERROR);
         _mainWindow.DisplayError("error loading liked playlist");
       });
@@ -203,7 +203,7 @@ public class PlaylistView : View {
 
       token.ThrowIfCancellationRequested();
 
-      InvokeUi(() => {
+      App!.Invoke(() => {
         Logging.Information($"Found {playlists.Count} playlists for search '{args}'.");
 
         if (playlists.Count == 0) {
@@ -220,7 +220,7 @@ public class PlaylistView : View {
       Logging.Debug("Playlist search cancelled");
     } catch (Exception ex) {
       Logging.Error($"Error searching playlists: {ex.Message}");
-      InvokeUi(() => {
+      App!.Invoke(() => {
         _mainWindow.DisplayError(Messages.SEARCH_ERROR);
         ResetSearchResults(Messages.SEARCH_ERROR);
       });
@@ -238,7 +238,7 @@ public class PlaylistView : View {
 
       token.ThrowIfCancellationRequested();
 
-      InvokeUi(() => {
+      App!.Invoke(() => {
         Logging.Information($"Loaded {songs.Count} songs for playlist {selectedPlaylist.Item.Name}.");
 
         if (songs.Count == 0) {
@@ -257,7 +257,7 @@ public class PlaylistView : View {
       Logging.Debug("Playlist load cancelled");
     } catch (Exception ex) {
       Logging.Error($"Error loading playlist: {ex.Message}");
-      InvokeUi(() => {
+      App!.Invoke(() => {
         _mainWindow.DisplayError(Messages.SONG_LOAD_ERROR);
         ResetSongsTable(Messages.SONG_LOAD_ERROR);
       });
@@ -294,13 +294,5 @@ public class PlaylistView : View {
     _songsLabel.Text = message;
     _songTable.Style.ShowHeaders = false;
     _songTable.ClearSongs();
-  }
-
-  private void InvokeUi(Action action) {
-    if (App is { } app) {
-      app.Invoke(action);
-    } else {
-      action();
-    }
   }
 }

@@ -97,7 +97,7 @@ public sealed class SongView : View {
         return;
       }
 
-      InvokeUi(() => {
+      App!.Invoke(() => {
         Logging.Information($"Found {songs.Count} tracks for search '{args}'.");
 
         if (songs.Count == 0) {
@@ -113,7 +113,7 @@ public sealed class SongView : View {
       // Ignore
     } catch (Exception ex) {
       Logging.Error($"Error searching tracks: {ex.Message}");
-      InvokeUi(() => {
+      App!.Invoke(() => {
         _mainWindow.DisplayError(Messages.SEARCH_ERROR);
         ResetTable(Messages.SEARCH_ERROR);
       });
@@ -131,13 +131,5 @@ public sealed class SongView : View {
     _songsLabel.Text = message;
     _songTable.Style.ShowHeaders = false;
     _songTable.ClearSongs();
-  }
-
-  private void InvokeUi(Action action) {
-    if (App is { } app) {
-      app.Invoke(action);
-    } else {
-      action();
-    }
   }
 }

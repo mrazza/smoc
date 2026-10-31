@@ -49,10 +49,8 @@ public sealed class SixelImageView : ImageView {
   }
 
   private void UpdateSixelData() {
-    var oldCts = _cancellationTokenSource;
+    _cancellationTokenSource?.Cancel();
     _cancellationTokenSource = new CancellationTokenSource();
-    oldCts?.Cancel();
-    oldCts?.Dispose();
 
     var token = _cancellationTokenSource.Token;
     Task.Run(() => {
@@ -80,7 +78,7 @@ public sealed class SixelImageView : ImageView {
     }
 
     var targetSize = FitImageInViewportInPixels(new(_image.Width, _image.Height));
-    var resizedImage = _image.Clone(i => i.Resize(targetSize.Width, targetSize.Height));
+    using var resizedImage = _image.Clone(i => i.Resize(targetSize.Width, targetSize.Height));
     return ConvertToColorArray(resizedImage);
   }
 

@@ -24,11 +24,19 @@ public static class YtmUrlParser {
     switch (uri.AbsolutePath) {
       case "/watch": {
         var query = HttpUtility.ParseQueryString(uri.Query);
-        return (typeof(Song), query["v"] ?? throw new ArgumentException("Invalid URL.", nameof(url)));
+        var videoId = query["v"];
+        if (string.IsNullOrWhiteSpace(videoId)) {
+          throw new ArgumentException("Invalid URL.", nameof(url));
+        }
+        return (typeof(Song), videoId);
       }
       case "/playlist": {
         var query = HttpUtility.ParseQueryString(uri.Query);
-        return (typeof(Playlist), query["list"] ?? throw new ArgumentException("Invalid URL.", nameof(url)));
+        var playlistId = query["list"];
+        if (string.IsNullOrWhiteSpace(playlistId)) {
+          throw new ArgumentException("Invalid URL.", nameof(url));
+        }
+        return (typeof(Playlist), playlistId);
       }
       default: {
         throw new ArgumentException("Invalid URL.", nameof(url));
