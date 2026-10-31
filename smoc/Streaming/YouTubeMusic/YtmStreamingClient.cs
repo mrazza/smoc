@@ -99,18 +99,24 @@ public sealed class YtmStreamingClient : IStreamingClient {
   /// <inheritdoc/>
   public async Task<List<Album>> GetAlbumsByArtistAsync(Artist artist, CancellationToken cancellationToken = default) {
     var results = await _ytmClient.GetArtistInfoAsync(artist.Id, cancellationToken);
-    return results.Albums.Select(s => new Album(
-        s.Id,
-        artist,
-        s.Name,
-        s.Thumbnails.Select(t => new AlbumCover(t.Url, t.Width, t.Height)),
-        s.ReleaseYear)).ToList();
+    return results.Albums
+        .Where(s => !string.IsNullOrWhiteSpace(s.Id))
+        .Select(s => new Album(
+            s.Id,
+            artist,
+            s.Name,
+            s.Thumbnails.Select(t => new AlbumCover(t.Url, t.Width, t.Height)),
+            s.ReleaseYear))
+        .ToList();
   }
 
   /// <inheritdoc/>
   public async Task<List<Song>> GetSongsByAlbumAsync(Album album, CancellationToken cancellationToken = default) {
     var results = await _ytmClient.GetAlbumInfoAsync(album.Id, cancellationToken);
-    return results.Songs.Select(s => new Song(s.Id!, album, s.Name, s.Duration, s.SongNumber)).ToList();
+    return results.Songs
+        .Where(s => !string.IsNullOrWhiteSpace(s.Id))
+        .Select(s => new Song(s.Id!, album, s.Name, s.Duration, s.SongNumber))
+        .ToList();
   }
 
   /// <inheritdoc/>

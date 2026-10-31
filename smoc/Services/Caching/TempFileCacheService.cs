@@ -80,10 +80,6 @@ public class TempFileCacheService : ICacheService {
         }
         throw;
       }
-      if (cachedEntity.CanSeek) {
-        cachedEntity.Seek(0, SeekOrigin.Begin);
-        return cachedEntity;
-      }
       cachedEntity.Dispose();
       return new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize: 4096, useAsync: true);
     } finally {

@@ -345,4 +345,37 @@ public class ArtistViewTest {
     context.WaitIteration();
     _screenshotDiffer.AssertEqualsGolden(context);
   }
+
+  /// <summary>
+  /// Verifies that if one album throws during song lookup, tracks from the remaining albums still load.
+  /// </summary>
+  [Fact]
+  public void ArtistSelected_SingleAlbumFailure_ShowsSongsFromRemainingAlbums() {
+    using var context = NewArtistViewContext();
+
+    var pinkFloyd = new Artist("123", "Pink Floyd");
+    _mockStreamingClient.Setup(client => client.SearchArtistsAsync("pink floyd", It.IsAny<CancellationToken>()))
+      .ReturnsAsync([pinkFloyd]);
+
+    context.Then((_) => _commandService.ExecuteCommand("a/pink floyd"));
+
+    var darkSide = new Album("321", pinkFloyd, "Animals", [EntityTestFactory.GenerateAlbumCover()], 1977);
+    var brokenAlbum = new Album("322", pinkFloyd, "Unavailable Release", [EntityTestFactory.GenerateAlbumCover()], 1975);
+    _mockStreamingClient.Setup(client => client.GetAlbumsByArtistAsync(pinkFloyd, It.IsAny<CancellationToken>()))
+      .ReturnsAsync([darkSide, brokenAlbum]);
+
+    var time = new Song("456", darkSide, "Dogs", TimeSpan.FromMinutes(17), 2);
+    _mockStreamingClient.Setup(client => client.GetSongsByAlbumAsync(darkSide, It.IsAny<CancellationToken>()))
+      .ReturnsAsync([time]);
+    _mockStreamingClient.Setup(client => client.GetSongsByAlbumAsync(brokenAlbum, It.IsAny<CancellationToken>()))
+      .ThrowsAsync(new ArgumentNullException("buttons[2].musicPlayButtonRenderer.playNavigationEndpoint.watchPlaylistEndpoint.playlistId", "Requiered token is null."));
+
+    context.KeyDown(Key.Enter);
+
+    using var textWriter = new StringWriter();
+    context.ScreenShot("", textWriter);
+    var screen = textWriter.ToString();
+    Assert.Contains("Dogs", screen);
+    Assert.Contains("Animals", screen);
+  }
 }
