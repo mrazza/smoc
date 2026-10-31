@@ -71,6 +71,12 @@ public class SmocConfiguration {
   public LoudnessNormalizationMode LoudnessNormalizationMode { get; set; } = LoudnessNormalizationMode.Full;
 
   /// <summary>
+  /// Gets or sets the preferred audio output device name or index.
+  /// If null or empty, the system default playback device is used.
+  /// </summary>
+  public string? AudioDevice { get; set; } = null;
+
+  /// <summary>
   /// The static facade instance containing the current effective values.
   /// </summary>
   public static SmocConfiguration Defaults { get; set; } = new();

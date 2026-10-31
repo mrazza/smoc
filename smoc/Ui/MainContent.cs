@@ -68,4 +68,17 @@ public sealed class MainContent : View {
     };
     _currentView!.Visible = true;
   }
+
+  /// <summary>
+  /// Applies a filter to the active view's song table, if the active view contains one.
+  /// </summary>
+  /// <param name="filterText">The filter text to apply.</param>
+  public void ApplyFilterToCurrentView(string? filterText) {
+    if (_currentView is not { } currentView) {
+      return;
+    }
+
+    var songTable = currentView.SubViews.OfType<Components.SongTable>().FirstOrDefault();
+    songTable?.ApplyFilter(filterText);
+  }
 }

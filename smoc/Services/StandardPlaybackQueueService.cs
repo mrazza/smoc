@@ -22,6 +22,7 @@ public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
   private readonly UniqueResource<CancellationTokenSource> _preloadCts;
   private Song? _preloadingSong;
   private Task<IPlaybackService>? _preloadingTask;
+  private TimeSpan? _pendingRestorePosition;
 
   /// <inheritdoc/>
   public event EventHandler<float>? VolumeChanged;
@@ -45,13 +46,23 @@ public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
   public Song? CurrentSong => GetCurrentSong();
 
   /// <inheritdoc/>
-  public TimeSpan CurrentTime => _playbackService.Resource?.CurrentTime ?? TimeSpan.Zero;
+  public TimeSpan CurrentTime => _playbackService.Resource?.CurrentTime ?? _pendingRestorePosition ?? TimeSpan.Zero;
 
   /// <inheritdoc/>
-  public TimeSpan Duration => _playbackService.Resource?.Duration ?? TimeSpan.Zero;
+  public TimeSpan Duration => _playbackService.Resource?.Duration ?? CurrentSong?.Duration ?? TimeSpan.Zero;
 
   /// <inheritdoc/>
-  public float Progress => _playbackService.Resource?.Progress ?? 0;
+  public float Progress {
+    get {
+      if (_playbackService.Resource is { } playback) {
+        return playback.Progress;
+      }
+      if (_pendingRestorePosition is { } pending && Duration > TimeSpan.Zero) {
+        return Math.Clamp((float)(pending / Duration), 0f, 1f);
+      }
+      return 0f;
+    }
+  }
 
   /// <inheritdoc/>
   public float[] SpectrumData => _playbackService.Resource?.SpectrumData ?? Array.Empty<float>();
@@ -158,6 +169,7 @@ public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
 
     _playbackQueue.Clear();
     _currentPlaybackIndex = 0;
+    _pendingRestorePosition = null;
     InvokeAppEvent(QueueChanged);
     InvokeAppEvent(SongChanged, null);
     EnsurePreload();
@@ -176,6 +188,7 @@ public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
     var wasPlaying = PlaybackState == PlaybackState.Playing;
 
     Stop();
+    _pendingRestorePosition = null;
     _currentPlaybackIndex = index;
     InvokeAppEvent(SongChanged, GetCurrentSong()!);
 
@@ -260,6 +273,12 @@ public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
       playback.PlaybackStateChanged += OnPlaybackStateChanged;
 
       token.ThrowIfCancellationRequested();
+      if (_pendingRestorePosition is { } restorePos) {
+        _pendingRestorePosition = null;
+        if (restorePos > TimeSpan.Zero && restorePos <= playback.Duration) {
+          playback.Seek(restorePos);
+        }
+      }
       playback.Play();
 
       EnsurePreload();
@@ -363,11 +382,65 @@ public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
   public void SeekTo(TimeSpan position) {
     ArgumentOutOfRangeException.ThrowIfLessThan(position, TimeSpan.Zero);
     if (_playbackService.Resource is not { } playback) {
-      Logging.Debug("Can't seek, no current song (no playback resource)");
+      if (CurrentSong is { } && position <= Duration) {
+        _pendingRestorePosition = position;
+        InvokeAppEvent(PositionChanged, position);
+      } else {
+        Logging.Debug("Can't seek, no current song (no playback resource)");
+      }
       return;
     }
     ArgumentOutOfRangeException.ThrowIfGreaterThan(position, Duration);
     playback.Seek(position);
+  }
+
+  /// <inheritdoc/>
+  public IReadOnlyList<AudioDeviceInfo> GetPlaybackDevices() => _audioService.GetPlaybackDevices();
+
+  /// <inheritdoc/>
+  public bool SelectPlaybackDevice(string deviceIndexOrName) => _audioService.SelectPlaybackDevice(deviceIndexOrName);
+
+  /// <inheritdoc/>
+  public AudioDeviceInfo? ActivePlaybackDevice => _audioService.ActivePlaybackDevice;
+
+  /// <inheritdoc/>
+  public void RestoreSessionState(SessionState state) {
+    ArgumentNullException.ThrowIfNull(state);
+    Stop();
+    _playbackQueue.Clear();
+    _pendingRestorePosition = null;
+
+    Volume = Math.Clamp(state.Volume, 0f, 2.0f);
+
+    if (state.Queue is { Count: > 0 }) {
+      _playbackQueue.AddRange(state.Queue);
+      _currentPlaybackIndex = Math.Clamp(state.CurrentPlaybackIndex, 0, _playbackQueue.Count - 1);
+      var currentSong = GetCurrentSong()!;
+      InvokeAppEvent(QueueChanged);
+      InvokeAppEvent(SongChanged, currentSong);
+
+      if (state.CurrentPositionSeconds > 0) {
+        var restoredPos = TimeSpan.FromSeconds(state.CurrentPositionSeconds);
+        if (currentSong.Duration <= TimeSpan.Zero || restoredPos <= currentSong.Duration) {
+          _pendingRestorePosition = restoredPos;
+          InvokeAppEvent(PositionChanged, restoredPos);
+        }
+      }
+      EnsurePreload();
+    } else {
+      _currentPlaybackIndex = 0;
+      InvokeAppEvent(QueueChanged);
+      InvokeAppEvent(SongChanged, null);
+    }
+  }
+
+  /// <inheritdoc/>
+  public SessionState GetSessionState() {
+    return new SessionState(
+      _playbackQueue.ToList(),
+      _currentPlaybackIndex,
+      CurrentTime.TotalSeconds,
+      Volume);
   }
 
   /// <inheritdoc/>

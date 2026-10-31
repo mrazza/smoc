@@ -5,6 +5,7 @@ using Smoc.Services.Audio.SoundFlow;
 using Smoc.Services.Streaming;
 using Smoc.Streaming;
 using Smoc.Ui.Models;
+using Terminal.Gui.App;
 using Terminal.Gui.Input;
 using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
@@ -22,6 +23,7 @@ public sealed class MainWindow : Runnable, IMainWindow {
   private readonly IPlaybackQueueService _playbackQueueService;
   private readonly CommandService _commandService;
   private readonly IPlaybackTrackingService _playbackTrackingService;
+  private readonly ISessionStateService _sessionStateService;
 
   private Mode? _currentMode;
   private View? _preCommandFocusedView;
@@ -31,11 +33,13 @@ public sealed class MainWindow : Runnable, IMainWindow {
   /// Initializes a new instance of the <see cref="MainWindow"/> class.
   /// </summary>
   /// <param name="streamingClient">The initialized streaming client.</param>
-  public MainWindow(IStreamingClient streamingClient) {
+  /// <param name="sessionStateService">Optional session state service for persisting playback state across restarts.</param>
+  public MainWindow(IStreamingClient streamingClient, ISessionStateService? sessionStateService = null) {
     Width = Dim.Fill();
     Height = Dim.Fill();
     CanFocus = true;
 
+    _sessionStateService = sessionStateService ?? new JsonSessionStateService();
     _playbackQueueService = StandardPlaybackQueueService.UsingAudioService<SoundFlowAudioService>(this, streamingClient);
     _playbackTrackingService = new StreamingListenHistoryService(
       streamingClient,
@@ -51,7 +55,7 @@ public sealed class MainWindow : Runnable, IMainWindow {
 
     _commandService = new CommandService();
     _nowPlayingBar = new NowPlayingBar(this, _playbackQueueService, _commandService, streamingClient);
-    _commandLine = new CommandLine() {
+    _commandLine = new CommandLine(_commandService) {
       Y = Pos.AnchorEnd()
     };
     _statusBar = new StatusBar(_playbackQueueService) {
@@ -67,24 +71,38 @@ public sealed class MainWindow : Runnable, IMainWindow {
       if (args.Length > 0) {
         _commandLine.DisplayError($"unexpected trailing characters: {args}");
       } else {
+        SaveSessionState();
         App!.RequestStop();
       }
     });
+    _commandService.RegisterCommand("devices", OnDevicesCommand);
+    _commandService.RegisterCommand("device", OnDeviceCommand);
 
     AddCommand(Command.HotKey, OnCommandLineHotKey);
     HotKeyBindings.Add(new Key(':'), Command.HotKey);
     HotKeyBindings.Add(new Key(':').WithShift, Command.HotKey);
+    HotKeyBindings.Add(new Key('/'), Command.HotKey);
 
+    _commandLine.FilterChanged += (_, filterText) => {
+      _mainContent.ApplyFilterToCurrentView(filterText);
+    };
+    _commandLine.FilterAccepted += (_, filterText) => {
+      _mainContent.ApplyFilterToCurrentView(filterText);
+    };
     _commandLine.CommandCancelled += (sender, e) => {
+      if (_commandLine.Prefix == '/') {
+        _mainContent.ApplyFilterToCurrentView(string.Empty);
+      }
       SetMode(_preCommandMode!.Value);
       _preCommandFocusedView?.SetFocus();
     };
     _commandLine.Accepted += (sender, e) => {
       var command = (e.Context as CommandLineCommandContext?)?.CommandText;
+      bool isFilter = _commandLine.Prefix == '/' || (command is not null && command.StartsWith('/'));
       SetMode(_preCommandMode!.Value);
       _preCommandFocusedView?.SetFocus();
 
-      if (command is not null && command.Length > 0) {
+      if (!isFilter && command is not null && command.Length > 0) {
         if (!_commandService.ExecuteCommand(command)) {
           _commandLine.DisplayError($"not a valid command: {command}");
         }
@@ -94,6 +112,10 @@ public sealed class MainWindow : Runnable, IMainWindow {
     _currentMode = null;
     SetMode(Mode.Queue);
     _mainContent.SetFocus();
+
+    if (_sessionStateService.Load() is { } savedSession) {
+      _playbackQueueService.RestoreSessionState(savedSession);
+    }
   }
 
   /// <inheritdoc/>
@@ -122,14 +144,62 @@ public sealed class MainWindow : Runnable, IMainWindow {
   }
 
   protected override void Dispose(bool disposing) {
-    _commandService.UnregisterCommand("q");
+    if (disposing) {
+      SaveSessionState();
+      _commandService.UnregisterCommand("q");
+      _commandService.UnregisterCommand("devices");
+      _commandService.UnregisterCommand("device");
+      _playbackQueueService.Dispose();
+    }
     base.Dispose(disposing);
+  }
+
+  private void SaveSessionState() {
+    try {
+      _sessionStateService.Save(_playbackQueueService.GetSessionState());
+    } catch (Exception ex) {
+      Logging.Warning($"Failed to save session state during shutdown: {ex.Message}");
+    }
+  }
+
+  private void OnDevicesCommand(string _, string args) {
+    if (!string.IsNullOrWhiteSpace(args)) {
+      OnDeviceCommand("device", args);
+      return;
+    }
+
+    var devices = _playbackQueueService.GetPlaybackDevices();
+    if (devices.Count == 0) {
+      _commandLine.DisplayError("no audio playback devices found");
+      return;
+    }
+
+    var summary = string.Join(" | ", devices.Select(d => $"{(d.IsActive ? "*" : "")}[{d.Index}] {d.Name}"));
+    _commandLine.DisplayError(summary);
+  }
+
+  private void OnDeviceCommand(string _, string args) {
+    var splitArgs = CommandService.GetArgs(args);
+    if (splitArgs.Length == 0) {
+      OnDevicesCommand("devices", string.Empty);
+      return;
+    }
+
+    string query = splitArgs[0];
+    if (!_playbackQueueService.SelectPlaybackDevice(query)) {
+      _commandLine.DisplayError($"audio device not found: {query}");
+    }
   }
 
   private bool? OnCommandLineHotKey(ICommandContext? context) {
     _preCommandMode = _currentMode;
     _preCommandFocusedView = MostFocused;
+    char prefix = ':';
+    if (context?.Binding is KeyBinding { Key: { } pressedKey } && pressedKey == new Key('/')) {
+      prefix = '/';
+    }
     SetMode(Mode.Command);
+    _commandLine.StartInput(prefix);
     return true;
   }
 

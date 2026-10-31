@@ -38,6 +38,27 @@ public sealed class CommandService {
   }
 
   /// <summary>
+  /// Gets all registered command names sorted alphabetically.
+  /// </summary>
+  /// <returns>A collection of registered command names.</returns>
+  public IReadOnlyCollection<string> GetRegisteredCommands() {
+    return _commands.Keys.OrderBy(k => k, StringComparer.Ordinal).ToList();
+  }
+
+  /// <summary>
+  /// Gets command name completions that match the given prefix.
+  /// </summary>
+  /// <param name="prefix">The command prefix to search for.</param>
+  /// <returns>A list of matching command names sorted alphabetically.</returns>
+  public IReadOnlyList<string> GetCompletions(string prefix) {
+    prefix ??= string.Empty;
+    return _commands.Keys
+        .Where(k => k.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+        .OrderBy(k => k, StringComparer.Ordinal)
+        .ToList();
+  }
+
+  /// <summary>
   /// Executes a command if a matching handler is found.
   /// </summary>
   /// <param name="command">The command string to execute.</param>

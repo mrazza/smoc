@@ -80,4 +80,25 @@ public class MainContentTest {
     _screenshotDiffer.AssertEqualsGolden(context);
   }
 
+  [Fact]
+  public void ApplyFilterToCurrentView_FiltersActiveSongTable() {
+    EventHandler? queueChangedHandler = null;
+    _mockPlaybackQueue.SetupAdd((ps) => ps.QueueChanged += It.IsAny<EventHandler>())
+        .Callback<EventHandler>(h => queueChangedHandler = h);
+    var song1 = EntityTestFactory.GenerateSong(id: "1", trackName: "Karma Police");
+    var song2 = EntityTestFactory.GenerateSong(id: "2", trackName: "Paranoid Android");
+    _mockPlaybackQueue.Setup((ps) => ps.GetCurrentPlaybackQueue()).Returns([song1, song2]);
+
+    using var context = NewContext();
+    var mainContent = NewMainContent();
+    context.Add(mainContent)
+        .Then((_) => mainContent.SetMode(Mode.Queue))
+        .Then((_) => queueChangedHandler?.Invoke(null, EventArgs.Empty))
+        .Then((_) => mainContent.ApplyFilterToCurrentView("Paranoid"));
+
+    var queueView = mainContent.SubViews.OfType<PlaybackQueueView>().Single();
+    var songTable = queueView.SubViews.OfType<Smoc.Ui.Components.SongTable>().Single();
+    Assert.Single(songTable.GetSongs(), song2);
+  }
+
 }
