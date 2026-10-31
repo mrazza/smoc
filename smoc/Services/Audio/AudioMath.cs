@@ -22,7 +22,9 @@ public static class AudioMath {
   /// <param name="volume">The logical volume level in the range [0.0, 2.0].</param>
   /// <returns>The linear gain multiplier.</returns>
   public static float VolumeToGain(float volume) {
-    if (volume <= 0f) return 0f;
+    if (volume <= 0f) {
+      return 0f;
+    }
     if (volume <= 1.0f) {
       // Quadratic perceptual curve across 0.0 to 1.0 (100% = 1.0x unity gain)
       return volume * volume;
@@ -38,7 +40,9 @@ public static class AudioMath {
   /// <param name="gain">The linear gain multiplier.</param>
   /// <returns>The logical volume level in the range [0.0, 2.0].</returns>
   public static float GainToVolume(float gain) {
-    if (gain <= 0f) return 0f;
+    if (gain <= 0f) {
+      return 0f;
+    }
     if (gain <= 1.0f) {
       return MathF.Sqrt(gain);
     }
@@ -81,8 +85,12 @@ public static class AudioMath {
   /// <param name="attenuateOnly">True to only attenuate loud tracks and never boost; false to scale in both directions.</param>
   /// <returns>The linear gain multiplier.</returns>
   public static float CalculateNormalizationGain(float loudnessDb, bool attenuateOnly = false) {
-    if (float.IsNaN(loudnessDb) || float.IsInfinity(loudnessDb)) return 1.0f;
-    if (attenuateOnly && loudnessDb <= 0f) return 1.0f;
+    if (float.IsNaN(loudnessDb) || float.IsInfinity(loudnessDb)) {
+      return 1.0f;
+    }
+    if (attenuateOnly && loudnessDb <= 0f) {
+      return 1.0f;
+    }
 
     float linearGain = MathF.Pow(10f, -loudnessDb / 20f);
     return Math.Clamp(linearGain, 0.01f, 4.0f);

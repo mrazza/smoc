@@ -1,4 +1,3 @@
-using System.Drawing;
 using Smoc.Services;
 using Smoc.Streaming;
 using Smoc.Ui.Components;
@@ -94,24 +93,30 @@ public sealed class SongView : View {
       Logging.Information($"Searching for track {args}...");
       var songs = await _streamingClient.SearchSongsAsync(args, token);
 
-      if (token.IsCancellationRequested) return;
-
-      Logging.Information($"Found {songs.Count} tracks for search '{args}'.");
-
-      if (songs.Count == 0) {
-        ResetTable(Messages.NO_SONGS);
+      if (token.IsCancellationRequested) {
         return;
       }
 
-      _songTable.Style.ShowHeaders = true;
-      _songsLabel.Visible = false;
-      _songTable.SetSongs(songs);
+      InvokeUi(() => {
+        Logging.Information($"Found {songs.Count} tracks for search '{args}'.");
+
+        if (songs.Count == 0) {
+          ResetTable(Messages.NO_SONGS);
+          return;
+        }
+
+        _songTable.Style.ShowHeaders = true;
+        _songsLabel.Visible = false;
+        _songTable.SetSongs(songs);
+      });
     } catch (OperationCanceledException) {
       // Ignore
     } catch (Exception ex) {
       Logging.Error($"Error searching tracks: {ex.Message}");
-      _mainWindow.DisplayError(Messages.SEARCH_ERROR);
-      ResetTable(Messages.SEARCH_ERROR);
+      InvokeUi(() => {
+        _mainWindow.DisplayError(Messages.SEARCH_ERROR);
+        ResetTable(Messages.SEARCH_ERROR);
+      });
     }
   }
 
@@ -126,5 +131,13 @@ public sealed class SongView : View {
     _songsLabel.Text = message;
     _songTable.Style.ShowHeaders = false;
     _songTable.ClearSongs();
+  }
+
+  private void InvokeUi(Action action) {
+    if (App is { } app) {
+      app.Invoke(action);
+    } else {
+      action();
+    }
   }
 }

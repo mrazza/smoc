@@ -57,17 +57,37 @@ public sealed class YtmStreamingClient : IStreamingClient {
   /// <inheritdoc/>
   public async Task<Song> GetSongAsync(string songId, CancellationToken cancellationToken = default) {
     var songInfo = await _ytmClient.GetSongVideoInfoAsync(songId, cancellationToken);
-    var albumInfo = await _ytmClient.GetAlbumInfoAsync(songInfo.Album!.Id!, cancellationToken);
+    var firstArtist = songInfo.Artists.FirstOrDefault();
+    var artist = new Artist(firstArtist?.Id ?? firstArtist?.Name ?? "Unknown Artist", firstArtist?.Name ?? "Unknown Artist");
+
+    Album album;
+    if (songInfo.Album?.Id is { } albumId) {
+      album = await GetAlbumAsync(albumId, cancellationToken);
+    } else {
+      album = new Album(
+        songInfo.Id,
+        artist,
+        songInfo.Album?.Name ?? songInfo.Name,
+        songInfo.Thumbnails.Select(t => new AlbumCover(t.Url, t.Width, t.Height)).ToArray(),
+        null);
+    }
+
     return new Song(
         songInfo.Id,
-        new Album(
-            albumInfo.Id,
-            new Artist(albumInfo.Artists.First().Id!, albumInfo.Artists.First().Name),
-            albumInfo.Name,
-            albumInfo.Thumbnails.Select(t => new AlbumCover(t.Url, t.Width, t.Height)),
-            albumInfo.ReleaseYear),
+        album,
         songInfo.Name,
         songInfo.Duration);
+  }
+
+  private async Task<Album> GetAlbumAsync(string albumId, CancellationToken cancellationToken = default) {
+    var albumInfo = await _ytmClient.GetAlbumInfoAsync(albumId, cancellationToken);
+    var firstArtist = albumInfo.Artists.FirstOrDefault();
+    return new Album(
+        albumInfo.Id,
+        new Artist(firstArtist?.Id ?? firstArtist?.Name ?? "Unknown Artist", firstArtist?.Name ?? "Unknown Artist"),
+        albumInfo.Name,
+        albumInfo.Thumbnails.Select(t => new AlbumCover(t.Url, t.Width, t.Height)),
+        albumInfo.ReleaseYear);
   }
 
   /// <inheritdoc/>
@@ -95,14 +115,15 @@ public sealed class YtmStreamingClient : IStreamingClient {
 
   /// <inheritdoc/>
   public async Task<SongStream> GetSongStreamAsync(string songId, CancellationToken cancellationToken = default) {
-    if (_authedYtmClient == null)
-      throw new InvalidOperationException("No authed YTM client privided.");
+    if (_authedYtmClient == null) {
+      throw new InvalidOperationException("No authed YTM client provided.");
+    }
 
     var streamingData = await _authedYtmClient.GetStreamingDataAsync(songId, cancellationToken);
     var highestAudioStreamInfo = streamingData.StreamInfo
         .OfType<AudioStreamInfo>()
         .OrderByDescending(info => info.Bitrate)
-        .First();
+        .FirstOrDefault() ?? throw new InvalidOperationException($"No audio stream found for song {songId}.");
     var stream = await _songCacheService.GetOrAddAsync(
       string.Concat(songId, "-", highestAudioStreamInfo.Bitrate.ToString()),
       highestAudioStreamInfo.GetStreamAsync,
@@ -112,8 +133,9 @@ public sealed class YtmStreamingClient : IStreamingClient {
 
   /// <inheritdoc/>
   public async Task<List<Song>> GetLikedSongsAsync(CancellationToken cancellationToken = default) {
-    if (_authedYtmClient is null)
+    if (_authedYtmClient is null) {
       throw new InvalidOperationException("No authed YTM client provided.");
+    }
 
     var result = _authedYtmClient.GetCommunityPlaylistSongsAsync(_authedYtmClient.GetCommunityPlaylistBrowseId("LM"));
     var results = await result.FetchItemsAsync(limit: 1000, cancellationToken: cancellationToken);
@@ -147,8 +169,9 @@ public sealed class YtmStreamingClient : IStreamingClient {
 
   /// <inheritdoc/>
   public async Task<List<Song>> GetPlaylistSongsAsync(Playlist playlist, CancellationToken cancellationToken = default) {
-    if (_authedYtmClient is null)
+    if (_authedYtmClient is null) {
       throw new InvalidOperationException("No authed YTM client provided.");
+    }
 
     var result = _authedYtmClient.GetCommunityPlaylistSongsAsync(_authedYtmClient.GetCommunityPlaylistBrowseId(playlist.Id));
     var results = await result.FetchItemsAsync(limit: 1000, cancellationToken: cancellationToken);
@@ -166,16 +189,18 @@ public sealed class YtmStreamingClient : IStreamingClient {
 
   /// <inheritdoc/>
   public async Task AddToListenHistory(Song song, CancellationToken cancellationToken = default) {
-    if (_authedYtmClient is null)
+    if (_authedYtmClient is null) {
       throw new InvalidOperationException("No authed YTM client provided.");
+    }
 
     await _authedYtmClient.AddToWatchHistoryAsync(await _authedYtmClient.GetSongVideoInfoAsync(song.Id, cancellationToken), cancellationToken);
   }
 
   /// <inheritdoc/>
   public async Task<List<Song>> GetPlaylistSongsFromUrlAsync(string url, CancellationToken cancellationToken = default) {
-    if (_authedYtmClient is null)
+    if (_authedYtmClient is null) {
       throw new InvalidOperationException("No authed YTM client provided.");
+    }
 
     var (entityType, id) = YtmUrlParser.ParseUrl(url);
 
@@ -188,8 +213,9 @@ public sealed class YtmStreamingClient : IStreamingClient {
 
   /// <inheritdoc/>
   public async Task<Image<Rgba32>> GetAlbumArtAsync(Album album, Func<IEnumerable<AlbumCover>, AlbumCover>? coverSelector = null, CancellationToken cancellationToken = default) {
-    if (!album.Covers.Any())
+    if (!album.Covers.Any()) {
       throw new ArgumentException("Album has no covers.", nameof(album));
+    }
 
     var cover = coverSelector?.Invoke(album.Covers) ?? album.Covers.First();
 
@@ -210,7 +236,12 @@ public sealed class YtmStreamingClient : IStreamingClient {
   /// <returns>A list of parsed cookies.</returns>
   public static List<Cookie> GetCookiesFromFile(string file) {
     string cookieString = File.ReadAllText(file);
-    return cookieString.Split(";").Select(x => x.Trim().Split("=")).Select(x => new Cookie(x[0], x[1], "", "music.youtube.com")).ToList();
+    return cookieString
+      .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+      .Select(x => x.Split('=', 2))
+      .Where(parts => parts.Length == 2)
+      .Select(parts => new Cookie(parts[0].Trim(), parts[1].Trim(), "/", ".youtube.com"))
+      .ToList();
   }
 
   /// <summary>
@@ -221,8 +252,9 @@ public sealed class YtmStreamingClient : IStreamingClient {
   public static async Task<YtmTokens> GenerateTokensAsync(List<Cookie> cookies) {
     using NodeEnvironment myCustomJsEnvironment = new();
     var cookieContainer = new CookieContainer();
-    foreach (var cookie in cookies)
+    foreach (var cookie in cookies) {
       cookieContainer.Add(cookie);
+    }
     using HttpClient httpClient = new(new HttpClientHandler() { CookieContainer = cookieContainer });
 
     YouTubeSessionConfig config = new() {
@@ -243,7 +275,8 @@ public sealed class YtmStreamingClient : IStreamingClient {
   /// </summary>
   /// <param name="cookies">The user's cookies.</param>
   /// <param name="tokens">The generated tokens.</param>
-  /// <param name="cacheService">Optional cache service to use for caching streams; if not provided, no caching will be used.</param>
+  /// <param name="songCacheService">Optional cache service to use for caching streams; if not provided, no caching will be used.</param>
+  /// <param name="albumArtCacheService">Optional cache service to use for caching album covers; if not provided, no caching will be used.</param>
   /// <returns>An initialized client.</returns>
   public static YtmStreamingClient Create(List<Cookie> cookies, YtmTokens tokens, ICacheService? songCacheService = null, ICacheService? albumArtCacheService = null) {
     return new YtmStreamingClient(new(logger: Logging.Logger, cookies: cookies, poToken: tokens.PoToken, visitorData: tokens.VisitorData, playerId: YouTubeMusicConfig.Defaults.PlayerId), songCacheService, albumArtCacheService);
@@ -252,7 +285,8 @@ public sealed class YtmStreamingClient : IStreamingClient {
   /// <summary>
   /// Creates an unauthenticated YouTube Music client.
   /// </summary>
-  /// <param name="cacheService">Optional cache service to use for caching streams; if not provided, no caching will be used.</param>
+  /// <param name="songCacheService">Optional cache service to use for caching streams; if not provided, no caching will be used.</param>
+  /// <param name="albumArtCacheService">Optional cache service to use for caching album covers; if not provided, no caching will be used.</param>
   /// <returns>An initialized client.</returns>
   public static YtmStreamingClient Create(ICacheService? songCacheService = null, ICacheService? albumArtCacheService = null) {
     return new YtmStreamingClient(songCacheService: songCacheService, albumArtCacheService: albumArtCacheService);

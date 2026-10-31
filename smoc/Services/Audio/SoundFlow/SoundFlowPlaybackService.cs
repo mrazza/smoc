@@ -35,17 +35,37 @@ public sealed class SoundFlowPlaybackService : IPlaybackService {
   public event EventHandler<PlaybackState>? PlaybackStateChanged;
 
   /// <inheritdoc/>
-  public TimeSpan Duration => TimeSpan.FromSeconds(_soundPlayer.Duration);
+  public TimeSpan Duration {
+    get {
+      var duration = _soundPlayer.Duration;
+      if (float.IsNaN(duration) || float.IsInfinity(duration) || duration < 0) {
+        return TimeSpan.Zero;
+      }
+      return TimeSpan.FromSeconds(duration);
+    }
+  }
 
   /// <inheritdoc/>
-  public TimeSpan CurrentTime => TimeSpan.FromSeconds(_soundPlayer.Time);
+  public TimeSpan CurrentTime {
+    get {
+      var time = _soundPlayer.Time;
+      if (float.IsNaN(time) || float.IsInfinity(time) || time < 0) {
+        return TimeSpan.Zero;
+      }
+      return TimeSpan.FromSeconds(time);
+    }
+  }
 
   /// <inheritdoc/>
   public float[] SpectrumData {
     get {
-      if (_spectrumAnalyzer == null) return [];
+      if (_spectrumAnalyzer == null) {
+        return [];
+      }
       float[] raw = _spectrumAnalyzer.SpectrumData;
-      if (raw == null || raw.Length == 0) return [];
+      if (raw == null || raw.Length == 0) {
+        return [];
+      }
 
       float gain = _playbackDevice.MasterMixer.Volume;
       lock (_spectrumLock) {
@@ -55,7 +75,7 @@ public sealed class SoundFlowPlaybackService : IPlaybackService {
         for (int i = 0; i < raw.Length; i++) {
           _cachedSpectrumData[i] = raw[i] * gain;
         }
-        return _cachedSpectrumData;
+        return _cachedSpectrumData.ToArray();
       }
     }
   }
@@ -69,7 +89,14 @@ public sealed class SoundFlowPlaybackService : IPlaybackService {
   }
 
   /// <inheritdoc/>
-  public float Progress => _soundPlayer.Time / _soundPlayer.Duration;
+  public float Progress {
+    get {
+      if (_soundPlayer.Duration <= 0 || float.IsNaN(_soundPlayer.Duration)) {
+        return 0f;
+      }
+      return Math.Clamp(_soundPlayer.Time / _soundPlayer.Duration, 0f, 1f);
+    }
+  }
 
   /// <inheritdoc/>
   public Song Song => _song;
@@ -117,7 +144,9 @@ public sealed class SoundFlowPlaybackService : IPlaybackService {
 
   /// <inheritdoc/>
   public void Play() {
-    if (PlaybackState == PlaybackState.Playing) return;
+    if (PlaybackState == PlaybackState.Playing) {
+      return;
+    }
 
     Logging.Debug("Playing stream...");
     _soundPlayer.Play();
@@ -126,7 +155,9 @@ public sealed class SoundFlowPlaybackService : IPlaybackService {
 
   /// <inheritdoc/>
   public void Pause() {
-    if (PlaybackState == PlaybackState.Paused) return;
+    if (PlaybackState == PlaybackState.Paused) {
+      return;
+    }
 
     Logging.Debug("Pausing stream...");
     _soundPlayer.Pause();
@@ -135,7 +166,9 @@ public sealed class SoundFlowPlaybackService : IPlaybackService {
 
   /// <inheritdoc/>
   public void Stop() {
-    if (PlaybackState == PlaybackState.Stopped) return;
+    if (PlaybackState == PlaybackState.Stopped) {
+      return;
+    }
 
     Logging.Debug("Stopping stream...");
     _soundPlayer.Stop();

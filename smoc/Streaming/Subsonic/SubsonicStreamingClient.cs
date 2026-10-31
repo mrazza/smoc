@@ -13,7 +13,7 @@ using SubsonicModels = Smoc.Streaming.Subsonic.Models;
 /// <summary>
 /// A streaming client implementation for Subsonic-compatible APIs.
 /// </summary>
-public class SubsonicStreamingClient : IStreamingClient {
+public sealed class SubsonicStreamingClient : IStreamingClient {
   private readonly HttpClient _httpClient;
   private readonly ICacheService _songCacheService;
   private readonly ICacheService _albumArtCacheService;
@@ -124,20 +124,35 @@ public class SubsonicStreamingClient : IStreamingClient {
 
   /// <inheritdoc/>
   public async Task<SongStream> GetSongStreamAsync(string songId, CancellationToken cancellationToken = default) {
-    var stream = await _songCacheService.GetOrAddAsync(
-      string.Concat("subsonic-", songId),
-      async (cancellationToken) => {
-        var url = BuildUrl("stream.view", new Dictionary<string, string> { { "id", songId } });
-        using var response = await _httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
-        using var stream = await response.Content.ReadAsStreamAsync(cancellationToken) ?? throw new Exception("Failed to get song stream");
-        var memoryStream = new MemoryStream();
-        await stream.CopyToAsync(memoryStream, cancellationToken);
-        memoryStream.Position = 0;
-        return memoryStream;
-      },
-      cancellationToken);
+    var url = BuildUrl("stream.view", new Dictionary<string, string> { { "id", songId } });
+    var response = await _httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+    var mediaType = response.Content.Headers.ContentType?.MediaType;
+    var codec = mediaType switch {
+      "audio/flac" => "flac",
+      "audio/ogg" => "ogg",
+      "audio/opus" => "opus",
+      "audio/mp4" or "audio/x-m4a" => "m4a",
+      "audio/aac" => "aac",
+      _ => "mp3",
+    };
 
-    return new SongStream(songId, "mp3", stream);
+    bool factoryInvoked = false;
+    Stream stream;
+    try {
+      stream = await _songCacheService.GetOrAddAsync(
+        string.Concat("subsonic-", songId),
+        async ct => {
+          factoryInvoked = true;
+          return await response.Content.ReadAsStreamAsync(ct) ?? throw new InvalidOperationException("Failed to get song stream");
+        },
+        cancellationToken);
+    } finally {
+      if (!factoryInvoked) {
+        response.Dispose();
+      }
+    }
+
+    return new SongStream(songId, codec, stream);
   }
 
   /// <inheritdoc/>
@@ -198,7 +213,7 @@ public class SubsonicStreamingClient : IStreamingClient {
 
   private string BuildUrl(string method, Dictionary<string, string>? parameters = null) {
     var query = new List<string> {
-      $"u={_username}",
+      $"u={Uri.EscapeDataString(_username)}",
       "v=1.16.1",
       "c=smoc",
       "f=json"
@@ -209,7 +224,7 @@ public class SubsonicStreamingClient : IStreamingClient {
       query.Add($"t={token}");
       query.Add($"s={salt}");
     } else {
-      query.Add($"p={_password}");
+      query.Add($"p={Uri.EscapeDataString(_password)}");
     }
 
     if (parameters != null) {

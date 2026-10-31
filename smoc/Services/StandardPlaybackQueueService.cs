@@ -6,6 +6,9 @@ using Terminal.Gui.App;
 
 namespace Smoc.Services;
 
+/// <summary>
+/// Service managing the playback queue, current song playback lifecycle, preloading, and audio state.
+/// </summary>
 public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
   private readonly IAudioService _audioService;
   private readonly IMainWindow _mainWindow;
@@ -111,21 +114,21 @@ public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
 
   /// <inheritdoc/>
   public void QueueNext(IEnumerable<Song> songs) {
-    if (!songs.Any()) return;
+    if (!songs.Any()) {
+      return;
+    }
 
     if (_playbackQueue.Count == 0) {
       QueueLast(songs);
       return;
     }
 
-    var wasEmpty = _playbackQueue.Count == 0;
     var insertIndex = _currentPlaybackIndex + 1;
     if (insertIndex >= _playbackQueue.Count) {
       _playbackQueue.AddRange(songs);
     } else {
       _playbackQueue.InsertRange(insertIndex, songs);
     }
-    if (wasEmpty) InvokeAppEvent(SongChanged, GetCurrentSong()!);
     InvokeAppEvent(QueueChanged);
     EnsurePreload();
   }
@@ -135,17 +138,23 @@ public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
 
   /// <inheritdoc/>
   public void QueueLast(IEnumerable<Song> songs) {
-    if (!songs.Any()) return;
+    if (!songs.Any()) {
+      return;
+    }
     var wasEmpty = _playbackQueue.Count == 0;
     _playbackQueue.AddRange(songs);
-    if (wasEmpty) InvokeAppEvent(SongChanged, GetCurrentSong()!);
+    if (wasEmpty) {
+      InvokeAppEvent(SongChanged, GetCurrentSong()!);
+    }
     InvokeAppEvent(QueueChanged);
     EnsurePreload();
   }
 
   /// <inheritdoc/>
   public void ClearPlaybackQueue() {
-    if (_playbackQueue.Count == 0) return;
+    if (_playbackQueue.Count == 0) {
+      return;
+    }
 
     _playbackQueue.Clear();
     _currentPlaybackIndex = 0;
@@ -160,7 +169,9 @@ public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
       throw new ArgumentOutOfRangeException(nameof(index));
     }
 
-    if (_currentPlaybackIndex == index) return;
+    if (_currentPlaybackIndex == index) {
+      return;
+    }
 
     var wasPlaying = PlaybackState == PlaybackState.Playing;
 
@@ -168,7 +179,9 @@ public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
     _currentPlaybackIndex = index;
     InvokeAppEvent(SongChanged, GetCurrentSong()!);
 
-    if (wasPlaying) await Play();
+    if (wasPlaying) {
+      await Play();
+    }
   }
 
   /// <inheritdoc/>
@@ -186,7 +199,9 @@ public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
 
   /// <inheritdoc/>
   public async Task Play() {
-    if (PlaybackState == PlaybackState.Playing) return;
+    if (PlaybackState == PlaybackState.Playing) {
+      return;
+    }
 
     if (_playbackService.Resource is { } && _playbackService.Resource.Song == GetCurrentSong()) {
       _playbackService.Resource.Play();
@@ -273,7 +288,9 @@ public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
     } else if (_currentPlaybackIndex > 0) {
       Logging.Debug("Previous song below threshold, going to previous...");
       await ChangeTrack(_currentPlaybackIndex - 1);
-      await Play();
+      if (PlaybackState != PlaybackState.Playing) {
+        await Play();
+      }
     } else {
       Logging.Debug("Previous song below threshold, no previous song, stopping playback...");
       Stop();
@@ -284,9 +301,10 @@ public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
   public async Task NextTrack() {
     Logging.Debug($"Playing next song...");
     if (_currentPlaybackIndex + 1 < _playbackQueue.Count) {
-      Logging.Debug($"Playing next song...");
       await ChangeTrack(_currentPlaybackIndex + 1);
-      await Play();
+      if (PlaybackState != PlaybackState.Playing) {
+        await Play();
+      }
     } else {
       Logging.Debug($"Reached the end of the queue, stopping playback.");
       Stop();
@@ -304,7 +322,9 @@ public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
     }
 
     var nextSong = _playbackQueue[nextSongIndex];
-    if (_preloadingSong == nextSong) return;
+    if (_preloadingSong == nextSong) {
+      return;
+    }
 
     _preloadedPlaybackService.Replace(null!);
     _preloadingSong = nextSong;
@@ -341,6 +361,7 @@ public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
 
   /// <inheritdoc/>
   public void SeekTo(TimeSpan position) {
+    ArgumentOutOfRangeException.ThrowIfLessThan(position, TimeSpan.Zero);
     if (_playbackService.Resource is not { } playback) {
       Logging.Debug("Can't seek, no current song (no playback resource)");
       return;
@@ -372,8 +393,11 @@ public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
 
   private async void OnSongEnded(object? sender, EventArgs e) {
     Logging.Debug($"Playback ended for {CurrentSong?.Title} ({CurrentSong?.Id}).");
-    _preloadedPlaybackService.Resource?.Play();
-    await NextTrack();
+    try {
+      await NextTrack();
+    } catch (Exception ex) {
+      Logging.Error($"Failed to transition to next track on song end: {ex}");
+    }
   }
 
   private void OnPositionChanged(object? sender, TimeSpan e) {

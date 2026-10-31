@@ -9,6 +9,9 @@ namespace Smoc.Ui.Components;
 /// participate in standard tab navigation and prevents focus from advancing.
 /// </summary>
 public sealed class CommandTextField : TextField {
+  /// <summary>
+  /// Initializes a new instance of the <see cref="CommandTextField"/> class.
+  /// </summary>
   public CommandTextField()
       : base() {
     CanFocus = true;

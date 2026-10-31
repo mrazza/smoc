@@ -86,7 +86,7 @@ public sealed class MainWindow : Runnable, IMainWindow {
 
       if (command is not null && command.Length > 0) {
         if (!_commandService.ExecuteCommand(command)) {
-          _commandLine.DisplayError($"not a valid commmand: {command}");
+          _commandLine.DisplayError($"not a valid command: {command}");
         }
       }
     };

@@ -1,5 +1,4 @@
 using System.Collections.ObjectModel;
-using System.Drawing;
 using Smoc.Services;
 using Smoc.Services.Util;
 using Smoc.Streaming;
@@ -38,6 +37,13 @@ public class PlaylistView : View {
   private readonly UniqueResource<CancellationTokenSource> _searchCtsResource;
   private readonly IStreamingClient _streamingClient;
 
+  /// <summary>
+  /// Initializes a new instance of the <see cref="PlaylistView"/> class.
+  /// </summary>
+  /// <param name="mainWindow">The main window reference.</param>
+  /// <param name="commandService">The command service for registering playlist commands.</param>
+  /// <param name="playbackQueueService">The playback queue service for playback options.</param>
+  /// <param name="streamingClient">The client for searching and fetching playlist data.</param>
   public PlaylistView(IMainWindow mainWindow, CommandService commandService, IPlaybackQueueService playbackQueueService, IStreamingClient streamingClient) {
     _mainWindow = mainWindow;
     _commandService = commandService;
@@ -116,20 +122,24 @@ public class PlaylistView : View {
 
       token.ThrowIfCancellationRequested();
 
-      if (songs.Count == 0) {
-        ResetSongsTable();
-        return;
-      }
+      InvokeUi(() => {
+        if (songs.Count == 0) {
+          ResetSongsTable();
+          return;
+        }
 
-      _songTable.SetSongs(songs);
-      _songTable.Style.ShowHeaders = true;
-      _songsLabel.Visible = false;
+        _songTable.SetSongs(songs);
+        _songTable.Style.ShowHeaders = true;
+        _songsLabel.Visible = false;
+      });
     } catch (OperationCanceledException) {
       Logging.Debug("Loading url playlist cancelled");
     } catch (Exception ex) {
-      ResetSongsTable(Messages.SONG_LOAD_ERROR);
       Logging.Error($"Error loading url: {ex.Message}");
-      _mainWindow.DisplayError("error loading url");
+      InvokeUi(() => {
+        ResetSongsTable(Messages.SONG_LOAD_ERROR);
+        _mainWindow.DisplayError("error loading url");
+      });
     }
   }
 
@@ -151,20 +161,24 @@ public class PlaylistView : View {
 
       token.ThrowIfCancellationRequested();
 
-      if (songs.Count == 0) {
-        ResetSongsTable();
-        return;
-      }
+      InvokeUi(() => {
+        if (songs.Count == 0) {
+          ResetSongsTable();
+          return;
+        }
 
-      _songTable.SetSongs(songs);
-      _songTable.Style.ShowHeaders = true;
-      _songsLabel.Visible = false;
+        _songTable.SetSongs(songs);
+        _songTable.Style.ShowHeaders = true;
+        _songsLabel.Visible = false;
+      });
     } catch (OperationCanceledException) {
       Logging.Debug("Loading liked playlist cancelled");
     } catch (Exception ex) {
-      ResetSongsTable(Messages.SONG_LOAD_ERROR);
       Logging.Error($"Error loading liked playlist: {ex.Message}");
-      _mainWindow.DisplayError("error loading liked playlist");
+      InvokeUi(() => {
+        ResetSongsTable(Messages.SONG_LOAD_ERROR);
+        _mainWindow.DisplayError("error loading liked playlist");
+      });
     }
   }
 
@@ -189,23 +203,27 @@ public class PlaylistView : View {
 
       token.ThrowIfCancellationRequested();
 
-      Logging.Information($"Found {playlists.Count} playlists for search '{args}'.");
+      InvokeUi(() => {
+        Logging.Information($"Found {playlists.Count} playlists for search '{args}'.");
 
-      if (playlists.Count == 0) {
-        ResetSearchResults(Messages.NO_PLAYLISTS_FOUND);
-        return;
-      }
+        if (playlists.Count == 0) {
+          ResetSearchResults(Messages.NO_PLAYLISTS_FOUND);
+          return;
+        }
 
-      _searchResults.SetSource(new ObservableCollection<SearchResultRow<Playlist>>(playlists.Select(playlist => new SearchResultRow<Playlist>(playlist, playlist.Name))));
-      _searchResults.SelectedItem = 0;
-      _searchResultsLabel.Visible = false;
+        _searchResults.SetSource(new ObservableCollection<SearchResultRow<Playlist>>(playlists.Select(playlist => new SearchResultRow<Playlist>(playlist, playlist.Name))));
+        _searchResults.SelectedItem = 0;
+        _searchResultsLabel.Visible = false;
+      });
     } catch (OperationCanceledException) {
       // Ignore
       Logging.Debug("Playlist search cancelled");
     } catch (Exception ex) {
       Logging.Error($"Error searching playlists: {ex.Message}");
-      _mainWindow.DisplayError(Messages.SEARCH_ERROR);
-      ResetSearchResults(Messages.SEARCH_ERROR);
+      InvokeUi(() => {
+        _mainWindow.DisplayError(Messages.SEARCH_ERROR);
+        ResetSearchResults(Messages.SEARCH_ERROR);
+      });
     }
   }
 
@@ -220,37 +238,45 @@ public class PlaylistView : View {
 
       token.ThrowIfCancellationRequested();
 
-      Logging.Information($"Loaded {songs.Count} songs for playlist {selectedPlaylist.Item.Name}.");
+      InvokeUi(() => {
+        Logging.Information($"Loaded {songs.Count} songs for playlist {selectedPlaylist.Item.Name}.");
 
-      if (songs.Count == 0) {
-        ResetSongsTable(Messages.NO_SONGS);
-        return;
-      }
+        if (songs.Count == 0) {
+          ResetSongsTable(Messages.NO_SONGS);
+          return;
+        }
 
-      _songTable.SetSongs(songs);
-      _songTable.SelectedRow = 0;
-      _songTable.EnsureCursorIsVisible();
-      _songTable.Style.ShowHeaders = true;
-      _songsLabel.Visible = false;
+        _songTable.SetSongs(songs);
+        _songTable.SelectedRow = 0;
+        _songTable.EnsureCursorIsVisible();
+        _songTable.Style.ShowHeaders = true;
+        _songsLabel.Visible = false;
+      });
     } catch (OperationCanceledException) {
       // Ignore
       Logging.Debug("Playlist load cancelled");
     } catch (Exception ex) {
       Logging.Error($"Error loading playlist: {ex.Message}");
-      _mainWindow.DisplayError(Messages.SONG_LOAD_ERROR);
-      ResetSongsTable(Messages.SONG_LOAD_ERROR);
+      InvokeUi(() => {
+        _mainWindow.DisplayError(Messages.SONG_LOAD_ERROR);
+        ResetSongsTable(Messages.SONG_LOAD_ERROR);
+      });
     }
   }
 
   private void HideSearchResults() {
-    if (!_searchResults.Visible) return;
+    if (!_searchResults.Visible) {
+      return;
+    }
     _searchResults.Visible = false;
     _searchResults.Width = Dim.Absolute(0);
     _searchResultsLabel.Visible = false;
   }
 
   private void ShowSearchResults() {
-    if (_searchResults.Visible) return;
+    if (_searchResults.Visible) {
+      return;
+    }
     _searchResults.Visible = true;
     _searchResults.Width = Dim.Absolute(30);
     _searchResultsLabel.Visible = true;
@@ -268,5 +294,13 @@ public class PlaylistView : View {
     _songsLabel.Text = message;
     _songTable.Style.ShowHeaders = false;
     _songTable.ClearSongs();
+  }
+
+  private void InvokeUi(Action action) {
+    if (App is { } app) {
+      app.Invoke(action);
+    } else {
+      action();
+    }
   }
 }

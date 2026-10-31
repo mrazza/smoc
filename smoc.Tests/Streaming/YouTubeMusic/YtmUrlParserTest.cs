@@ -43,4 +43,10 @@ public class YtmUrlParserTest {
     var url = "https://music.youtube.com/playlist?q=unknown";
     Assert.Throws<ArgumentException>(() => YtmUrlParser.ParseUrl(url));
   }
+
+  [Fact]
+  public void Parse_MalformedUrl_ThrowsArgumentException() {
+    var url = "not a valid url";
+    Assert.Throws<ArgumentException>(() => YtmUrlParser.ParseUrl(url));
+  }
 }
