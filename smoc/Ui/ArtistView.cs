@@ -124,7 +124,7 @@ public sealed class ArtistView : View {
       }
 
       if (albums.Count == 0) {
-        InvokeUi(() => ResetSongsTable(Messages.NO_SONGS));
+        App!.Invoke(() => ResetSongsTable(Messages.NO_SONGS));
         return;
       }
 
@@ -137,7 +137,7 @@ public sealed class ArtistView : View {
         return;
       }
 
-      InvokeUi(() => {
+      App!.Invoke(() => {
         Logging.Information($"Loaded {songs.Count()} songs for artist {selectedArtist.Item.Name}.");
 
         if (!songs.Any()) {
@@ -155,7 +155,7 @@ public sealed class ArtistView : View {
       // Ignore cancellation
     } catch (Exception ex) {
       Logging.Error($"Error loading artist details: {ex.Message}");
-      InvokeUi(() => {
+      App!.Invoke(() => {
         _mainWindow.DisplayError(Messages.SONG_LOAD_ERROR);
         ResetSongsTable(Messages.SONG_LOAD_ERROR);
       });
@@ -184,7 +184,7 @@ public sealed class ArtistView : View {
         return;
       }
 
-      InvokeUi(() => {
+      App!.Invoke(() => {
         Logging.Information($"Found {artists.Count} artists for search '{args}'.");
 
         if (artists.Count == 0) {
@@ -201,7 +201,7 @@ public sealed class ArtistView : View {
       Logging.Debug("Artist search cancelled");
     } catch (Exception ex) {
       Logging.Error($"Error searching artists: {ex.Message}");
-      InvokeUi(() => {
+      App!.Invoke(() => {
         _mainWindow.DisplayError(Messages.SEARCH_ERROR);
         ResetSearchResults(Messages.SEARCH_ERROR);
       });
@@ -229,13 +229,5 @@ public sealed class ArtistView : View {
     _songsLabel.Text = message;
     _songTable.Style.ShowHeaders = false;
     _songTable.ClearSongs();
-  }
-
-  private void InvokeUi(Action action) {
-    if (App is { } app) {
-      app.Invoke(action);
-    } else {
-      action();
-    }
   }
 }

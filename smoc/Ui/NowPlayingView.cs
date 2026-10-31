@@ -164,16 +164,14 @@ public sealed class NowPlayingView : View {
       _albumArtView.BorderStyle = LineStyle.Dashed;
     } else if (_currentAlbum != song.Album) {
       _currentAlbum = song.Album;
-      var oldCts = _albumArtCancellationTokenSource;
+      _albumArtCancellationTokenSource?.Cancel();
       _albumArtCancellationTokenSource = new CancellationTokenSource();
-      oldCts?.Cancel();
-      oldCts?.Dispose();
       var token = _albumArtCancellationTokenSource.Token;
       try {
         var image = await _streamingClient.GetAlbumArtAsync(song.Album, (covers) => covers.OrderByDescending(c => c.Width).First(), token);
         Logging.Debug($"Album art loaded: {song.Title}");
         token.ThrowIfCancellationRequested();
-        InvokeUi(() => {
+        App!.Invoke(() => {
           _albumArtView.BorderStyle = LineStyle.None;
           _albumArtView.SetImage(image);
         });
@@ -256,13 +254,5 @@ public sealed class NowPlayingView : View {
       }
     }
     return null;
-  }
-
-  private void InvokeUi(Action action) {
-    if (App is { } app) {
-      app.Invoke(action);
-    } else {
-      action();
-    }
   }
 }

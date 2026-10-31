@@ -1,4 +1,6 @@
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
+using System.Text;
 using Terminal.Gui.App;
 
 namespace Smoc.Services.Caching;
@@ -112,7 +114,11 @@ public class TempFileCacheService : ICacheService {
         chars[i] = '_';
       }
     }
-    return new string(chars);
+    var sanitized = new string(chars);
+    if (sanitized.Length > 128) {
+      return $"{sanitized[..64]}_{Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(key)))}";
+    }
+    return sanitized;
   }
 
   private async Task CleanCacheDirectory(CancellationToken cancellationToken = default) {

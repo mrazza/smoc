@@ -61,7 +61,7 @@ public sealed class YtmStreamingClient : IStreamingClient {
     var artist = new Artist(firstArtist?.Id ?? firstArtist?.Name ?? "Unknown Artist", firstArtist?.Name ?? "Unknown Artist");
 
     Album album;
-    if (songInfo.Album?.Id is { } albumId) {
+    if (songInfo.Album?.Id is { } albumId && !string.IsNullOrWhiteSpace(albumId)) {
       album = await GetAlbumAsync(albumId, cancellationToken);
     } else {
       album = new Album(
