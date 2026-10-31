@@ -2,7 +2,6 @@ namespace Smoc.Ui;
 
 using System;
 using System.Collections.ObjectModel;
-using System.Data;
 using Smoc.Services;
 using Smoc.Streaming;
 using Smoc.Ui.Components;
@@ -120,10 +119,12 @@ public sealed class ArtistView : View {
       Logging.Information($"Loading artist {selectedArtist.Item.Name}...");
       var albums = await _streamingClient.GetAlbumsByArtistAsync(selectedArtist.Item, token);
 
-      if (token.IsCancellationRequested) return;
+      if (token.IsCancellationRequested) {
+        return;
+      }
 
       if (albums.Count == 0) {
-        ResetSongsTable(Messages.NO_SONGS);
+        InvokeUi(() => ResetSongsTable(Messages.NO_SONGS));
         return;
       }
 
@@ -132,26 +133,32 @@ public sealed class ArtistView : View {
       var songTasks = albums.Select(album => _streamingClient.GetSongsByAlbumAsync(album, token));
       var songs = (await Task.WhenAll(songTasks)).SelectMany(s => s);
 
-      if (token.IsCancellationRequested) return;
-
-      Logging.Information($"Loaded {songs.Count()} songs for artist {selectedArtist.Item.Name}.");
-
-      if (!songs.Any()) {
-        ResetSongsTable(Messages.NO_SONGS);
+      if (token.IsCancellationRequested) {
         return;
       }
 
-      _songTable.SetSongs(songs);
-      _songTable.SelectedRow = 0;
-      _songTable.EnsureCursorIsVisible();
-      _songTable.Style.ShowHeaders = true;
-      _songsLabel.Visible = false;
+      InvokeUi(() => {
+        Logging.Information($"Loaded {songs.Count()} songs for artist {selectedArtist.Item.Name}.");
+
+        if (!songs.Any()) {
+          ResetSongsTable(Messages.NO_SONGS);
+          return;
+        }
+
+        _songTable.SetSongs(songs);
+        _songTable.SelectedRow = 0;
+        _songTable.EnsureCursorIsVisible();
+        _songTable.Style.ShowHeaders = true;
+        _songsLabel.Visible = false;
+      });
     } catch (OperationCanceledException) {
       // Ignore cancellation
     } catch (Exception ex) {
       Logging.Error($"Error loading artist details: {ex.Message}");
-      _mainWindow.DisplayError(Messages.SONG_LOAD_ERROR);
-      ResetSongsTable(Messages.SONG_LOAD_ERROR);
+      InvokeUi(() => {
+        _mainWindow.DisplayError(Messages.SONG_LOAD_ERROR);
+        ResetSongsTable(Messages.SONG_LOAD_ERROR);
+      });
     }
   }
 
@@ -173,25 +180,31 @@ public sealed class ArtistView : View {
       ResetSearchResults();
       var artists = await _streamingClient.SearchArtistsAsync(args, token);
 
-      if (token.IsCancellationRequested) return;
-
-      Logging.Information($"Found {artists.Count} artists for search '{args}'.");
-
-      if (artists.Count == 0) {
-        ResetSearchResults(Messages.NO_ARTISTS_FOUND);
+      if (token.IsCancellationRequested) {
         return;
       }
 
-      _searchResults.SetSource(new ObservableCollection<SearchResultRow<Artist>>(artists.Select(artist => new SearchResultRow<Artist>(artist, artist.Name))));
-      _searchResults.SelectedItem = 0;
-      _searchResultsLabel.Visible = false;
+      InvokeUi(() => {
+        Logging.Information($"Found {artists.Count} artists for search '{args}'.");
+
+        if (artists.Count == 0) {
+          ResetSearchResults(Messages.NO_ARTISTS_FOUND);
+          return;
+        }
+
+        _searchResults.SetSource(new ObservableCollection<SearchResultRow<Artist>>(artists.Select(artist => new SearchResultRow<Artist>(artist, artist.Name))));
+        _searchResults.SelectedItem = 0;
+        _searchResultsLabel.Visible = false;
+      });
     } catch (OperationCanceledException) {
       // Ignore
       Logging.Debug("Artist search cancelled");
     } catch (Exception ex) {
       Logging.Error($"Error searching artists: {ex.Message}");
-      _mainWindow.DisplayError(Messages.SEARCH_ERROR);
-      ResetSearchResults(Messages.SEARCH_ERROR);
+      InvokeUi(() => {
+        _mainWindow.DisplayError(Messages.SEARCH_ERROR);
+        ResetSearchResults(Messages.SEARCH_ERROR);
+      });
     }
   }
 
@@ -216,5 +229,13 @@ public sealed class ArtistView : View {
     _songsLabel.Text = message;
     _songTable.Style.ShowHeaders = false;
     _songTable.ClearSongs();
+  }
+
+  private void InvokeUi(Action action) {
+    if (App is { } app) {
+      app.Invoke(action);
+    } else {
+      action();
+    }
   }
 }

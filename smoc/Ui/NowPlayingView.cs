@@ -164,15 +164,19 @@ public sealed class NowPlayingView : View {
       _albumArtView.BorderStyle = LineStyle.Dashed;
     } else if (_currentAlbum != song.Album) {
       _currentAlbum = song.Album;
-      _albumArtCancellationTokenSource?.Cancel();
+      var oldCts = _albumArtCancellationTokenSource;
       _albumArtCancellationTokenSource = new CancellationTokenSource();
+      oldCts?.Cancel();
+      oldCts?.Dispose();
       var token = _albumArtCancellationTokenSource.Token;
       try {
         var image = await _streamingClient.GetAlbumArtAsync(song.Album, (covers) => covers.OrderByDescending(c => c.Width).First(), token);
         Logging.Debug($"Album art loaded: {song.Title}");
         token.ThrowIfCancellationRequested();
-        _albumArtView.BorderStyle = LineStyle.None;
-        _albumArtView.SetImage(image);
+        InvokeUi(() => {
+          _albumArtView.BorderStyle = LineStyle.None;
+          _albumArtView.SetImage(image);
+        });
       } catch (OperationCanceledException) {
         Logging.Debug($"Album art load cancelled: {song.Title}");
       } catch (Exception ex) {
@@ -181,7 +185,16 @@ public sealed class NowPlayingView : View {
     }
   }
 
+  /// <inheritdoc />
+  protected override void OnVisibleChanged() {
+    base.OnVisibleChanged();
+    _playbackQueueService.IsSpectrumActive = Visible && _histogramView.Visible;
+  }
+
   protected override void Dispose(bool disposing) {
+    _albumArtCancellationTokenSource?.Cancel();
+    _albumArtCancellationTokenSource?.Dispose();
+    _albumArtCancellationTokenSource = null;
     _commandService.UnregisterCommand("np");
     _commandService.UnregisterCommand("np-vis");
     _commandService.UnregisterCommand("np-vis-fps");
@@ -243,5 +256,13 @@ public sealed class NowPlayingView : View {
       }
     }
     return null;
+  }
+
+  private void InvokeUi(Action action) {
+    if (App is { } app) {
+      app.Invoke(action);
+    } else {
+      action();
+    }
   }
 }

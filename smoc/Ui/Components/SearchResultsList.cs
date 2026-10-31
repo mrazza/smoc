@@ -1,4 +1,3 @@
-using Smoc.Services.Audio.SoundFlow;
 using Terminal.Gui.Input;
 using Terminal.Gui.Views;
 
@@ -16,18 +15,21 @@ public sealed class SearchResultsList<T> : ListView {
   /// </summary>
   public event EventHandler<T>? SearchResultSelected;
 
+  /// <summary>
+  /// Initializes a new instance of the <see cref="SearchResultsList{T}"/> class.
+  /// </summary>
   public SearchResultsList()
       : base() {
     VimKeyBindings.AddDirectionalKeyBindings(KeyBindings, bindLeftRight: false);
     VimKeyBindings.AddNavigationKeyBindings(KeyBindings, bindUpDown: false);
 
     Accepting += (_, args) => {
-      if (SelectedItem is int itemId
-        && Source is { }
-        && Source.ToList()[itemId] is T item) {
-        SearchResultSelected?.Invoke(this, item);
-
-        args.Handled = true;
+      if (SelectedItem is int itemId && itemId >= 0 && Source is { }) {
+        var list = Source.ToList();
+        if (itemId < list.Count && list[itemId] is T item) {
+          SearchResultSelected?.Invoke(this, item);
+          args.Handled = true;
+        }
       }
     };
   }

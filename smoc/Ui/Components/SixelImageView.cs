@@ -49,8 +49,10 @@ public sealed class SixelImageView : ImageView {
   }
 
   private void UpdateSixelData() {
-    _cancellationTokenSource?.Cancel();
+    var oldCts = _cancellationTokenSource;
     _cancellationTokenSource = new CancellationTokenSource();
+    oldCts?.Cancel();
+    oldCts?.Dispose();
 
     var token = _cancellationTokenSource.Token;
     Task.Run(() => {
@@ -95,5 +97,16 @@ public sealed class SixelImageView : ImageView {
     }
 
     return colors;
+  }
+
+  /// <inheritdoc />
+  protected override void Dispose(bool disposing) {
+    if (disposing) {
+      _cancellationTokenSource?.Cancel();
+      _cancellationTokenSource?.Dispose();
+      _cancellationTokenSource = null;
+    }
+
+    base.Dispose(disposing);
   }
 }

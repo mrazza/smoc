@@ -230,12 +230,12 @@ To access your YouTube Music account, you need to extract your cookies from YouT
 2. Open Developer Tools (`F12`) -> **Network** tab.
 3. Find a `POST` request to `music.youtube.com`.
 4. Copy the value of the `cookie` request header.
-5. Save it to `~/.config/smoc/cookie.txt`.
+5. Save it to `~/.config/smoc/cookies.txt`.
 
 > [!TIP]
 > It is recommended to open an incognito window or separate browser profile when getting your cookie information to avoid other browser sessions from invalidating the tokens. Once cookies are retrieved, close the session _without_ logging out.
 
-More recently, additional tokens beyond just cookies are often needed. POToken and Visitor Data are required in the `tokens.json` file in the same directory as your `cookie.txt`.
+More recently, additional tokens beyond just cookies are often needed. POToken and Visitor Data are required in the `tokens.json` file in the same directory as your `cookies.txt`.
 
 > [!TIP]
 > Run `smoc --gentokens` after setting up the cookie to generate necessary PO Tokens and Visitor Data automatically.

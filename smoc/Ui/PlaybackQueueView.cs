@@ -5,6 +5,7 @@ using Smoc.Services;
 using Smoc.Streaming;
 using Smoc.Ui.Components;
 using Smoc.Ui.Models;
+using Terminal.Gui.App;
 using Terminal.Gui.Drawing;
 using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
@@ -25,7 +26,7 @@ public sealed class PlaybackQueueView : View {
   /// </summary>
   /// <param name="mainWindow">The main window reference.</param>
   /// <param name="commandService">The command service.</param>
-  /// <param name="playerService">The player service for managing the queue.</param>
+  /// <param name="playbackQueueService">The playback queue service for managing the queue.</param>
   public PlaybackQueueView(IMainWindow mainWindow, CommandService commandService, IPlaybackQueueService playbackQueueService) {
     _mainWindow = mainWindow;
     _commandService = commandService;
@@ -78,7 +79,11 @@ public sealed class PlaybackQueueView : View {
       throw new InvalidOperationException("Multiple songs cannot be selected when changing active track");
     }
 
-    await _playbackQueueService.ChangeTrack(_songTable.SelectedRow);
+    try {
+      await _playbackQueueService.ChangeTrack(_songTable.SelectedRow);
+    } catch (Exception e) {
+      Logging.Error($"Failed to change track: {e}");
+    }
   }
 
   private void OnSongChanged(object? sender, Song? song) {

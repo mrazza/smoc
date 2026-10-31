@@ -20,10 +20,14 @@ namespace Smoc;
 /// initialization responsibility to the MainWindow.
 /// </summary>
 public static class Program {
-  private static readonly string _configPath = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) + "/.config/smoc/config.json";
-  private static readonly string _cookiesPath = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) + "/.config/smoc/cookies.txt";
-  private static readonly string _tokensPath = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) + "/.config/smoc/tokens.json";
-  private static readonly string _logPath = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) + "/.config/smoc/log_{Date}.txt";
+  private static readonly string _configPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".config", "smoc", "config.json");
+  private static readonly string _cookiesPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".config", "smoc", "cookies.txt");
+  private static readonly string _tokensPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".config", "smoc", "tokens.json");
+  private static readonly string _logPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".config", "smoc", "log_{Date}.txt");
+
+  /// <summary>
+  /// The product name of the application.
+  /// </summary>
   public static readonly string ProductName = "SMoC";
 
   /// <summary>

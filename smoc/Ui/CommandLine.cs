@@ -56,7 +56,7 @@ public sealed class CommandLine : View {
     Logging.Warning($"Displaying error: {message}");
     ClearError();
     _errorLabel.Text = message;
-    _errorTimeoutTracker = App!.AddTimeout(TimeSpan.FromSeconds(5), () => { ClearError(); return false; });
+    _errorTimeoutTracker = App?.AddTimeout(TimeSpan.FromSeconds(5), () => { ClearError(); return false; });
   }
 
   protected override bool OnKeyDownNotHandled(Key key) {
@@ -80,7 +80,7 @@ public sealed class CommandLine : View {
 
   private void ClearError() {
     if (_errorTimeoutTracker is not null) {
-      App!.RemoveTimeout(_errorTimeoutTracker);
+      App?.RemoveTimeout(_errorTimeoutTracker);
     }
 
     _errorLabel.Text = "";

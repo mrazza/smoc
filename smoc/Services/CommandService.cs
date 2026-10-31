@@ -11,7 +11,7 @@ public sealed class CommandService {
   /// <param name="args">The arguments part of the command string.</param>
   public delegate void CommandHandler(string command, string args);
 
-  private readonly Dictionary<string, CommandHandler> commands = new();
+  private readonly Dictionary<string, CommandHandler> _commands = new();
 
   /// <summary>
   /// Registers a new command handler.
@@ -20,9 +20,11 @@ public sealed class CommandService {
   /// <param name="handler">The handler to callback when the command is executed.</param>
   /// <exception cref="ArgumentException">Thrown if the command is already registered.</exception>
   public void RegisterCommand(string command, CommandHandler handler) {
-    if (commands.ContainsKey(command)) throw new ArgumentException("Command already registered");
+    if (_commands.ContainsKey(command)) {
+      throw new ArgumentException("Command already registered");
+    }
 
-    commands.Add(command, handler);
+    _commands.Add(command, handler);
   }
 
   /// <summary>
@@ -30,7 +32,9 @@ public sealed class CommandService {
   /// </summary>
   /// <param name="command">The command name to unregister.</param>
   public void UnregisterCommand(string command) {
-    if (!commands.Remove(command)) throw new ArgumentException("Command not registered");
+    if (!_commands.Remove(command)) {
+      throw new ArgumentException("Command not registered");
+    }
   }
 
   /// <summary>
@@ -46,7 +50,7 @@ public sealed class CommandService {
     }
     var args = argCutoff > 0 ? command[(argCutoff + 1)..] : string.Empty;
 
-    if (commands.TryGetValue(commandName, out var handler)) {
+    if (_commands.TryGetValue(commandName, out var handler)) {
       handler(commandName, args);
       return true;
     }

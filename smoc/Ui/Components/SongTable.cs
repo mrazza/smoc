@@ -233,15 +233,31 @@ public class SongTable : TableView {
   private void ResizeSongTableColumns(Rectangle frame) {
     int columnIndex = 0;
     int dynamicColumnCount = 0;
-    if (_columns.HasFlag(SongTableColumns.Artist)) dynamicColumnCount++;
-    if (_columns.HasFlag(SongTableColumns.Album)) dynamicColumnCount++;
-    if (_columns.HasFlag(SongTableColumns.Song)) dynamicColumnCount++;
+    if (_columns.HasFlag(SongTableColumns.Artist)) {
+      dynamicColumnCount++;
+    }
+    if (_columns.HasFlag(SongTableColumns.Album)) {
+      dynamicColumnCount++;
+    }
+    if (_columns.HasFlag(SongTableColumns.Song)) {
+      dynamicColumnCount++;
+    }
+
+    if (dynamicColumnCount <= 0) {
+      return;
+    }
 
     // Each column has spacing of 1 pixel between them. Therefore, we need to track that 1 pixel buffer.
-    int narrowColumnWidth = this.GetAdornmentsThickness().Horizontal;
-    if (_columns.HasFlag(SongTableColumns.Number)) narrowColumnWidth += 3 + 1;
-    if (_columns.HasFlag(SongTableColumns.Length)) narrowColumnWidth += 6 + 1;
-    if (_columns.HasFlag(SongTableColumns.Year)) narrowColumnWidth += 5 + 1;
+    int narrowColumnWidth = GetAdornmentsThickness().Horizontal;
+    if (_columns.HasFlag(SongTableColumns.Number)) {
+      narrowColumnWidth += 3 + 1;
+    }
+    if (_columns.HasFlag(SongTableColumns.Length)) {
+      narrowColumnWidth += 6 + 1;
+    }
+    if (_columns.HasFlag(SongTableColumns.Year)) {
+      narrowColumnWidth += 5 + 1;
+    }
 
     int remainingWidth = (frame.Width - narrowColumnWidth) / dynamicColumnCount - 1;
     int widthRemainer = (frame.Width - narrowColumnWidth) % dynamicColumnCount - 1;
@@ -252,20 +268,23 @@ public class SongTable : TableView {
     }
 
     if (_columns.HasFlag(SongTableColumns.Artist)) {
-      Style.GetOrCreateColumnStyle(columnIndex).MinWidth = remainingWidth;
-      Style.GetOrCreateColumnStyle(columnIndex++).MaxWidth = remainingWidth;
+      int artistWidth = Math.Max(0, remainingWidth);
+      Style.GetOrCreateColumnStyle(columnIndex).MinWidth = artistWidth;
+      Style.GetOrCreateColumnStyle(columnIndex++).MaxWidth = artistWidth;
     }
 
     if (_columns.HasFlag(SongTableColumns.Album)) {
-      Style.GetOrCreateColumnStyle(columnIndex).MinWidth = remainingWidth;
-      Style.GetOrCreateColumnStyle(columnIndex++).MaxWidth = remainingWidth;
+      int albumWidth = Math.Max(0, remainingWidth);
+      Style.GetOrCreateColumnStyle(columnIndex).MinWidth = albumWidth;
+      Style.GetOrCreateColumnStyle(columnIndex++).MaxWidth = albumWidth;
     }
 
     if (_columns.HasFlag(SongTableColumns.Song)) {
       // We expect song names to be both the longest and most important field in the table.
       // Therefore, if there is any remaining, non-evenly divisible width, we place it in the song column.
-      Style.GetOrCreateColumnStyle(columnIndex).MinWidth = remainingWidth + widthRemainer;
-      Style.GetOrCreateColumnStyle(columnIndex++).MaxWidth = remainingWidth + widthRemainer;
+      int songWidth = Math.Max(0, remainingWidth + widthRemainer);
+      Style.GetOrCreateColumnStyle(columnIndex).MinWidth = songWidth;
+      Style.GetOrCreateColumnStyle(columnIndex++).MaxWidth = songWidth;
     }
 
     if (_columns.HasFlag(SongTableColumns.Length)) {

@@ -75,8 +75,11 @@ public sealed class UniqueResource<T> : IDisposable where T : class, IDisposable
 
   private void DisposeResourceIfExists(T? oldResource) {
     if (oldResource is { }) {
-      _onDispose(oldResource);
-      oldResource.Dispose();
+      try {
+        _onDispose(oldResource);
+      } finally {
+        oldResource.Dispose();
+      }
     }
   }
 }

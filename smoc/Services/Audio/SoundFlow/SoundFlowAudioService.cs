@@ -49,7 +49,9 @@ public sealed class SoundFlowAudioService : IAudioService {
 
   /// <inheritdoc/>
   public IPlaybackService MakePlaybackService(Song song, Stream stream, string codec, float? loudnessDb, CancellationToken cancellationToken = default) {
-    if (_playbackDevice.IsDisposed) throw new InvalidOperationException("Audio service is not initialized.");
+    if (_playbackDevice.IsDisposed) {
+      throw new InvalidOperationException("Audio service is not initialized.");
+    }
 
     using var decoder = _audioEngine.CreateDecoder(stream, codec, AudioFormat.DvdHq);
     var format = new AudioFormat {
@@ -58,6 +60,9 @@ public sealed class SoundFlowAudioService : IAudioService {
       SampleRate = decoder.SampleRate,
       Layout = AudioFormat.GetLayoutFromChannels(decoder.Channels)
     };
+    if (stream.CanSeek) {
+      stream.Seek(0, SeekOrigin.Begin);
+    }
     cancellationToken.ThrowIfCancellationRequested();
 
     float trackGain = 1.0f;

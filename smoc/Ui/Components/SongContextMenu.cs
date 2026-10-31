@@ -1,5 +1,6 @@
 using System.Drawing;
 using Smoc.Services;
+using Terminal.Gui.App;
 using Terminal.Gui.Input;
 using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
@@ -25,7 +26,7 @@ public sealed class SongContextMenu : PopoverMenu {
   /// <summary>
   /// Initializes a new instance of the <see cref="SongContextMenu"/> class.
   /// </summary>
-  /// <param name="playerService">The player service to control playback.</param>
+  /// <param name="playbackQueueService">The playback queue service to control playback.</param>
   /// <param name="songTable">The song table to get selection from.</param>
   public SongContextMenu(IPlaybackQueueService playbackQueueService, SongTable songTable)
       : base(CreateMenuItems(playbackQueueService, songTable)) {
@@ -52,10 +53,11 @@ public sealed class SongContextMenu : PopoverMenu {
     Visible = false;
   }
 
+  /// <inheritdoc />
   public override void EndInit() {
     base.EndInit();
 
-    App!.Popovers?.Register(this);
+    App?.Popovers?.Register(this);
   }
 
   /// <summary>
@@ -72,8 +74,19 @@ public sealed class SongContextMenu : PopoverMenu {
   /// </remarks>
   /// <param name="view">The view to display the context menu in.</param>
   public void MakeVisibleInView(View view) {
+    if (_songTable.SelectedRow < 0) {
+      return;
+    }
+
+    Point selectedRowFramePos;
+    try {
+      selectedRowFramePos = _songTable.GetSelectedRowFramePosition();
+    } catch (InvalidOperationException) {
+      return;
+    }
+
     var tableAdornments = _songTable.GetAdornmentsThickness();
-    var yPos = _songTable.GetSelectedRowFramePosition().Y + tableAdornments.Top + 1;
+    var yPos = selectedRowFramePos.Y + tableAdornments.Top + 1;
     int menuHeight = RequiredHeight;
 
     if (yPos + menuHeight > view.Frame.Height) {
@@ -88,16 +101,24 @@ public sealed class SongContextMenu : PopoverMenu {
   private static List<MenuItem> CreateMenuItems(IPlaybackQueueService playbackQueueService, SongTable songTable) {
     var menuItems = new List<MenuItem> {
       new(Messages.PLAY_ALL, action: async () => {
-        playbackQueueService.ClearPlaybackQueue();
-        playbackQueueService.QueueLast(songTable.GetSongs());
-        await playbackQueueService.ChangeTrack(songTable.SelectedRow);
-        await playbackQueueService.Play();
+        try {
+          playbackQueueService.ClearPlaybackQueue();
+          playbackQueueService.QueueLast(songTable.GetSongs());
+          await playbackQueueService.ChangeTrack(songTable.SelectedRow);
+          await playbackQueueService.Play();
+        } catch (Exception e) {
+          Logging.Error($"Playback action failed: {e}");
+        }
       }),
       new(Messages.PLAY_SELECTION, action: async () => {
-        playbackQueueService.ClearPlaybackQueue();
-        playbackQueueService.QueueLast(songTable.GetSelectedSongs());
-        await playbackQueueService.ChangeTrack(0);
-        await playbackQueueService.Play();
+        try {
+          playbackQueueService.ClearPlaybackQueue();
+          playbackQueueService.QueueLast(songTable.GetSelectedSongs());
+          await playbackQueueService.ChangeTrack(0);
+          await playbackQueueService.Play();
+        } catch (Exception e) {
+          Logging.Error($"Playback action failed: {e}");
+        }
       }),
       new(Messages.PLAY_NEXT, action: () => {
         playbackQueueService.QueueNext(songTable.GetSelectedSongs());
