@@ -33,7 +33,9 @@ public class SongTable : TableView {
 
   private readonly DataTable _songTableData;
   private readonly SongTableColumns _columns;
-  private List<Song> _songs;
+  private List<Song> _allSongs = [];
+  private List<Song> _songs = [];
+  private string _filterText = string.Empty;
   private int _highlightedRow = -1;
 
   /// <summary>
@@ -47,6 +49,11 @@ public class SongTable : TableView {
       }
     }
   }
+
+  /// <summary>
+  /// Gets the current filter text applied to the table.
+  /// </summary>
+  public string FilterText => _filterText;
 
   /// <summary>
   /// Gets or sets the index of the highlighted row.
@@ -108,6 +115,7 @@ public class SongTable : TableView {
     _songTableData = CreateDataTable(columns);
     Table = new DataTableSource(_songTableData);
     _songs = [];
+    _allSongs = [];
     CanFocus = false;
 
     // We don't bind left and right as directional keys here because the table
@@ -126,7 +134,23 @@ public class SongTable : TableView {
   }
 
   /// <inheritdoc />
+  protected override bool OnKeyDown(Key key) {
+    if (key == Key.Esc && !string.IsNullOrEmpty(_filterText)) {
+      ClearFilter();
+      key.Handled = true;
+      return true;
+    }
+
+    return base.OnKeyDown(key);
+  }
+
+  /// <inheritdoc />
   protected override bool OnKeyDownNotHandled(Key key) {
+    if (key == Key.Esc && !string.IsNullOrEmpty(_filterText)) {
+      ClearFilter();
+      return true;
+    }
+
     base.OnKeyDownNotHandled(key);
     return false;
   }
@@ -138,7 +162,43 @@ public class SongTable : TableView {
   public void SetSongs(IEnumerable<Song> songs) {
     ClearSongs();
     CanFocus = true;
-    _songs = songs.ToList();
+    _allSongs = songs.ToList();
+    _filterText = string.Empty;
+    _songs = _allSongs.ToList();
+    PopulateTableRows();
+    RefreshContentSize();
+  }
+
+  /// <summary>
+  /// Applies a filter text to the songs in the table, matching title, artist, or album.
+  /// </summary>
+  /// <param name="filterText">The text to filter songs by.</param>
+  public void ApplyFilter(string? filterText) {
+    _filterText = filterText?.Trim() ?? string.Empty;
+    if (string.IsNullOrEmpty(_filterText)) {
+      _songs = _allSongs.ToList();
+    } else {
+      _songs = _allSongs.Where(song =>
+          song.Title.Contains(_filterText, StringComparison.OrdinalIgnoreCase) ||
+          song.Artist.Name.Contains(_filterText, StringComparison.OrdinalIgnoreCase) ||
+          song.Album.Name.Contains(_filterText, StringComparison.OrdinalIgnoreCase)).ToList();
+    }
+
+    PopulateTableRows();
+    SelectedRow = _songs.Count > 0 ? 0 : -1;
+    RefreshContentSize();
+    SetNeedsDraw();
+  }
+
+  /// <summary>
+  /// Clears the active filter and displays all songs.
+  /// </summary>
+  public void ClearFilter() {
+    ApplyFilter(string.Empty);
+  }
+
+  private void PopulateTableRows() {
+    _songTableData.Clear();
     foreach (var song in _songs) {
       int index = 0;
       var values = new object[_songTableData.Columns.Count];
@@ -162,8 +222,6 @@ public class SongTable : TableView {
       }
       _songTableData.Rows.Add(values);
     }
-
-    RefreshContentSize();
   }
 
   /// <inheritdoc />
@@ -183,19 +241,30 @@ public class SongTable : TableView {
   }
 
   /// <summary>
+  /// Gets the 0-based index in the full unfiltered song list for the specified song, or -1 if not found.
+  /// </summary>
+  /// <param name="song">The song to locate.</param>
+  /// <returns>The 0-based index in the unfiltered song list, or -1 if not found.</returns>
+  public int GetUnfilteredIndex(Song song) {
+    return _allSongs.IndexOf(song);
+  }
+
+  /// <summary>
   /// Gets the list of currently selected songs.
   /// </summary>
   public List<Song> GetSelectedSongs() {
     return MultiSelectedRegions.Where(_ => MultiSelect).Select(region => Enumerable.Range(region.Rectangle.Y, region.Rectangle.Height))
-        .FirstOrDefault()?.Select(index => _songs[index]).ToList() ?? (SelectedRow >= 0 ? [_songs[SelectedRow]] : []);
+        .FirstOrDefault()?.Select(index => _songs[index]).ToList() ?? (SelectedRow >= 0 && SelectedRow < _songs.Count ? [_songs[SelectedRow]] : []);
   }
 
   /// <summary>
   /// Clears all songs from the table.
   /// </summary>
   public void ClearSongs() {
+    _allSongs.Clear();
     _songs.Clear();
     _songTableData.Clear();
+    _filterText = string.Empty;
     SelectedRow = 0;
     CanFocus = false;
   }

@@ -1128,4 +1128,62 @@ public class StandardPlaybackQueueServiceTest {
 
     _mockAudioService.Verify(a => a.MakePlaybackService(song2, It.IsAny<Stream>(), "m4a", -2.5f, It.IsAny<CancellationToken>()), Times.Once);
   }
+
+  /// <summary>
+  /// Verifies that RestoreSessionState restores the queue, active index, volume, and pending position,
+  /// and seeks to the restored position when Play is called.
+  /// </summary>
+  [Fact]
+  public async Task RestoreSessionState_RestoresQueueIndexVolumeAndSeeksOnPlay() {
+    using var sut = NewStandardPlaybackQueue();
+    var song1 = EntityTestFactory.GenerateSong(id: "1", postfix: "_1");
+    var song2 = EntityTestFactory.GenerateSong(id: "2", postfix: "_2");
+    var fakePlayerService2 = new FakePlaybackService(song2);
+
+    _mockAudioService.SetupProperty(a => a.Volume);
+    _mockAudioService.Setup(a => a.MakePlaybackService(song2, It.IsAny<Stream>(), "m4a", It.IsAny<CancellationToken>()))
+      .Returns(fakePlayerService2);
+    _mockStreamingClient.Setup(c => c.GetSongStreamAsync(song2.Id, It.IsAny<CancellationToken>()))
+      .ReturnsAsync(new SongStream(song2.Id, "m4a", new MemoryStream()));
+
+    var state = new SessionState([song1, song2], CurrentPlaybackIndex: 1, CurrentPositionSeconds: 45.0, Volume: 1.25f);
+    sut.RestoreSessionState(state);
+
+    Assert.Equal([song1, song2], sut.GetCurrentPlaybackQueue());
+    Assert.Equal(1, sut.CurrentPlaybackIndex);
+    Assert.Equal(song2, sut.CurrentSong);
+    Assert.Equal(TimeSpan.FromSeconds(45), sut.CurrentTime);
+    Assert.Equal(1.25f, sut.Volume);
+    Assert.Equal(PlaybackState.Stopped, sut.PlaybackState);
+
+    var captured = sut.GetSessionState();
+    Assert.Equal(2, captured.Queue.Count);
+    Assert.Equal(1, captured.CurrentPlaybackIndex);
+    Assert.Equal(45.0, captured.CurrentPositionSeconds);
+    Assert.Equal(1.25f, captured.Volume);
+
+    await sut.Play();
+    Assert.Equal(PlaybackState.Playing, sut.PlaybackState);
+    Assert.Equal(TimeSpan.FromSeconds(45), fakePlayerService2.CurrentTime);
+  }
+
+  /// <summary>
+  /// Verifies that GetPlaybackDevices and SelectPlaybackDevice delegate to IAudioService.
+  /// </summary>
+  [Fact]
+  public void PlaybackDevices_DelegatesToAudioService() {
+    using var sut = NewStandardPlaybackQueue();
+    var expectedDevices = new List<Smoc.Services.Audio.AudioDeviceInfo> {
+      new(0, "Default Speakers", IsDefault: true, IsActive: true),
+      new(1, "USB DAC", IsDefault: false, IsActive: false)
+    };
+    _mockAudioService.Setup(a => a.GetPlaybackDevices()).Returns(expectedDevices);
+    _mockAudioService.Setup(a => a.SelectPlaybackDevice("1")).Returns(true);
+    _mockAudioService.Setup(a => a.ActivePlaybackDevice).Returns(expectedDevices[0]);
+
+    Assert.Equal(expectedDevices, sut.GetPlaybackDevices());
+    Assert.Equal(expectedDevices[0], sut.ActivePlaybackDevice);
+    Assert.True(sut.SelectPlaybackDevice("1"));
+    _mockAudioService.Verify(a => a.SelectPlaybackDevice("1"), Times.Once);
+  }
 }

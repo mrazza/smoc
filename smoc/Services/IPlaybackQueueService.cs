@@ -157,4 +157,34 @@ public interface IPlaybackQueueService : IDisposable {
   /// Seeks backward by a specified duration in the current track.
   /// </summary>
   void SeekBackward(TimeSpan duration);
+
+  /// <summary>
+  /// Gets the list of available audio playback devices.
+  /// </summary>
+  /// <returns>A read-only list of available <see cref="Audio.AudioDeviceInfo"/> records.</returns>
+  IReadOnlyList<Audio.AudioDeviceInfo> GetPlaybackDevices() => [];
+
+  /// <summary>
+  /// Switches audio output to the device matching the specified index or name.
+  /// </summary>
+  /// <param name="deviceIndexOrName">The 0-based device index or partial/full device name.</param>
+  /// <returns><c>true</c> if the device was found and selected; otherwise, <c>false</c>.</returns>
+  bool SelectPlaybackDevice(string deviceIndexOrName) => false;
+
+  /// <summary>
+  /// Gets the currently active playback device, or <c>null</c> if none is initialized.
+  /// </summary>
+  Audio.AudioDeviceInfo? ActivePlaybackDevice => null;
+
+  /// <summary>
+  /// Restores a previously saved playback session state without auto-starting playback.
+  /// </summary>
+  /// <param name="state">The session state to restore.</param>
+  void RestoreSessionState(SessionState state) { }
+
+  /// <summary>
+  /// Captures a snapshot of the current playback session state.
+  /// </summary>
+  /// <returns>The current <see cref="SessionState"/>.</returns>
+  SessionState GetSessionState() => new(GetCurrentPlaybackQueue().ToList(), CurrentPlaybackIndex, CurrentTime.TotalSeconds, Volume);
 }

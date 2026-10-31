@@ -15,7 +15,7 @@ namespace Smoc.Services.Audio.SoundFlow;
 /// Implementation of <see cref="IPlaybackService"/> using SoundFlow.
 /// </summary>  
 public sealed class SoundFlowPlaybackService : IPlaybackService {
-  private readonly AudioPlaybackDevice _playbackDevice;
+  private AudioPlaybackDevice _playbackDevice;
   private readonly Stream _songStream;
   private readonly AudioFormat _audioFormat;
   private readonly AssetDataProvider _streamDataProvider;
@@ -24,6 +24,8 @@ public sealed class SoundFlowPlaybackService : IPlaybackService {
   private readonly SpectrumAnalyzer? _spectrumAnalyzer;
   private float[] _cachedSpectrumData = [];
   private readonly object _spectrumLock = new();
+  private readonly object _mixerLock = new();
+  private bool _isAddedToMixer;
 
   /// <inheritdoc/>
   public event EventHandler? SongEnded;
@@ -67,7 +69,10 @@ public sealed class SoundFlowPlaybackService : IPlaybackService {
         return [];
       }
 
-      float gain = _playbackDevice.MasterMixer.Volume;
+      float gain;
+      lock (_mixerLock) {
+        gain = !_playbackDevice.IsDisposed ? _playbackDevice.MasterMixer.Volume : 1.0f;
+      }
       lock (_spectrumLock) {
         if (_cachedSpectrumData.Length != raw.Length) {
           _cachedSpectrumData = new float[raw.Length];
@@ -130,7 +135,6 @@ public sealed class SoundFlowPlaybackService : IPlaybackService {
     _streamDataProvider = new AssetDataProvider(audioEngine, audioFormat, songStream);
     _soundPlayer = new SoundPlayer(audioEngine, audioFormat, _streamDataProvider);
     _soundPlayer.Volume = trackGain;
-    _playbackDevice.MasterMixer.AddComponent(_soundPlayer);
 
     try {
       _spectrumAnalyzer = new SpectrumAnalyzer(audioFormat, fftSize: 1024) {
@@ -145,10 +149,33 @@ public sealed class SoundFlowPlaybackService : IPlaybackService {
     _soundPlayer.PlaybackEnded += (sender, args) => SongEnded?.Invoke(this, EventArgs.Empty);
   }
 
+  /// <summary>
+  /// Switches the audio playback device used by this service.
+  /// </summary>
+  /// <param name="newDevice">The new audio playback device.</param>
+  internal void SwitchPlaybackDevice(AudioPlaybackDevice newDevice) {
+    lock (_mixerLock) {
+      if (_isAddedToMixer && !_playbackDevice.IsDisposed) {
+        _playbackDevice.MasterMixer.RemoveComponent(_soundPlayer);
+      }
+      _playbackDevice = newDevice;
+      if (_isAddedToMixer && !_playbackDevice.IsDisposed) {
+        _playbackDevice.MasterMixer.AddComponent(_soundPlayer);
+      }
+    }
+  }
+
   /// <inheritdoc/>
   public void Play() {
     if (PlaybackState == PlaybackState.Playing) {
       return;
+    }
+
+    lock (_mixerLock) {
+      if (!_isAddedToMixer && !_playbackDevice.IsDisposed) {
+        _playbackDevice.MasterMixer.AddComponent(_soundPlayer);
+        _isAddedToMixer = true;
+      }
     }
 
     Logging.Debug("Playing stream...");
@@ -188,7 +215,12 @@ public sealed class SoundFlowPlaybackService : IPlaybackService {
     if (_spectrumAnalyzer != null) {
       _soundPlayer.RemoveAnalyzer(_spectrumAnalyzer);
     }
-    _playbackDevice.MasterMixer.RemoveComponent(_soundPlayer);
+    lock (_mixerLock) {
+      if (_isAddedToMixer && !_playbackDevice.IsDisposed) {
+        _playbackDevice.MasterMixer.RemoveComponent(_soundPlayer);
+        _isAddedToMixer = false;
+      }
+    }
     _soundPlayer.Dispose();
     _streamDataProvider.Dispose();
     _songStream.Dispose();

@@ -22,4 +22,22 @@ public interface IAudioService : IDisposable {
   /// Creates a new playback service for the given stream, codec, and optional loudness metadata.
   /// </summary>
   IPlaybackService MakePlaybackService(Song song, Stream stream, string codec, float? loudnessDb, CancellationToken cancellationToken = default);
+
+  /// <summary>
+  /// Gets the list of available audio playback devices.
+  /// </summary>
+  /// <returns>A read-only list of available <see cref="AudioDeviceInfo"/> records.</returns>
+  IReadOnlyList<AudioDeviceInfo> GetPlaybackDevices() => [];
+
+  /// <summary>
+  /// Switches audio output to the device matching the specified index or name.
+  /// </summary>
+  /// <param name="deviceIndexOrName">The 0-based device index or partial/full device name.</param>
+  /// <returns><c>true</c> if the device was found and selected; otherwise, <c>false</c>.</returns>
+  bool SelectPlaybackDevice(string deviceIndexOrName) => false;
+
+  /// <summary>
+  /// Gets the currently active playback device, or <c>null</c> if none is initialized.
+  /// </summary>
+  AudioDeviceInfo? ActivePlaybackDevice => null;
 }

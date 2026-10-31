@@ -8,7 +8,7 @@ namespace Smoc.Ui.Components;
 /// </summary>
 public sealed class SearchResultsList<T> : ListView {
   // TODO: Extract this so that its shared with the actual command bindings
-  private static readonly Key[] _commandKeys = [new Key(':'), new Key(':').WithShift];
+  private static readonly Key[] _commandKeys = [new Key(':'), new Key(':').WithShift, new Key('/')];
 
   /// <summary>
   /// Occurs when the user selects a search result.

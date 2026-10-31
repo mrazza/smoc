@@ -98,4 +98,63 @@ public class CommandServiceTest {
     commandService.RegisterCommand("known", (cmd, __) => { });
     Assert.Throws<ArgumentException>(() => commandService.RegisterCommand("known", (cmd, __) => { }));
   }
+
+  [Fact]
+  public void GetRegisteredCommands_Empty_ReturnsEmpty() {
+    var commandService = new CommandService();
+    Assert.Empty(commandService.GetRegisteredCommands());
+  }
+
+  [Fact]
+  public void GetRegisteredCommands_MultipleCommands_ReturnsSorted() {
+    var commandService = new CommandService();
+    commandService.RegisterCommand("z_command", (_, __) => { });
+    commandService.RegisterCommand("a_command", (_, __) => { });
+    commandService.RegisterCommand("m_command", (_, __) => { });
+    Assert.Equal(["a_command", "m_command", "z_command"], commandService.GetRegisteredCommands());
+  }
+
+  [Fact]
+  public void GetCompletions_EmptyPrefix_ReturnsAllSorted() {
+    var commandService = new CommandService();
+    commandService.RegisterCommand("play", (_, __) => { });
+    commandService.RegisterCommand("pause", (_, __) => { });
+    commandService.RegisterCommand("stop", (_, __) => { });
+    Assert.Equal(["pause", "play", "stop"], commandService.GetCompletions(string.Empty));
+  }
+
+  [Fact]
+  public void GetCompletions_NullPrefix_ReturnsAllSorted() {
+    var commandService = new CommandService();
+    commandService.RegisterCommand("play", (_, __) => { });
+    commandService.RegisterCommand("pause", (_, __) => { });
+    Assert.Equal(["pause", "play"], commandService.GetCompletions(null!));
+  }
+
+  [Fact]
+  public void GetCompletions_MatchingPrefix_ReturnsMatchingSorted() {
+    var commandService = new CommandService();
+    commandService.RegisterCommand("play", (_, __) => { });
+    commandService.RegisterCommand("pause", (_, __) => { });
+    commandService.RegisterCommand("stop", (_, __) => { });
+    commandService.RegisterCommand("prev", (_, __) => { });
+    Assert.Equal(["pause", "play", "prev"], commandService.GetCompletions("p"));
+  }
+
+  [Fact]
+  public void GetCompletions_CaseInsensitiveMatch_ReturnsMatching() {
+    var commandService = new CommandService();
+    commandService.RegisterCommand("Play", (_, __) => { });
+    commandService.RegisterCommand("pause", (_, __) => { });
+    Assert.Equal(["Play", "pause"], commandService.GetCompletions("P"));
+    Assert.Equal(["Play", "pause"], commandService.GetCompletions("p"));
+  }
+
+  [Fact]
+  public void GetCompletions_NoMatch_ReturnsEmpty() {
+    var commandService = new CommandService();
+    commandService.RegisterCommand("play", (_, __) => { });
+    commandService.RegisterCommand("pause", (_, __) => { });
+    Assert.Empty(commandService.GetCompletions("xyz"));
+  }
 }

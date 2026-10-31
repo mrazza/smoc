@@ -80,7 +80,10 @@ public sealed class PlaybackQueueView : View {
     }
 
     try {
-      await _playbackQueueService.ChangeTrack(_songTable.SelectedRow);
+      int targetIndex = songs.Count == 1 ? _songTable.GetUnfilteredIndex(songs[0]) : _songTable.SelectedRow;
+      if (targetIndex >= 0) {
+        await _playbackQueueService.ChangeTrack(targetIndex);
+      }
     } catch (Exception e) {
       Logging.Error($"Failed to change track: {e}");
     }
