@@ -53,13 +53,15 @@ public sealed class SoundFlowAudioService : IAudioService {
       throw new InvalidOperationException("Audio service is not initialized.");
     }
 
-    using var decoder = _audioEngine.CreateDecoder(stream, codec, AudioFormat.DvdHq);
-    var format = new AudioFormat {
-      Format = decoder.SampleFormat,
-      Channels = decoder.Channels,
-      SampleRate = decoder.SampleRate,
-      Layout = AudioFormat.GetLayoutFromChannels(decoder.Channels)
-    };
+    AudioFormat format;
+    using (var decoder = _audioEngine.CreateDecoder(stream, codec, AudioFormat.DvdHq)) {
+      format = new AudioFormat {
+        Format = decoder.SampleFormat,
+        Channels = decoder.Channels,
+        SampleRate = decoder.SampleRate,
+        Layout = AudioFormat.GetLayoutFromChannels(decoder.Channels)
+      };
+    }
     if (stream.CanSeek) {
       stream.Seek(0, SeekOrigin.Begin);
     }

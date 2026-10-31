@@ -47,6 +47,9 @@ public class TempFileCacheServiceTest : IDisposable {
     Assert.True(Directory.Exists(_testDirectory));
   }
 
+  /// <summary>
+  /// Verifies that on a cache miss, the file is created on disk and returned as a FileStream.
+  /// </summary>
   [Theory]
   [CombinatorialData]
   public async Task GetOrAddAsync_OnCacheMiss_CreatesFile(CachePersistence cachePersistence) {
@@ -62,11 +65,14 @@ public class TempFileCacheServiceTest : IDisposable {
       TestContext.Current.CancellationToken);
 
     Assert.NotNull(resultStream);
+    var fileStream = Assert.IsType<FileStream>(resultStream);
+    string expectedFilePath = Path.Combine(testDirectory, key);
+    Assert.Equal(Path.GetFullPath(expectedFilePath), Path.GetFullPath(fileStream.Name));
+
     using var reader = new StreamReader(resultStream);
     string content = await reader.ReadToEndAsync(TestContext.Current.CancellationToken);
     Assert.Equal(expectedContent, content);
 
-    string expectedFilePath = Path.Combine(testDirectory, key);
     Assert.True(File.Exists(expectedFilePath), $"Expected file not found: {expectedFilePath}");
   }
 
@@ -214,32 +220,96 @@ public class TempFileCacheServiceTest : IDisposable {
     Assert.True(File.Exists(file1));
   }
 
-  private class NonSeekableStream : Stream {
+  /// <summary>
+  /// A stream implementation that does not support seeking, for testing purposes.
+  /// </summary>
+  private sealed class NonSeekableStream : Stream {
     private readonly MemoryStream _inner;
+
+    /// <summary>
+    /// Gets whether the stream has been disposed.
+    /// </summary>
+    public bool IsDisposed { get; private set; }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="NonSeekableStream"/> class.
+    /// </summary>
+    /// <param name="data">The byte data to expose in the stream.</param>
     public NonSeekableStream(byte[] data) {
       _inner = new MemoryStream(data);
     }
+
+    /// <inheritdoc/>
     public override bool CanRead => true;
+
+    /// <inheritdoc/>
     public override bool CanSeek => false;
+
+    /// <inheritdoc/>
     public override bool CanWrite => false;
+
+    /// <inheritdoc/>
     public override long Length => _inner.Length;
+
+    /// <inheritdoc/>
     public override long Position {
       get => throw new NotSupportedException();
       set => throw new NotSupportedException();
     }
+
+    /// <inheritdoc/>
     public override void Flush() => _inner.Flush();
+
+    /// <inheritdoc/>
     public override int Read(byte[] buffer, int offset, int count) => _inner.Read(buffer, offset, count);
+
+    /// <inheritdoc/>
     public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+
+    /// <inheritdoc/>
     public override void SetLength(long value) => throw new NotSupportedException();
+
+    /// <inheritdoc/>
     public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+
+    /// <inheritdoc/>
     protected override void Dispose(bool disposing) {
       if (disposing) {
+        IsDisposed = true;
         _inner.Dispose();
       }
       base.Dispose(disposing);
     }
   }
 
+  /// <summary>
+  /// A seekable stream that tracks whether it has been disposed.
+  /// </summary>
+  private sealed class TrackedSeekableStream : MemoryStream {
+    /// <summary>
+    /// Gets whether the stream has been disposed.
+    /// </summary>
+    public bool IsDisposed { get; private set; }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TrackedSeekableStream"/> class.
+    /// </summary>
+    /// <param name="buffer">The underlying buffer.</param>
+    public TrackedSeekableStream(byte[] buffer) : base(buffer) {
+    }
+
+    /// <inheritdoc/>
+    protected override void Dispose(bool disposing) {
+      if (disposing) {
+        IsDisposed = true;
+      }
+      base.Dispose(disposing);
+    }
+  }
+
+  /// <summary>
+  /// Verifies that GetOrAddAsync succeeds with a non-seekable source stream, disposes it, and returns a seekable FileStream.
+  /// </summary>
   [Theory]
   [CombinatorialData]
   public async Task GetOrAddAsync_WithNonSeekableStream_Succeeds(CachePersistence cachePersistence) {
@@ -248,19 +318,68 @@ public class TempFileCacheServiceTest : IDisposable {
     var service = new TempFileCacheService(_subDirectory, config, cachePersistence);
     string key = "non-seekable-key";
     string expectedContent = "non-seekable stream content";
+    NonSeekableStream? sourceStream = null;
 
     using var resultStream = await service.GetOrAddAsync(
       key,
-      _ => Task.FromResult<Stream>(new NonSeekableStream(Encoding.UTF8.GetBytes(expectedContent))),
+      _ => {
+        sourceStream = new NonSeekableStream(Encoding.UTF8.GetBytes(expectedContent));
+        return Task.FromResult<Stream>(sourceStream);
+      },
       TestContext.Current.CancellationToken);
 
+    Assert.NotNull(sourceStream);
+    Assert.True(sourceStream.IsDisposed, "Source non-seekable stream must be disposed.");
     Assert.NotNull(resultStream);
     Assert.True(resultStream.CanSeek, "Returned stream must be seekable");
+    var fileStream = Assert.IsType<FileStream>(resultStream);
+    string expectedFilePath = Path.Combine(testDirectory, key);
+    Assert.Equal(Path.GetFullPath(expectedFilePath), Path.GetFullPath(fileStream.Name));
+
     using var reader = new StreamReader(resultStream);
     string content = await reader.ReadToEndAsync(TestContext.Current.CancellationToken);
     Assert.Equal(expectedContent, content);
 
+    Assert.True(File.Exists(expectedFilePath), $"Expected file not found: {expectedFilePath}");
+  }
+
+  /// <summary>
+  /// Verifies that on a cache miss, GetOrAddAsync always disposes the seekable source stream returned by
+  /// the factory and returns a FileStream backed by the cached file on disk.
+  /// </summary>
+  [Theory]
+  [CombinatorialData]
+  public async Task GetOrAddAsync_OnCacheMiss_DisposesSeekableSourceStreamAndReturnsFileStream(CachePersistence cachePersistence) {
+    var testDirectory = InitDirectory(cachePersistence);
+    var config = new CacheConfig();
+    var service = new TempFileCacheService(_subDirectory, config, cachePersistence);
+    string key = "seekable-key";
+    string expectedContent = "seekable content to cache";
+    TrackedSeekableStream? sourceStream = null;
+    bool wasSeekableBeforeDispose = false;
+
+    using var resultStream = await service.GetOrAddAsync(
+      key,
+      _ => {
+        sourceStream = new TrackedSeekableStream(Encoding.UTF8.GetBytes(expectedContent));
+        wasSeekableBeforeDispose = sourceStream.CanSeek;
+        return Task.FromResult<Stream>(sourceStream);
+      },
+      TestContext.Current.CancellationToken);
+
+    Assert.NotNull(sourceStream);
+    Assert.True(wasSeekableBeforeDispose, "Source stream must report CanSeek == true before disposal.");
+    Assert.True(sourceStream.IsDisposed, "Source seekable stream must be disposed on cache miss.");
+
+    Assert.NotNull(resultStream);
+    var fileStream = Assert.IsType<FileStream>(resultStream);
     string expectedFilePath = Path.Combine(testDirectory, key);
+    Assert.Equal(Path.GetFullPath(expectedFilePath), Path.GetFullPath(fileStream.Name));
+
+    using var reader = new StreamReader(resultStream);
+    string content = await reader.ReadToEndAsync(TestContext.Current.CancellationToken);
+    Assert.Equal(expectedContent, content);
+
     Assert.True(File.Exists(expectedFilePath), $"Expected file not found: {expectedFilePath}");
   }
 

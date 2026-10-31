@@ -128,19 +128,38 @@ public sealed class ArtistView : View {
         return;
       }
 
-      // Note: Parallel fetch is okay, but we should pass token. 
-      // If one fails/cancels, we bail.
-      var songTasks = albums.Select(album => _streamingClient.GetSongsByAlbumAsync(album, token));
-      var songs = (await Task.WhenAll(songTasks)).SelectMany(s => s);
+      var failedAlbums = 0;
+      Exception? lastAlbumError = null;
+      var songTasks = albums.Select(async album => {
+        try {
+          var albumSongs = await _streamingClient.GetSongsByAlbumAsync(album, token);
+          if (albumSongs is null) {
+            throw new InvalidOperationException($"Null song list returned for album '{album.Name}' ({album.Id}).");
+          }
+          return albumSongs;
+        } catch (OperationCanceledException) {
+          throw;
+        } catch (Exception ex) {
+          Interlocked.Increment(ref failedAlbums);
+          lastAlbumError = ex;
+          Logging.Warning($"Failed to load songs for album '{album.Name}' ({album.Id}): {ex.Message}");
+          return [];
+        }
+      });
+      var songs = (await Task.WhenAll(songTasks)).SelectMany(s => s).ToList();
 
       if (token.IsCancellationRequested) {
         return;
       }
 
-      App!.Invoke(() => {
-        Logging.Information($"Loaded {songs.Count()} songs for artist {selectedArtist.Item.Name}.");
+      if (failedAlbums == albums.Count && lastAlbumError is not null) {
+        throw lastAlbumError;
+      }
 
-        if (!songs.Any()) {
+      App!.Invoke(() => {
+        Logging.Information($"Loaded {songs.Count} songs for artist {selectedArtist.Item.Name}.");
+
+        if (songs.Count == 0) {
           ResetSongsTable(Messages.NO_SONGS);
           return;
         }
