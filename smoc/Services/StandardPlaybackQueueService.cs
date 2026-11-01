@@ -395,15 +395,6 @@ public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
   }
 
   /// <inheritdoc/>
-  public IReadOnlyList<AudioDeviceInfo> GetPlaybackDevices() => _audioService.GetPlaybackDevices();
-
-  /// <inheritdoc/>
-  public bool SelectPlaybackDevice(string deviceIndexOrName) => _audioService.SelectPlaybackDevice(deviceIndexOrName);
-
-  /// <inheritdoc/>
-  public AudioDeviceInfo? ActivePlaybackDevice => _audioService.ActivePlaybackDevice;
-
-  /// <inheritdoc/>
   public void RestoreSessionState(SessionState state) {
     ArgumentNullException.ThrowIfNull(state);
     Stop();

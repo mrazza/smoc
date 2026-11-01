@@ -21,6 +21,9 @@ public sealed class SoundFlowAudioService : IAudioService {
   private float _volume;
 
   /// <inheritdoc/>
+  public event EventHandler<AudioDeviceInfo?>? PlaybackDeviceChanged;
+
+  /// <inheritdoc/>
   public float Volume {
     get => _volume;
     set {
@@ -122,6 +125,7 @@ public sealed class SoundFlowAudioService : IAudioService {
       return false;
     }
 
+    AudioDeviceInfo? activeDevice;
     lock (_deviceLock) {
       _audioEngine.UpdateAudioDevicesInfo();
       var devices = _audioEngine.PlaybackDevices;
@@ -162,8 +166,11 @@ public sealed class SoundFlowAudioService : IAudioService {
 
       _playbackDeviceInfo = targetDevice;
       _playbackDevice = newPlaybackDevice;
-      return true;
+      activeDevice = ActivePlaybackDevice;
     }
+
+    PlaybackDeviceChanged?.Invoke(this, activeDevice);
+    return true;
   }
 
   /// <inheritdoc/>

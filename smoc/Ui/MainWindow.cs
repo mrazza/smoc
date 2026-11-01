@@ -1,6 +1,7 @@
 using System.Reflection;
 using Smoc.Configuration;
 using Smoc.Services;
+using Smoc.Services.Audio;
 using Smoc.Services.Audio.SoundFlow;
 using Smoc.Services.Streaming;
 using Smoc.Streaming;
@@ -20,6 +21,7 @@ public sealed class MainWindow : Runnable, IMainWindow {
   private readonly StatusBar _statusBar;
   private readonly MainContent _mainContent;
   private readonly NowPlayingBar _nowPlayingBar;
+  private readonly IAudioService _audioService;
   private readonly IPlaybackQueueService _playbackQueueService;
   private readonly CommandService _commandService;
   private readonly IPlaybackTrackingService _playbackTrackingService;
@@ -34,13 +36,15 @@ public sealed class MainWindow : Runnable, IMainWindow {
   /// </summary>
   /// <param name="streamingClient">The initialized streaming client.</param>
   /// <param name="sessionStateService">Optional session state service for persisting playback state across restarts.</param>
-  public MainWindow(IStreamingClient streamingClient, ISessionStateService? sessionStateService = null) {
+  /// <param name="audioService">Optional audio service for managing audio playback and sound devices.</param>
+  public MainWindow(IStreamingClient streamingClient, ISessionStateService? sessionStateService = null, IAudioService? audioService = null) {
     Width = Dim.Fill();
     Height = Dim.Fill();
     CanFocus = true;
 
     _sessionStateService = sessionStateService ?? new JsonSessionStateService();
-    _playbackQueueService = StandardPlaybackQueueService.UsingAudioService<SoundFlowAudioService>(this, streamingClient);
+    _audioService = audioService ?? new SoundFlowAudioService();
+    _playbackQueueService = new StandardPlaybackQueueService(this, streamingClient, _audioService);
     _playbackTrackingService = new StreamingListenHistoryService(
       streamingClient,
       TimeSpan.FromSeconds(ListenHistoryConfig.Defaults.MinimumPositionSeconds),
@@ -168,7 +172,7 @@ public sealed class MainWindow : Runnable, IMainWindow {
       return;
     }
 
-    var devices = _playbackQueueService.GetPlaybackDevices();
+    var devices = _audioService.GetPlaybackDevices();
     if (devices.Count == 0) {
       _commandLine.DisplayError("no audio playback devices found");
       return;
@@ -186,7 +190,7 @@ public sealed class MainWindow : Runnable, IMainWindow {
     }
 
     string query = splitArgs[0];
-    if (!_playbackQueueService.SelectPlaybackDevice(query)) {
+    if (!_audioService.SelectPlaybackDevice(query)) {
       _commandLine.DisplayError($"audio device not found: {query}");
     }
   }
