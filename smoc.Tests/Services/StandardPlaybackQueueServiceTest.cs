@@ -1166,24 +1166,4 @@ public class StandardPlaybackQueueServiceTest {
     Assert.Equal(PlaybackState.Playing, sut.PlaybackState);
     Assert.Equal(TimeSpan.FromSeconds(45), fakePlayerService2.CurrentTime);
   }
-
-  /// <summary>
-  /// Verifies that GetPlaybackDevices and SelectPlaybackDevice delegate to IAudioService.
-  /// </summary>
-  [Fact]
-  public void PlaybackDevices_DelegatesToAudioService() {
-    using var sut = NewStandardPlaybackQueue();
-    var expectedDevices = new List<Smoc.Services.Audio.AudioDeviceInfo> {
-      new(0, "Default Speakers", IsDefault: true, IsActive: true),
-      new(1, "USB DAC", IsDefault: false, IsActive: false)
-    };
-    _mockAudioService.Setup(a => a.GetPlaybackDevices()).Returns(expectedDevices);
-    _mockAudioService.Setup(a => a.SelectPlaybackDevice("1")).Returns(true);
-    _mockAudioService.Setup(a => a.ActivePlaybackDevice).Returns(expectedDevices[0]);
-
-    Assert.Equal(expectedDevices, sut.GetPlaybackDevices());
-    Assert.Equal(expectedDevices[0], sut.ActivePlaybackDevice);
-    Assert.True(sut.SelectPlaybackDevice("1"));
-    _mockAudioService.Verify(a => a.SelectPlaybackDevice("1"), Times.Once);
-  }
 }

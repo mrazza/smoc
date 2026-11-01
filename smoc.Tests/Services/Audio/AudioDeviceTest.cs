@@ -31,6 +31,9 @@ public class AudioDeviceTest {
     public float Volume { get; set; } = 1.0f;
     public string? SelectedDevice { get; private set; }
 
+    /// <inheritdoc/>
+    public event EventHandler<AudioDeviceInfo?>? PlaybackDeviceChanged;
+
     public void Dispose() {
     }
 
@@ -49,6 +52,7 @@ public class AudioDeviceTest {
       if (deviceIndexOrName == "0" || deviceIndexOrName == "1" ||
           deviceIndexOrName == "Default Speakers" || deviceIndexOrName == "Headphones") {
         SelectedDevice = deviceIndexOrName;
+        PlaybackDeviceChanged?.Invoke(this, ActivePlaybackDevice);
         return true;
       }
       return false;
@@ -226,5 +230,58 @@ public class AudioDeviceTest {
 
     bool failedSelect = service.SelectPlaybackDevice("NonExistentDevice");
     Assert.False(failedSelect);
+  }
+
+  /// <summary>
+  /// Verifies that default <see cref="IAudioService.PlaybackDeviceChanged"/> event can be subscribed to and unsubscribed from.
+  /// </summary>
+  [Fact]
+  public void IAudioService_PlaybackDeviceChanged_DefaultInterfaceAllowsSubscription() {
+    IAudioService service = new DefaultAudioService();
+    EventHandler<AudioDeviceInfo?> handler = (_, _) => { };
+
+    service.PlaybackDeviceChanged += handler;
+    service.PlaybackDeviceChanged -= handler;
+  }
+
+  /// <summary>
+  /// Verifies that <see cref="IAudioService.PlaybackDeviceChanged"/> is invoked when a device is selected successfully.
+  /// </summary>
+  [Fact]
+  public void IAudioService_PlaybackDeviceChanged_InvokedWhenSelectPlaybackDeviceSucceeds() {
+    IAudioService service = new OverridingAudioService();
+    AudioDeviceInfo? changedDevice = null;
+    int eventCount = 0;
+
+    service.PlaybackDeviceChanged += (sender, device) => {
+      eventCount++;
+      changedDevice = device;
+    };
+
+    bool selected = service.SelectPlaybackDevice("Headphones");
+
+    Assert.True(selected);
+    Assert.Equal(1, eventCount);
+    Assert.NotNull(changedDevice);
+    Assert.Equal("Headphones", changedDevice.Name);
+    Assert.True(changedDevice.IsActive);
+  }
+
+  /// <summary>
+  /// Verifies that <see cref="IAudioService.PlaybackDeviceChanged"/> is not invoked when device selection fails.
+  /// </summary>
+  [Fact]
+  public void IAudioService_PlaybackDeviceChanged_NotInvokedWhenSelectPlaybackDeviceFails() {
+    IAudioService service = new OverridingAudioService();
+    int eventCount = 0;
+
+    service.PlaybackDeviceChanged += (sender, device) => {
+      eventCount++;
+    };
+
+    bool selected = service.SelectPlaybackDevice("NonExistentDevice");
+
+    Assert.False(selected);
+    Assert.Equal(0, eventCount);
   }
 }

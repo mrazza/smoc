@@ -8,6 +8,14 @@ namespace Smoc.Services.Audio;
 public interface IAudioService : IDisposable {
 
   /// <summary>
+  /// Occurs when the active audio playback device changes.
+  /// </summary>
+  event EventHandler<AudioDeviceInfo?>? PlaybackDeviceChanged {
+    add { }
+    remove { }
+  }
+
+  /// <summary>
   /// Gets or sets the master volume (0.0 to 2.0).
   /// </summary>
   float Volume { get; set; }
