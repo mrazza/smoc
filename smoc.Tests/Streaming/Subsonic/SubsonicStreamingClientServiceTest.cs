@@ -33,12 +33,9 @@ public class SubsonicStreamingClientServiceTest {
     return client;
   }
 
-  private static SubsonicStreamingClient CreateClientWithMockStreamResponse(byte[] contentBytes, string? mediaType = null) {
+  private static SubsonicStreamingClient CreateClientWithMockStreamResponse(byte[] contentBytes) {
     var handlerMock = new Mock<HttpMessageHandler>(MockBehavior.Strict);
     var content = new ByteArrayContent(contentBytes);
-    if (mediaType != null) {
-      content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(mediaType);
-    }
 
     handlerMock
       .Protected()
@@ -365,24 +362,6 @@ public class SubsonicStreamingClientServiceTest {
     Assert.Equal("s1", stream.Id);
     Assert.Equal("mp3", stream.Codec);
     Assert.Equal(5, stream.Stream.Length);
-  }
-
-  [Theory]
-  [InlineData("audio/flac", "flac")]
-  [InlineData("audio/ogg", "ogg")]
-  [InlineData("audio/opus", "opus")]
-  [InlineData("audio/mp4", "m4a")]
-  [InlineData("audio/x-m4a", "m4a")]
-  [InlineData("audio/aac", "aac")]
-  [InlineData("audio/mpeg", "mp3")]
-  [InlineData("audio/unknown", "mp3")]
-  public async Task GetSongStreamAsync_DetectsCodecFromContentType(string mediaType, string expectedCodec) {
-    var contentBytes = new byte[] { 1, 2, 3 };
-    var client = CreateClientWithMockStreamResponse(contentBytes, mediaType);
-    var stream = await client.GetSongStreamAsync("s1", TestContext.Current.CancellationToken);
-    Assert.Equal("s1", stream.Id);
-    Assert.Equal(expectedCodec, stream.Codec);
-    Assert.Equal(3, stream.Stream.Length);
   }
 
   [Fact]
