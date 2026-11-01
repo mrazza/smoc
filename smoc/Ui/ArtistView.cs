@@ -124,7 +124,7 @@ public sealed class ArtistView : View {
       }
 
       if (albums.Count == 0) {
-        App!.Invoke(() => ResetSongsTable(Messages.NO_SONGS));
+        ResetSongsTable(Messages.NO_SONGS);
         return;
       }
 
@@ -156,28 +156,24 @@ public sealed class ArtistView : View {
         throw lastAlbumError;
       }
 
-      App!.Invoke(() => {
-        Logging.Information($"Loaded {songs.Count} songs for artist {selectedArtist.Item.Name}.");
+      Logging.Information($"Loaded {songs.Count} songs for artist {selectedArtist.Item.Name}.");
 
-        if (songs.Count == 0) {
-          ResetSongsTable(Messages.NO_SONGS);
-          return;
-        }
+      if (songs.Count == 0) {
+        ResetSongsTable(Messages.NO_SONGS);
+        return;
+      }
 
-        _songTable.SetSongs(songs);
-        _songTable.SelectedRow = 0;
-        _songTable.EnsureCursorIsVisible();
-        _songTable.Style.ShowHeaders = true;
-        _songsLabel.Visible = false;
-      });
+      _songTable.SetSongs(songs);
+      _songTable.SelectedRow = 0;
+      _songTable.EnsureCursorIsVisible();
+      _songTable.Style.ShowHeaders = true;
+      _songsLabel.Visible = false;
     } catch (OperationCanceledException) {
       // Ignore cancellation
     } catch (Exception ex) {
       Logging.Error($"Error loading artist details: {ex.Message}");
-      App!.Invoke(() => {
-        _mainWindow.DisplayError(Messages.SONG_LOAD_ERROR);
-        ResetSongsTable(Messages.SONG_LOAD_ERROR);
-      });
+      _mainWindow.DisplayError(Messages.SONG_LOAD_ERROR);
+      ResetSongsTable(Messages.SONG_LOAD_ERROR);
     }
   }
 
@@ -203,27 +199,23 @@ public sealed class ArtistView : View {
         return;
       }
 
-      App!.Invoke(() => {
-        Logging.Information($"Found {artists.Count} artists for search '{args}'.");
+      Logging.Information($"Found {artists.Count} artists for search '{args}'.");
 
-        if (artists.Count == 0) {
-          ResetSearchResults(Messages.NO_ARTISTS_FOUND);
-          return;
-        }
+      if (artists.Count == 0) {
+        ResetSearchResults(Messages.NO_ARTISTS_FOUND);
+        return;
+      }
 
-        _searchResults.SetSource(new ObservableCollection<SearchResultRow<Artist>>(artists.Select(artist => new SearchResultRow<Artist>(artist, artist.Name))));
-        _searchResults.SelectedItem = 0;
-        _searchResultsLabel.Visible = false;
-      });
+      _searchResults.SetSource(new ObservableCollection<SearchResultRow<Artist>>(artists.Select(artist => new SearchResultRow<Artist>(artist, artist.Name))));
+      _searchResults.SelectedItem = 0;
+      _searchResultsLabel.Visible = false;
     } catch (OperationCanceledException) {
       // Ignore
       Logging.Debug("Artist search cancelled");
     } catch (Exception ex) {
       Logging.Error($"Error searching artists: {ex.Message}");
-      App!.Invoke(() => {
-        _mainWindow.DisplayError(Messages.SEARCH_ERROR);
-        ResetSearchResults(Messages.SEARCH_ERROR);
-      });
+      _mainWindow.DisplayError(Messages.SEARCH_ERROR);
+      ResetSearchResults(Messages.SEARCH_ERROR);
     }
   }
 

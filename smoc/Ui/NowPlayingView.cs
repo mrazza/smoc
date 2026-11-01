@@ -171,10 +171,8 @@ public sealed class NowPlayingView : View {
         var image = await _streamingClient.GetAlbumArtAsync(song.Album, (covers) => covers.OrderByDescending(c => c.Width).First(), token);
         Logging.Debug($"Album art loaded: {song.Title}");
         token.ThrowIfCancellationRequested();
-        App!.Invoke(() => {
-          _albumArtView.BorderStyle = LineStyle.None;
-          _albumArtView.SetImage(image);
-        });
+        _albumArtView.BorderStyle = LineStyle.None;
+        _albumArtView.SetImage(image);
       } catch (OperationCanceledException) {
         Logging.Debug($"Album art load cancelled: {song.Title}");
       } catch (Exception ex) {

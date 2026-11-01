@@ -122,24 +122,20 @@ public class PlaylistView : View {
 
       token.ThrowIfCancellationRequested();
 
-      App!.Invoke(() => {
-        if (songs.Count == 0) {
-          ResetSongsTable();
-          return;
-        }
+      if (songs.Count == 0) {
+        ResetSongsTable();
+        return;
+      }
 
-        _songTable.SetSongs(songs);
-        _songTable.Style.ShowHeaders = true;
-        _songsLabel.Visible = false;
-      });
+      _songTable.SetSongs(songs);
+      _songTable.Style.ShowHeaders = true;
+      _songsLabel.Visible = false;
     } catch (OperationCanceledException) {
       Logging.Debug("Loading url playlist cancelled");
     } catch (Exception ex) {
       Logging.Error($"Error loading url: {ex.Message}");
-      App!.Invoke(() => {
-        ResetSongsTable(Messages.SONG_LOAD_ERROR);
-        _mainWindow.DisplayError("error loading url");
-      });
+      ResetSongsTable(Messages.SONG_LOAD_ERROR);
+      _mainWindow.DisplayError("error loading url");
     }
   }
 
@@ -161,24 +157,20 @@ public class PlaylistView : View {
 
       token.ThrowIfCancellationRequested();
 
-      App!.Invoke(() => {
-        if (songs.Count == 0) {
-          ResetSongsTable();
-          return;
-        }
+      if (songs.Count == 0) {
+        ResetSongsTable();
+        return;
+      }
 
-        _songTable.SetSongs(songs);
-        _songTable.Style.ShowHeaders = true;
-        _songsLabel.Visible = false;
-      });
+      _songTable.SetSongs(songs);
+      _songTable.Style.ShowHeaders = true;
+      _songsLabel.Visible = false;
     } catch (OperationCanceledException) {
       Logging.Debug("Loading liked playlist cancelled");
     } catch (Exception ex) {
       Logging.Error($"Error loading liked playlist: {ex.Message}");
-      App!.Invoke(() => {
-        ResetSongsTable(Messages.SONG_LOAD_ERROR);
-        _mainWindow.DisplayError("error loading liked playlist");
-      });
+      ResetSongsTable(Messages.SONG_LOAD_ERROR);
+      _mainWindow.DisplayError("error loading liked playlist");
     }
   }
 
@@ -203,27 +195,23 @@ public class PlaylistView : View {
 
       token.ThrowIfCancellationRequested();
 
-      App!.Invoke(() => {
-        Logging.Information($"Found {playlists.Count} playlists for search '{args}'.");
+      Logging.Information($"Found {playlists.Count} playlists for search '{args}'.");
 
-        if (playlists.Count == 0) {
-          ResetSearchResults(Messages.NO_PLAYLISTS_FOUND);
-          return;
-        }
+      if (playlists.Count == 0) {
+        ResetSearchResults(Messages.NO_PLAYLISTS_FOUND);
+        return;
+      }
 
-        _searchResults.SetSource(new ObservableCollection<SearchResultRow<Playlist>>(playlists.Select(playlist => new SearchResultRow<Playlist>(playlist, playlist.Name))));
-        _searchResults.SelectedItem = 0;
-        _searchResultsLabel.Visible = false;
-      });
+      _searchResults.SetSource(new ObservableCollection<SearchResultRow<Playlist>>(playlists.Select(playlist => new SearchResultRow<Playlist>(playlist, playlist.Name))));
+      _searchResults.SelectedItem = 0;
+      _searchResultsLabel.Visible = false;
     } catch (OperationCanceledException) {
       // Ignore
       Logging.Debug("Playlist search cancelled");
     } catch (Exception ex) {
       Logging.Error($"Error searching playlists: {ex.Message}");
-      App!.Invoke(() => {
-        _mainWindow.DisplayError(Messages.SEARCH_ERROR);
-        ResetSearchResults(Messages.SEARCH_ERROR);
-      });
+      _mainWindow.DisplayError(Messages.SEARCH_ERROR);
+      ResetSearchResults(Messages.SEARCH_ERROR);
     }
   }
 
@@ -238,29 +226,25 @@ public class PlaylistView : View {
 
       token.ThrowIfCancellationRequested();
 
-      App!.Invoke(() => {
-        Logging.Information($"Loaded {songs.Count} songs for playlist {selectedPlaylist.Item.Name}.");
+      Logging.Information($"Loaded {songs.Count} songs for playlist {selectedPlaylist.Item.Name}.");
 
-        if (songs.Count == 0) {
-          ResetSongsTable(Messages.NO_SONGS);
-          return;
-        }
+      if (songs.Count == 0) {
+        ResetSongsTable(Messages.NO_SONGS);
+        return;
+      }
 
-        _songTable.SetSongs(songs);
-        _songTable.SelectedRow = 0;
-        _songTable.EnsureCursorIsVisible();
-        _songTable.Style.ShowHeaders = true;
-        _songsLabel.Visible = false;
-      });
+      _songTable.SetSongs(songs);
+      _songTable.SelectedRow = 0;
+      _songTable.EnsureCursorIsVisible();
+      _songTable.Style.ShowHeaders = true;
+      _songsLabel.Visible = false;
     } catch (OperationCanceledException) {
       // Ignore
       Logging.Debug("Playlist load cancelled");
     } catch (Exception ex) {
       Logging.Error($"Error loading playlist: {ex.Message}");
-      App!.Invoke(() => {
-        _mainWindow.DisplayError(Messages.SONG_LOAD_ERROR);
-        ResetSongsTable(Messages.SONG_LOAD_ERROR);
-      });
+      _mainWindow.DisplayError(Messages.SONG_LOAD_ERROR);
+      ResetSongsTable(Messages.SONG_LOAD_ERROR);
     }
   }
 
