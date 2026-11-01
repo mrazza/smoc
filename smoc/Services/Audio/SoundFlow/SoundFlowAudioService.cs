@@ -17,7 +17,7 @@ public sealed class SoundFlowAudioService : IAudioService {
   private AudioPlaybackDevice _playbackDevice;
   private readonly SoftClipperModifier _softClipperModifier;
   private readonly object _deviceLock = new();
-  private readonly List<WeakReference<SoundFlowPlaybackService>> _activeServices = [];
+  private readonly HashSet<SoundFlowPlaybackService> _activeServices = [];
   private float _volume;
 
   /// <inheritdoc/>
@@ -148,11 +148,8 @@ public sealed class SoundFlowAudioService : IAudioService {
       newPlaybackDevice.MasterMixer.AddModifier(_softClipperModifier);
       newPlaybackDevice.MasterMixer.Volume = AudioMath.VolumeToGain(_volume);
 
-      CleanDeadServices();
-      for (int i = 0; i < _activeServices.Count; i++) {
-        if (_activeServices[i].TryGetTarget(out var service)) {
-          service.SwitchPlaybackDevice(newPlaybackDevice);
-        }
+      foreach (var service in _activeServices) {
+        service.SwitchPlaybackDevice(newPlaybackDevice);
       }
 
       newPlaybackDevice.Start();
@@ -205,9 +202,15 @@ public sealed class SoundFlowAudioService : IAudioService {
         trackGain = AudioMath.CalculateNormalizationGain(loudnessDb.Value, attenuateOnly);
       }
 
-      var service = new SoundFlowPlaybackService(_audioEngine, _playbackDevice, song, stream, format, trackGain);
-      CleanDeadServices();
-      _activeServices.Add(new WeakReference<SoundFlowPlaybackService>(service));
+      var service = new SoundFlowPlaybackService(
+        _audioEngine,
+        _playbackDevice,
+        song,
+        stream,
+        format,
+        trackGain,
+        UnregisterPlaybackService);
+      _activeServices.Add(service);
       return service;
     }
   }
@@ -224,8 +227,10 @@ public sealed class SoundFlowAudioService : IAudioService {
     }
   }
 
-  private void CleanDeadServices() {
-    _activeServices.RemoveAll(x => !x.TryGetTarget(out _));
+  private void UnregisterPlaybackService(SoundFlowPlaybackService service) {
+    lock (_deviceLock) {
+      _activeServices.Remove(service);
+    }
   }
 
   private static bool TryFindDevice(string deviceIndexOrName, DeviceInfo[] devices, out DeviceInfo targetDevice) {

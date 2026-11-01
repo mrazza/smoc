@@ -41,6 +41,7 @@ public sealed class JsonSessionStateService : ISessionStateService {
 
   /// <inheritdoc/>
   public void Save(SessionState state) {
+    ArgumentNullException.ThrowIfNull(state);
     string tempPath = $"{_filePath}.{Guid.NewGuid():N}.tmp";
     try {
       string? directory = Path.GetDirectoryName(_filePath);
