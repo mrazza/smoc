@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using System.Text.Json;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
@@ -24,7 +23,6 @@ public sealed class SubsonicStreamingClient : IStreamingClient {
   private readonly string _username;
   private readonly string _password;
   private readonly bool _useToken;
-  private readonly ConcurrentDictionary<string, string> _songCodecs = new();
 
   private SubsonicStreamingClient(string uriScheme, string uriHost, int uriPort, string username, string password, bool useToken, ICacheService songCacheService, ICacheService albumArtCacheService) {
     _uriHost = uriHost;
@@ -131,16 +129,6 @@ public sealed class SubsonicStreamingClient : IStreamingClient {
       async ct => {
         var url = BuildUrl("stream.view", new Dictionary<string, string> { { "id", songId } });
         using var response = await _httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, ct);
-        var mediaType = response.Content.Headers.ContentType?.MediaType;
-        var detectedCodec = mediaType switch {
-          "audio/flac" => "flac",
-          "audio/ogg" => "ogg",
-          "audio/opus" => "opus",
-          "audio/mp4" or "audio/x-m4a" => "m4a",
-          "audio/aac" => "aac",
-          _ => "mp3",
-        };
-        _songCodecs[songId] = detectedCodec;
         using var contentStream = await response.Content.ReadAsStreamAsync(ct) ?? throw new InvalidOperationException("Failed to get song stream");
         var memoryStream = new MemoryStream();
         await contentStream.CopyToAsync(memoryStream, ct);
@@ -148,8 +136,7 @@ public sealed class SubsonicStreamingClient : IStreamingClient {
         return memoryStream;
       },
       cancellationToken);
-    var codec = _songCodecs.GetValueOrDefault(songId, "mp3");
-    return new SongStream(songId, codec, stream);
+    return new SongStream(songId, "mp3", stream);
   }
 
   /// <inheritdoc/>
