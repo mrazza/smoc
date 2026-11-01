@@ -26,6 +26,8 @@ public sealed class SoundFlowPlaybackService : IPlaybackService {
   private readonly object _spectrumLock = new();
   private readonly object _mixerLock = new();
   private bool _isAddedToMixer;
+  private readonly Action<SoundFlowPlaybackService>? _onDispose;
+  private bool _isDisposed;
 
   /// <inheritdoc/>
   public event EventHandler? SongEnded;
@@ -126,11 +128,20 @@ public sealed class SoundFlowPlaybackService : IPlaybackService {
   /// <param name="songStream">The stream of the song to play.</param>
   /// <param name="audioFormat">The format of the audio.</param>
   /// <param name="trackGain">The normalized track gain multiplier.</param>
-  public SoundFlowPlaybackService(MiniAudioEngine audioEngine, AudioPlaybackDevice playbackDevice, Song song, Stream songStream, AudioFormat audioFormat, float trackGain = 1.0f) {
+  /// <param name="onDispose">Optional callback invoked upon disposal.</param>
+  public SoundFlowPlaybackService(
+    MiniAudioEngine audioEngine,
+    AudioPlaybackDevice playbackDevice,
+    Song song,
+    Stream songStream,
+    AudioFormat audioFormat,
+    float trackGain = 1.0f,
+    Action<SoundFlowPlaybackService>? onDispose = null) {
     _playbackDevice = playbackDevice;
     _song = song;
     _songStream = songStream;
     _audioFormat = audioFormat;
+    _onDispose = onDispose;
 
     _streamDataProvider = new AssetDataProvider(audioEngine, audioFormat, songStream);
     _soundPlayer = new SoundPlayer(audioEngine, audioFormat, _streamDataProvider);
@@ -155,6 +166,9 @@ public sealed class SoundFlowPlaybackService : IPlaybackService {
   /// <param name="newDevice">The new audio playback device.</param>
   internal void SwitchPlaybackDevice(AudioPlaybackDevice newDevice) {
     lock (_mixerLock) {
+      if (_isDisposed) {
+        return;
+      }
       if (_isAddedToMixer && !_playbackDevice.IsDisposed) {
         _playbackDevice.MasterMixer.RemoveComponent(_soundPlayer);
       }
@@ -172,6 +186,9 @@ public sealed class SoundFlowPlaybackService : IPlaybackService {
     }
 
     lock (_mixerLock) {
+      if (_isDisposed) {
+        return;
+      }
       if (!_isAddedToMixer && !_playbackDevice.IsDisposed) {
         _playbackDevice.MasterMixer.AddComponent(_soundPlayer);
         _isAddedToMixer = true;
@@ -212,14 +229,19 @@ public sealed class SoundFlowPlaybackService : IPlaybackService {
 
   /// <inheritdoc/>
   public void Dispose() {
-    if (_spectrumAnalyzer != null) {
-      _soundPlayer.RemoveAnalyzer(_spectrumAnalyzer);
-    }
     lock (_mixerLock) {
+      if (_isDisposed) {
+        return;
+      }
+      _isDisposed = true;
       if (_isAddedToMixer && !_playbackDevice.IsDisposed) {
         _playbackDevice.MasterMixer.RemoveComponent(_soundPlayer);
         _isAddedToMixer = false;
       }
+    }
+    _onDispose?.Invoke(this);
+    if (_spectrumAnalyzer != null) {
+      _soundPlayer.RemoveAnalyzer(_spectrumAnalyzer);
     }
     _soundPlayer.Dispose();
     _streamDataProvider.Dispose();

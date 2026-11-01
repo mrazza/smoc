@@ -262,4 +262,14 @@ public sealed class JsonSessionStateServiceTest : IDisposable {
     string expectedSuffix = Path.Combine(".config", "smoc", "session.json");
     Assert.EndsWith(expectedSuffix, service.FilePath);
   }
+
+  /// <summary>
+  /// Verifies that <see cref="JsonSessionStateService.Save"/> throws <see cref="ArgumentNullException"/> when state is null.
+  /// </summary>
+  [Fact]
+  public void Save_NullState_ThrowsArgumentNullException() {
+    var sut = new JsonSessionStateService(_sessionFilePath);
+
+    Assert.Throws<ArgumentNullException>(() => sut.Save(null!));
+  }
 }
