@@ -277,7 +277,8 @@ Create or edit `~/.config/smoc/config.json` to customize settings.
     "VisualizerFps": 24,
     "EnableLoudnessNormalization": true,
     "LoudnessNormalizationMode": "Full",
-    "AudioDevice": null
+    "AudioDevice": null,
+    "DeduplicateArtistSingles": true
   },
   "SubsonicConfig": {
     "ServerScheme": "https",
@@ -316,6 +317,7 @@ Create or edit `~/.config/smoc/config.json` to customize settings.
 | `SmocConfiguration` | `EnableLoudnessNormalization` | `bool` | `true` | Enable track loudness normalization |
 | `SmocConfiguration` | `LoudnessNormalizationMode` | `LoudnessNormalizationMode` | `Full` | Loudness normalization mode (`Full`, `AttenuateOnly`) |
 | `SmocConfiguration` | `AudioDevice` | `string` | `null` | Preferred audio output device name or index (`null` = system default) |
+| `SmocConfiguration` | `DeduplicateArtistSingles` | `bool` | `true` | Filter out duplicate teaser singles already on an album in Artist mode |
 | `SubsonicConfig` | `ServerScheme` | `string` | `http` | Subsonic API URI scheme (`http`, `https`) |
 | `SubsonicConfig` | `ServerHost` | `string` | `null` | Subsonic server hostname |
 | `SubsonicConfig` | `ServerPort` | `int` | `80` | Subsonic server port |

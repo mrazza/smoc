@@ -77,6 +77,13 @@ public class SmocConfiguration {
   public string? AudioDevice { get; set; } = null;
 
   /// <summary>
+  /// Gets or sets whether to filter out standalone single releases that duplicate a track
+  /// already present on an album by the same artist when viewing in Artist mode.
+  /// The default value is true.
+  /// </summary>
+  public bool DeduplicateArtistSingles { get; set; } = true;
+
+  /// <summary>
   /// The static facade instance containing the current effective values.
   /// </summary>
   public static SmocConfiguration Defaults { get; set; } = new();

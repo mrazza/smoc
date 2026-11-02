@@ -8,4 +8,5 @@ namespace Smoc.Streaming;
 /// <param name="Name">The name of the album.</param>
 /// <param name="Covers">The album covers.</param>
 /// <param name="ReleaseYear">The year the album was released.</param>
-public sealed record Album(string Id, Artist Artist, string Name, IEnumerable<AlbumCover> Covers, int? ReleaseYear = null) : Entity(Id);
+/// <param name="Type">The type of release (Album, Ep, Single).</param>
+public sealed record Album(string Id, Artist Artist, string Name, IEnumerable<AlbumCover> Covers, int? ReleaseYear = null, AlbumType Type = AlbumType.Album) : Entity(Id);

@@ -2,6 +2,7 @@ namespace Smoc.Ui;
 
 using System;
 using System.Collections.ObjectModel;
+using Smoc.Configuration;
 using Smoc.Services;
 using Smoc.Streaming;
 using Smoc.Ui.Components;
@@ -130,23 +131,27 @@ public sealed class ArtistView : View {
 
       var failedAlbums = 0;
       Exception? lastAlbumError = null;
+      using var semaphore = new SemaphoreSlim(10, 10);
       var songTasks = albums.Select(async album => {
+        await semaphore.WaitAsync(token);
         try {
           var albumSongs = await _streamingClient.GetSongsByAlbumAsync(album, token);
           if (albumSongs is null) {
             throw new InvalidOperationException($"Null song list returned for album '{album.Name}' ({album.Id}).");
           }
-          return albumSongs;
+          return (Album: album, Songs: albumSongs);
         } catch (OperationCanceledException) {
           throw;
         } catch (Exception ex) {
           Interlocked.Increment(ref failedAlbums);
           lastAlbumError = ex;
           Logging.Warning($"Failed to load songs for album '{album.Name}' ({album.Id}): {ex.Message}");
-          return [];
+          return (Album: album, Songs: (List<Song>)[]);
+        } finally {
+          semaphore.Release();
         }
       });
-      var songs = (await Task.WhenAll(songTasks)).SelectMany(s => s).ToList();
+      var albumResults = await Task.WhenAll(songTasks);
 
       if (token.IsCancellationRequested) {
         return;
@@ -154,6 +159,27 @@ public sealed class ArtistView : View {
 
       if (failedAlbums == albums.Count && lastAlbumError is not null) {
         throw lastAlbumError;
+      }
+
+      List<Song> songs;
+      if (SmocConfiguration.Defaults.DeduplicateArtistSingles) {
+        var albumTrackTitles = new HashSet<string>(
+            albumResults
+                .Where(r => r.Album.Type == AlbumType.Album)
+                .SelectMany(r => r.Songs)
+                .Select(s => s.Title),
+            StringComparer.OrdinalIgnoreCase);
+
+        songs = albumResults
+            .SelectMany(r => {
+              if (r.Album.Type == AlbumType.Single) {
+                return r.Songs.Where(s => !albumTrackTitles.Contains(s.Title));
+              }
+              return r.Songs;
+            })
+            .ToList();
+      } else {
+        songs = albumResults.SelectMany(r => r.Songs).ToList();
       }
 
       Logging.Information($"Loaded {songs.Count} songs for artist {selectedArtist.Item.Name}.");
