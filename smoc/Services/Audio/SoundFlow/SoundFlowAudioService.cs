@@ -171,41 +171,58 @@ public sealed class SoundFlowAudioService : IAudioService {
 
   /// <inheritdoc/>
   public IPlaybackService MakePlaybackService(Song song, Stream stream, string codec, float? loudnessDb, CancellationToken cancellationToken = default) {
+    AudioPlaybackDevice initialDevice;
     lock (_deviceLock) {
       if (_playbackDevice.IsDisposed) {
         throw new InvalidOperationException("Audio service is not initialized.");
       }
+      initialDevice = _playbackDevice;
+    }
 
-      AudioFormat format;
-      using (var decoder = _audioEngine.CreateDecoder(stream, codec, AudioFormat.DvdHq)) {
-        format = new AudioFormat {
-          Format = decoder.SampleFormat,
-          Channels = decoder.Channels,
-          SampleRate = decoder.SampleRate,
-          Layout = AudioFormat.GetLayoutFromChannels(decoder.Channels)
-        };
-      }
-      if (stream.CanSeek) {
-        stream.Seek(0, SeekOrigin.Begin);
-      }
+    AudioFormat format;
+    using (var decoder = _audioEngine.CreateDecoder(stream, codec, AudioFormat.DvdHq)) {
+      format = new AudioFormat {
+        Format = decoder.SampleFormat,
+        Channels = decoder.Channels,
+        SampleRate = decoder.SampleRate,
+        Layout = AudioFormat.GetLayoutFromChannels(decoder.Channels)
+      };
+    }
+    if (stream.CanSeek) {
+      stream.Seek(0, SeekOrigin.Begin);
+    }
+    cancellationToken.ThrowIfCancellationRequested();
+
+    float trackGain = 1.0f;
+    if (SmocConfiguration.Defaults.EnableLoudnessNormalization && loudnessDb.HasValue) {
+      bool attenuateOnly = SmocConfiguration.Defaults.LoudnessNormalizationMode == LoudnessNormalizationMode.AttenuateOnly;
+      trackGain = AudioMath.CalculateNormalizationGain(loudnessDb.Value, attenuateOnly);
+    }
+
+    var service = new SoundFlowPlaybackService(
+      _audioEngine,
+      initialDevice,
+      song,
+      stream,
+      format,
+      trackGain,
+      UnregisterPlaybackService);
+
+    try {
       cancellationToken.ThrowIfCancellationRequested();
-
-      float trackGain = 1.0f;
-      if (SmocConfiguration.Defaults.EnableLoudnessNormalization && loudnessDb.HasValue) {
-        bool attenuateOnly = SmocConfiguration.Defaults.LoudnessNormalizationMode == LoudnessNormalizationMode.AttenuateOnly;
-        trackGain = AudioMath.CalculateNormalizationGain(loudnessDb.Value, attenuateOnly);
+      lock (_deviceLock) {
+        if (_playbackDevice.IsDisposed) {
+          throw new InvalidOperationException("Audio service is not initialized.");
+        }
+        if (!ReferenceEquals(_playbackDevice, initialDevice)) {
+          service.SwitchPlaybackDevice(_playbackDevice);
+        }
+        _activeServices.Add(service);
       }
-
-      var service = new SoundFlowPlaybackService(
-        _audioEngine,
-        _playbackDevice,
-        song,
-        stream,
-        format,
-        trackGain,
-        UnregisterPlaybackService);
-      _activeServices.Add(service);
       return service;
+    } catch {
+      service.Dispose();
+      throw;
     }
   }
 

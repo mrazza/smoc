@@ -25,6 +25,7 @@ public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
   private Song? _preloadingSong;
   private Task<IPlaybackService>? _preloadingTask;
   private TimeSpan? _pendingRestorePosition;
+  private bool _isPlayPending;
 
   /// <inheritdoc/>
   public event EventHandler<float>? VolumeChanged;
@@ -85,6 +86,8 @@ public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
 
   /// <inheritdoc/>
   public int CurrentPlaybackIndex => _currentPlaybackIndex;
+
+  internal Task? PreloadingTask => _preloadingTask;
 
   /// <inheritdoc/>
   public float Volume {
@@ -187,7 +190,7 @@ public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
       return;
     }
 
-    var wasPlaying = PlaybackState == PlaybackState.Playing;
+    var wasPlaying = PlaybackState == PlaybackState.Playing || _isPlayPending;
 
     Stop();
     _pendingRestorePosition = null;
@@ -228,44 +231,81 @@ public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
       throw new InvalidOperationException("No song in queue");
     }
 
+    _isPlayPending = true;
     // Cancel any previous playback setup
     var token = _playbackCts.Replace(new CancellationTokenSource()).Token;
 
     try {
       IPlaybackService playback;
 
-      if (_preloadingSong == currentSong && _preloadedPlaybackService.Resource is { } preloaded) {
+      if (_preloadingSong is not null && _preloadingSong != currentSong && _preloadingSong != GetNextSong()) {
+        CancelPreload();
+      }
+
+      if (_preloadingSong == currentSong && _preloadedPlaybackService.Resource is { }) {
         Logging.Debug($"Using preloaded playback service for {currentSong.Title} ({currentSong.Id})...");
         playback = _preloadedPlaybackService.Release()!;
         _preloadingSong = null;
         _preloadingTask = null;
       } else if (_preloadingSong == currentSong && _preloadingTask is { } preloadTask) {
         Logging.Debug($"Waiting for preloading task for {currentSong.Title} ({currentSong.Id})...");
-        playback = await preloadTask;
+        try {
+          playback = await preloadTask.WaitAsync(token);
+        } catch (OperationCanceledException) when (token.IsCancellationRequested) {
+          if (_preloadingSong == currentSong) {
+            CancelPreload();
+          }
+          throw;
+        } catch {
+          if (_preloadingSong == currentSong) {
+            CancelPreload();
+          }
+          Logging.Debug($"Starting playback for {currentSong.Title} ({currentSong.Id}) after preload cancelled...");
+          var songStream = await _streamingClient.GetSongStreamAsync(currentSong.Id, token);
+
+          if (token.IsCancellationRequested) {
+            songStream.Stream.Dispose();
+            token.ThrowIfCancellationRequested();
+          }
+
+          Logging.Debug($"Creating playing service for {currentSong.Title} ({currentSong.Id})...");
+          playback = await CreatePlaybackServiceAsync(currentSong, songStream, token);
+        }
+        if (token.IsCancellationRequested) {
+          if (_preloadedPlaybackService.Resource == playback) {
+            _preloadedPlaybackService.Replace(null!);
+          } else {
+            playback.Dispose();
+          }
+          if (_preloadingSong == currentSong) {
+            CancelPreload();
+          }
+          token.ThrowIfCancellationRequested();
+        }
         if (_preloadedPlaybackService.Resource == playback) {
           playback = _preloadedPlaybackService.Release()!;
         }
         _preloadingSong = null;
         _preloadingTask = null;
       } else {
+        if (_preloadingSong != GetNextSong()) {
+          CancelPreload();
+        }
         Logging.Debug($"Starting playback for {currentSong.Title} ({currentSong.Id})...");
         var songStream = await _streamingClient.GetSongStreamAsync(currentSong.Id, token);
 
-        token.ThrowIfCancellationRequested();
-
-        Logging.Debug($"Received stream for {currentSong.Title} ({currentSong.Id}), decoding format...");
-
-        var codec = songStream.Codec;
-        if (codec.StartsWith("mp4a")) {
-          codec = "m4a";
+        if (token.IsCancellationRequested) {
+          songStream.Stream.Dispose();
+          token.ThrowIfCancellationRequested();
         }
 
-        token.ThrowIfCancellationRequested();
-
         Logging.Debug($"Creating playing service for {currentSong.Title} ({currentSong.Id})...");
-        playback = songStream.LoudnessDb.HasValue
-          ? _audioService.MakePlaybackService(currentSong, songStream.Stream, codec, songStream.LoudnessDb.Value, token)
-          : _audioService.MakePlaybackService(currentSong, songStream.Stream, codec, token);
+        playback = await CreatePlaybackServiceAsync(currentSong, songStream, token);
+      }
+
+      if (token.IsCancellationRequested) {
+        playback.Dispose();
+        token.ThrowIfCancellationRequested();
       }
 
       _playbackService.Replace(playback);
@@ -282,11 +322,18 @@ public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
         }
       }
       playback.Play();
+      _isPlayPending = false;
 
       EnsurePreload();
     } catch (OperationCanceledException) {
+      if (_playbackCts.Resource?.Token == token) {
+        _isPlayPending = false;
+      }
       Logging.Debug($"Playback setup for {currentSong.Title} cancelled.");
     } catch (Exception e) {
+      if (_playbackCts.Resource?.Token == token) {
+        _isPlayPending = false;
+      }
       Logging.Error($"Playback setup for {currentSong.Title} failed: {e}");
       if (IsForbiddenHttpError(e)) {
         _mainWindow.DisplayError(
@@ -299,11 +346,13 @@ public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
 
   /// <inheritdoc/>
   public void Pause() {
+    _isPlayPending = false;
     _playbackService.Resource?.Pause();
   }
 
   /// <inheritdoc/>
   public void Stop() {
+    _isPlayPending = false;
     _playbackService.Resource?.Stop();
   }
 
@@ -315,7 +364,7 @@ public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
     } else if (_currentPlaybackIndex > 0) {
       Logging.Debug("Previous song below threshold, going to previous...");
       await ChangeTrack(_currentPlaybackIndex - 1);
-      if (PlaybackState != PlaybackState.Playing) {
+      if (PlaybackState != PlaybackState.Playing && !_isPlayPending) {
         await Play();
       }
     } else {
@@ -329,7 +378,7 @@ public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
     Logging.Debug($"Playing next song...");
     if (_currentPlaybackIndex + 1 < _playbackQueue.Count) {
       await ChangeTrack(_currentPlaybackIndex + 1);
-      if (PlaybackState != PlaybackState.Playing) {
+      if (PlaybackState != PlaybackState.Playing && !_isPlayPending) {
         await Play();
       }
     } else {
@@ -338,18 +387,42 @@ public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
     }
   }
 
+  private void CancelPreload() {
+    _preloadingSong = null;
+    _preloadingTask = null;
+    _preloadedPlaybackService.Replace(null!);
+    _preloadCts.Replace(new CancellationTokenSource());
+  }
+
+  private Task<IPlaybackService> CreatePlaybackServiceAsync(Song song, SongStream songStream, CancellationToken token) {
+    var codec = songStream.Codec;
+    if (codec.StartsWith("mp4a")) {
+      codec = "m4a";
+    }
+
+    return Task.Run(() => {
+      try {
+        token.ThrowIfCancellationRequested();
+        return songStream.LoudnessDb.HasValue
+          ? _audioService.MakePlaybackService(song, songStream.Stream, codec, songStream.LoudnessDb.Value, token)
+          : _audioService.MakePlaybackService(song, songStream.Stream, codec, token);
+      } catch {
+        songStream.Stream.Dispose();
+        throw;
+      }
+    }, token);
+  }
+
   private void EnsurePreload() {
     var nextSongIndex = _currentPlaybackIndex + 1;
     if (nextSongIndex >= _playbackQueue.Count) {
-      _preloadingSong = null;
-      _preloadingTask = null;
-      _preloadedPlaybackService.Replace(null!);
-      _preloadCts.Replace(new CancellationTokenSource());
+      CancelPreload();
       return;
     }
 
     var nextSong = _playbackQueue[nextSongIndex];
-    if (_preloadingSong == nextSong) {
+    if (_preloadingSong == nextSong &&
+        (_preloadedPlaybackService.Resource != null || (_preloadingTask is { } existingTask && !existingTask.IsFaulted && !existingTask.IsCanceled))) {
       return;
     }
 
@@ -363,19 +436,17 @@ public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
     try {
       Logging.Debug($"Preloading stream for {song.Title} ({song.Id})...");
       var songStream = await _streamingClient.GetSongStreamAsync(song.Id, token);
-      token.ThrowIfCancellationRequested();
-
-      var codec = songStream.Codec;
-      if (codec.StartsWith("mp4a")) {
-        codec = "m4a";
+      if (token.IsCancellationRequested) {
+        songStream.Stream.Dispose();
+        token.ThrowIfCancellationRequested();
       }
 
-      var playback = songStream.LoudnessDb.HasValue
-        ? _audioService.MakePlaybackService(song, songStream.Stream, codec, songStream.LoudnessDb.Value, token)
-        : _audioService.MakePlaybackService(song, songStream.Stream, codec, token);
+      var playback = await CreatePlaybackServiceAsync(song, songStream, token);
+      if (token.IsCancellationRequested) {
+        playback.Dispose();
+        token.ThrowIfCancellationRequested();
+      }
       _preloadedPlaybackService.Replace(playback);
-      token.ThrowIfCancellationRequested();
-
       return playback;
     } catch (OperationCanceledException) {
       Logging.Debug($"Preload cancelled for {song.Title}.");
@@ -486,6 +557,15 @@ public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
     }
 
     return _playbackQueue[_currentPlaybackIndex];
+  }
+
+  private Song? GetNextSong() {
+    var nextIndex = _currentPlaybackIndex + 1;
+    if (nextIndex >= _playbackQueue.Count) {
+      return null;
+    }
+
+    return _playbackQueue[nextIndex];
   }
 
   private static bool IsForbiddenHttpError(Exception ex) {
