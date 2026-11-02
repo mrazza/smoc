@@ -58,8 +58,8 @@ public sealed class JsonSessionStateService : ISessionStateService {
         if (File.Exists(tempPath)) {
           File.Delete(tempPath);
         }
-      } catch {
-        // Suppress cleanup failure during error recovery.
+      } catch (Exception cleanupEx) {
+        Logging.Warning($"Failed to delete temporary session state file '{tempPath}': {cleanupEx.Message}");
       }
     }
   }

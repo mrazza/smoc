@@ -75,15 +75,16 @@ public sealed class PlaybackQueueView : View {
   }
 
   private async void OnSongSelected(object? sender, List<Song> songs) {
+    if (songs.Count == 0) {
+      return;
+    }
     if (songs.Count > 1) {
       throw new InvalidOperationException("Multiple songs cannot be selected when changing active track");
     }
 
     try {
-      int targetIndex = songs.Count == 1 ? _songTable.GetUnfilteredIndex(songs[0]) : _songTable.SelectedRow;
-      if (targetIndex >= 0) {
-        await _playbackQueueService.ChangeTrack(targetIndex);
-      }
+      // Resolve the song's index in the full unfiltered queue in case a '/' filter is active.
+      await _playbackQueueService.ChangeTrack(_songTable.GetUnfilteredIndex(songs[0]));
     } catch (Exception e) {
       Logging.Error($"Failed to change track: {e}");
     }

@@ -11,25 +11,11 @@ namespace Smoc.Tests.Services.Audio;
 public class AudioDeviceTest {
 
   /// <summary>
-  /// Minimal implementation of <see cref="IAudioService"/> using default interface methods.
+  /// Test implementation of <see cref="IAudioService"/>.
   /// </summary>
-  private sealed class DefaultAudioService : IAudioService {
+  private sealed class TestAudioService : IAudioService {
     public float Volume { get; set; } = 1.0f;
-
-    public void Dispose() {
-    }
-
-    public IPlaybackService MakePlaybackService(Song song, Stream stream, string codec, float? loudnessDb, CancellationToken cancellationToken = default) {
-      throw new NotImplementedException();
-    }
-  }
-
-  /// <summary>
-  /// Custom implementation of <see cref="IAudioService"/> overriding default interface methods.
-  /// </summary>
-  private sealed class OverridingAudioService : IAudioService {
-    public float Volume { get; set; } = 1.0f;
-    public string? SelectedDevice { get; private set; }
+    public int? SelectedDeviceIndex { get; private set; }
 
     /// <inheritdoc/>
     public event EventHandler<AudioDeviceInfo?>? PlaybackDeviceChanged;
@@ -43,15 +29,14 @@ public class AudioDeviceTest {
 
     public IReadOnlyList<AudioDeviceInfo> GetPlaybackDevices() {
       return [
-        new AudioDeviceInfo(0, "Default Speakers", true, SelectedDevice == "0" || SelectedDevice == "Default Speakers"),
-        new AudioDeviceInfo(1, "Headphones", false, SelectedDevice == "1" || SelectedDevice == "Headphones")
+        new AudioDeviceInfo(0, "Default Speakers", true, SelectedDeviceIndex == 0 || SelectedDeviceIndex == null),
+        new AudioDeviceInfo(1, "Headphones", false, SelectedDeviceIndex == 1)
       ];
     }
 
-    public bool SelectPlaybackDevice(string deviceIndexOrName) {
-      if (deviceIndexOrName == "0" || deviceIndexOrName == "1" ||
-          deviceIndexOrName == "Default Speakers" || deviceIndexOrName == "Headphones") {
-        SelectedDevice = deviceIndexOrName;
+    public bool SelectPlaybackDevice(int deviceIndex) {
+      if (deviceIndex >= 0 && deviceIndex < 2) {
+        SelectedDeviceIndex = deviceIndex;
         PlaybackDeviceChanged?.Invoke(this, ActivePlaybackDevice);
         return true;
       }
@@ -172,55 +157,27 @@ public class AudioDeviceTest {
   }
 
   /// <summary>
-  /// Verifies that default <see cref="IAudioService.GetPlaybackDevices"/> returns an empty list.
+  /// Verifies that <see cref="IAudioService.GetPlaybackDevices"/> returns available devices.
   /// </summary>
   [Fact]
-  public void IAudioService_GetPlaybackDevices_DefaultReturnsEmpty() {
-    IAudioService service = new DefaultAudioService();
+  public void IAudioService_GetPlaybackDevices_ReturnsAvailableDevices() {
+    IAudioService service = new TestAudioService();
 
     var devices = service.GetPlaybackDevices();
 
-    Assert.NotNull(devices);
-    Assert.Empty(devices);
+    Assert.Equal(2, devices.Count);
+    Assert.Equal("Default Speakers", devices[0].Name);
+    Assert.Equal("Headphones", devices[1].Name);
   }
 
   /// <summary>
-  /// Verifies that default <see cref="IAudioService.SelectPlaybackDevice"/> returns false.
+  /// Verifies that <see cref="IAudioService.SelectPlaybackDevice(int)"/> selects a device by index.
   /// </summary>
   [Fact]
-  public void IAudioService_SelectPlaybackDevice_DefaultReturnsFalse() {
-    IAudioService service = new DefaultAudioService();
+  public void IAudioService_SelectPlaybackDevice_ByIndex_WorksAsExpected() {
+    IAudioService service = new TestAudioService();
 
-    bool resultIndex = service.SelectPlaybackDevice("0");
-    bool resultName = service.SelectPlaybackDevice("Headphones");
-
-    Assert.False(resultIndex);
-    Assert.False(resultName);
-  }
-
-  /// <summary>
-  /// Verifies that default <see cref="IAudioService.ActivePlaybackDevice"/> returns null.
-  /// </summary>
-  [Fact]
-  public void IAudioService_ActivePlaybackDevice_DefaultReturnsNull() {
-    IAudioService service = new DefaultAudioService();
-
-    Assert.Null(service.ActivePlaybackDevice);
-  }
-
-  /// <summary>
-  /// Verifies that implementations can override the default interface methods.
-  /// </summary>
-  [Fact]
-  public void IAudioService_OverridingImplementation_WorksAsExpected() {
-    IAudioService service = new OverridingAudioService();
-
-    var initialDevices = service.GetPlaybackDevices();
-    Assert.Equal(2, initialDevices.Count);
-    Assert.Equal("Default Speakers", initialDevices[0].Name);
-    Assert.Equal("Headphones", initialDevices[1].Name);
-
-    bool selected = service.SelectPlaybackDevice("Headphones");
+    bool selected = service.SelectPlaybackDevice(1);
     Assert.True(selected);
 
     var activeDevice = service.ActivePlaybackDevice;
@@ -228,16 +185,38 @@ public class AudioDeviceTest {
     Assert.Equal("Headphones", activeDevice.Name);
     Assert.True(activeDevice.IsActive);
 
-    bool failedSelect = service.SelectPlaybackDevice("NonExistentDevice");
+    bool failedSelect = service.SelectPlaybackDevice(99);
     Assert.False(failedSelect);
   }
 
   /// <summary>
-  /// Verifies that default <see cref="IAudioService.PlaybackDeviceChanged"/> event can be subscribed to and unsubscribed from.
+  /// Verifies that default interface method <see cref="IAudioService.SelectPlaybackDevice(AudioDeviceInfo)"/> delegates to index selection.
   /// </summary>
   [Fact]
-  public void IAudioService_PlaybackDeviceChanged_DefaultInterfaceAllowsSubscription() {
-    IAudioService service = new DefaultAudioService();
+  public void IAudioService_SelectPlaybackDevice_ByDeviceInfo_DelegatesToIndex() {
+    IAudioService service = new TestAudioService();
+    var targetDevice = new AudioDeviceInfo(1, "Headphones", false, false);
+
+    bool selected = service.SelectPlaybackDevice(targetDevice);
+    Assert.True(selected);
+
+    var activeDevice = service.ActivePlaybackDevice;
+    Assert.NotNull(activeDevice);
+    Assert.Equal(1, activeDevice.Index);
+    Assert.Equal("Headphones", activeDevice.Name);
+    Assert.True(activeDevice.IsActive);
+
+    var invalidDevice = new AudioDeviceInfo(99, "Unknown", false, false);
+    bool failedSelect = service.SelectPlaybackDevice(invalidDevice);
+    Assert.False(failedSelect);
+  }
+
+  /// <summary>
+  /// Verifies that <see cref="IAudioService.PlaybackDeviceChanged"/> event can be subscribed to and unsubscribed from.
+  /// </summary>
+  [Fact]
+  public void IAudioService_PlaybackDeviceChanged_AllowsSubscription() {
+    IAudioService service = new TestAudioService();
     EventHandler<AudioDeviceInfo?> handler = (_, _) => { };
 
     service.PlaybackDeviceChanged += handler;
@@ -249,7 +228,7 @@ public class AudioDeviceTest {
   /// </summary>
   [Fact]
   public void IAudioService_PlaybackDeviceChanged_InvokedWhenSelectPlaybackDeviceSucceeds() {
-    IAudioService service = new OverridingAudioService();
+    IAudioService service = new TestAudioService();
     AudioDeviceInfo? changedDevice = null;
     int eventCount = 0;
 
@@ -258,7 +237,7 @@ public class AudioDeviceTest {
       changedDevice = device;
     };
 
-    bool selected = service.SelectPlaybackDevice("Headphones");
+    bool selected = service.SelectPlaybackDevice(1);
 
     Assert.True(selected);
     Assert.Equal(1, eventCount);
@@ -272,14 +251,14 @@ public class AudioDeviceTest {
   /// </summary>
   [Fact]
   public void IAudioService_PlaybackDeviceChanged_NotInvokedWhenSelectPlaybackDeviceFails() {
-    IAudioService service = new OverridingAudioService();
+    IAudioService service = new TestAudioService();
     int eventCount = 0;
 
     service.PlaybackDeviceChanged += (sender, device) => {
       eventCount++;
     };
 
-    bool selected = service.SelectPlaybackDevice("NonExistentDevice");
+    bool selected = service.SelectPlaybackDevice(99);
 
     Assert.False(selected);
     Assert.Equal(0, eventCount);

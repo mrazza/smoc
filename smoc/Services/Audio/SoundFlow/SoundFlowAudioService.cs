@@ -120,22 +120,16 @@ public sealed class SoundFlowAudioService : IAudioService {
   }
 
   /// <inheritdoc/>
-  public bool SelectPlaybackDevice(string deviceIndexOrName) {
-    if (string.IsNullOrWhiteSpace(deviceIndexOrName)) {
-      return false;
-    }
-
+  public bool SelectPlaybackDevice(int deviceIndex) {
     AudioDeviceInfo? activeDevice;
     lock (_deviceLock) {
       _audioEngine.UpdateAudioDevicesInfo();
       var devices = _audioEngine.PlaybackDevices;
-      if (devices == null || devices.Length == 0) {
+      if (devices == null || deviceIndex < 0 || deviceIndex >= devices.Length) {
         return false;
       }
 
-      if (!TryFindDevice(deviceIndexOrName, devices, out var targetDevice)) {
-        return false;
-      }
+      var targetDevice = devices[deviceIndex];
 
       AudioPlaybackDevice newPlaybackDevice;
       try {

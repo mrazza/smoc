@@ -138,17 +138,17 @@ public class CommandLineTest {
     context.KeyDown(Key.P).KeyDown(Key.L).KeyDown(Key.A).KeyDown(Key.Y).KeyDown(Key.Enter);
     Assert.Equal(["play"], commandLine.History);
 
-    commandLine.StartInput(':');
+    commandLine.StartInput(CommandLineMode.Command);
     context.KeyDown(Key.P).KeyDown(Key.A).KeyDown(Key.U).KeyDown(Key.S).KeyDown(Key.E).KeyDown(Key.Enter);
     Assert.Equal(["play", "pause"], commandLine.History);
 
     // Consecutive duplicate should not be added
-    commandLine.StartInput(':');
+    commandLine.StartInput(CommandLineMode.Command);
     context.KeyDown(Key.P).KeyDown(Key.A).KeyDown(Key.U).KeyDown(Key.S).KeyDown(Key.E).KeyDown(Key.Enter);
     Assert.Equal(["play", "pause"], commandLine.History);
 
     // Empty command should not be added
-    commandLine.StartInput(':');
+    commandLine.StartInput(CommandLineMode.Command);
     context.KeyDown(Key.Enter);
     Assert.Equal(["play", "pause"], commandLine.History);
   }
@@ -160,11 +160,11 @@ public class CommandLineTest {
     context.Add(commandLine);
 
     context.KeyDown(Key.A).KeyDown(Key.Enter);
-    commandLine.StartInput(':');
+    commandLine.StartInput(CommandLineMode.Command);
     context.KeyDown(Key.B).KeyDown(Key.Enter);
 
     // Type a draft
-    commandLine.StartInput(':');
+    commandLine.StartInput(CommandLineMode.Command);
     context.KeyDown(Key.D).KeyDown(Key.R);
     Assert.Equal(":dr", commandLine.Text);
 
@@ -287,8 +287,8 @@ public class CommandLineTest {
     commandLine.FilterChanged += (_, text) => filterChanges.Add(text);
     commandLine.FilterAccepted += (_, text) => acceptedFilter = text;
 
-    commandLine.StartInput('/');
-    Assert.Equal('/', commandLine.Prefix);
+    commandLine.StartInput(CommandLineMode.Filter);
+    Assert.Equal(CommandLineMode.Filter, commandLine.InputMode);
     Assert.Equal("/", commandLine.Text);
 
     context.KeyDown(Key.R).KeyDown(Key.O).KeyDown(Key.C).KeyDown(Key.K);
@@ -308,22 +308,22 @@ public class CommandLineTest {
     bool cancelled = false;
     commandLine.CommandCancelled += (_, __) => cancelled = true;
 
-    commandLine.StartInput('/');
+    commandLine.StartInput(CommandLineMode.Filter);
     context.KeyDown(Key.Esc);
     Assert.True(cancelled);
   }
 
   [Fact]
-  public void StartInput_FilterMode_LosesFocusResetsPrefix() {
+  public void StartInput_FilterMode_LosesFocusResetsInputMode() {
     using var context = NewContext();
     var commandLine = NewCommandLine();
     var button = new Button();
     context.Add(commandLine).Add(button);
 
-    commandLine.StartInput('/');
-    Assert.Equal('/', commandLine.Prefix);
+    commandLine.StartInput(CommandLineMode.Filter);
+    Assert.Equal(CommandLineMode.Filter, commandLine.InputMode);
 
     context.Then((_) => button.SetFocus());
-    Assert.Equal(':', commandLine.Prefix);
+    Assert.Equal(CommandLineMode.Command, commandLine.InputMode);
   }
 }

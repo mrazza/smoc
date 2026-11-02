@@ -249,4 +249,23 @@ public class SongTableTest {
 
     Assert.Single(selectedSongs, song2);
   }
+
+  [Fact]
+  public void EmptyTable_EnterPressed_DoesNotInvokeSongSelected() {
+    using var context = NewContext();
+    var songTable = NewSongTable();
+    bool songSelectedInvoked = false;
+    songTable.SongSelected += (_, _) => songSelectedInvoked = true;
+
+    context.Add(songTable)
+        .KeyDown(Key.Enter);
+
+    Assert.False(songSelectedInvoked);
+  }
+
+  [Fact]
+  public void SongTable_ImplementsIFilterable() {
+    using var songTable = NewSongTable();
+    Assert.IsAssignableFrom<IFilterable>(songTable);
+  }
 }
