@@ -1,3 +1,5 @@
+using System.Net;
+using System.Net.Http;
 using Smoc.Services.Audio;
 using Smoc.Services.Util;
 using Smoc.Streaming;
@@ -286,6 +288,12 @@ public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
       Logging.Debug($"Playback setup for {currentSong.Title} cancelled.");
     } catch (Exception e) {
       Logging.Error($"Playback setup for {currentSong.Title} failed: {e}");
+      if (IsForbiddenHttpError(e)) {
+        _mainWindow.DisplayError(
+          $"Playback failed for '{currentSong.Title}' (403 Forbidden). Tokens or cookies may be expired; try running with --gentokens.");
+      } else {
+        _mainWindow.DisplayError($"Playback failed for '{currentSong.Title}': {e.Message}");
+      }
     }
   }
 
@@ -478,6 +486,20 @@ public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
     }
 
     return _playbackQueue[_currentPlaybackIndex];
+  }
+
+  private static bool IsForbiddenHttpError(Exception ex) {
+    for (var current = ex; current is not null; current = current.InnerException) {
+      if (current is AggregateException aggregateException) {
+        return aggregateException.Flatten().InnerExceptions.Any(IsForbiddenHttpError);
+      }
+      if (current is HttpRequestException httpEx &&
+          (httpEx.StatusCode == HttpStatusCode.Forbidden || httpEx.Message.Contains("403"))) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   /// <summary>

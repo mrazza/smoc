@@ -1,3 +1,5 @@
+using System.Net;
+using System.Net.Http;
 using Moq;
 using smoc.Tests.Fakes;
 using smoc.Tests.TestInfra;
@@ -1166,6 +1168,158 @@ public class StandardPlaybackQueueServiceTest {
     await sut.Play();
     Assert.Equal(PlaybackState.Playing, sut.PlaybackState);
     Assert.Equal(TimeSpan.FromSeconds(45), fakePlayerService2.CurrentTime);
+  }
+
+  /// <summary>
+  /// Verifies that when GetSongStreamAsync throws an HttpRequestException with Forbidden status,
+  /// a helpful error message suggesting --gentokens is displayed to the user.
+  /// </summary>
+  [Fact]
+  public async Task Play_StreamingClientThrowsForbiddenHttpException_DisplaysHelpfulError() {
+    using var sut = NewStandardPlaybackQueue();
+    var song = EntityTestFactory.GenerateSong(trackName: "Forbidden Track");
+    _mockStreamingClient.Setup(c => c.GetSongStreamAsync(song.Id, It.IsAny<CancellationToken>()))
+      .ThrowsAsync(new HttpRequestException("Response status code does not indicate success: 403 (Forbidden).", null, HttpStatusCode.Forbidden));
+
+    sut.QueueNext(song);
+    await sut.Play();
+
+    Assert.Single(_fakeMainWindow.DisplayedErrors);
+    Assert.Contains("Forbidden Track", _fakeMainWindow.LastDisplayedError);
+    Assert.Contains("403 Forbidden", _fakeMainWindow.LastDisplayedError);
+    Assert.Contains("--gentokens", _fakeMainWindow.LastDisplayedError);
+    Assert.Equal("Playback failed for 'Forbidden Track' (403 Forbidden). Tokens or cookies may be expired; try running with --gentokens.", _fakeMainWindow.LastDisplayedError);
+  }
+
+  /// <summary>
+  /// Verifies that when GetSongStreamAsync throws an exception whose inner exception is an HttpRequestException with Forbidden status,
+  /// a helpful error message suggesting --gentokens is displayed to the user.
+  /// </summary>
+  [Fact]
+  public async Task Play_StreamingClientThrowsInnerForbiddenHttpException_DisplaysHelpfulError() {
+    using var sut = NewStandardPlaybackQueue();
+    var song = EntityTestFactory.GenerateSong(trackName: "Inner Forbidden Track");
+    var innerException = new HttpRequestException("Forbidden", null, HttpStatusCode.Forbidden);
+    _mockStreamingClient.Setup(c => c.GetSongStreamAsync(song.Id, It.IsAny<CancellationToken>()))
+      .ThrowsAsync(new InvalidOperationException("Stream fetch failed", innerException));
+
+    sut.QueueNext(song);
+    await sut.Play();
+
+    Assert.Single(_fakeMainWindow.DisplayedErrors);
+    Assert.Equal("Playback failed for 'Inner Forbidden Track' (403 Forbidden). Tokens or cookies may be expired; try running with --gentokens.", _fakeMainWindow.LastDisplayedError);
+  }
+
+  /// <summary>
+  /// Verifies that when GetSongStreamAsync throws an exception with a message containing "403" but without StatusCode set,
+  /// a helpful error message suggesting --gentokens is displayed to the user as fallback.
+  /// </summary>
+  [Fact]
+  public async Task Play_StreamingClientThrows403MessageFallback_DisplaysHelpfulError() {
+    using var sut = NewStandardPlaybackQueue();
+    var song = EntityTestFactory.GenerateSong(trackName: "Fallback 403 Track");
+    _mockStreamingClient.Setup(c => c.GetSongStreamAsync(song.Id, It.IsAny<CancellationToken>()))
+      .ThrowsAsync(new HttpRequestException("HTTP Error 403"));
+
+    sut.QueueNext(song);
+    await sut.Play();
+
+    Assert.Single(_fakeMainWindow.DisplayedErrors);
+    Assert.Equal("Playback failed for 'Fallback 403 Track' (403 Forbidden). Tokens or cookies may be expired; try running with --gentokens.", _fakeMainWindow.LastDisplayedError);
+  }
+
+  /// <summary>
+  /// Verifies that when GetSongStreamAsync throws a general exception, the song title and exception message are displayed to the user.
+  /// </summary>
+  [Fact]
+  public async Task Play_StreamingClientThrowsGeneralException_DisplaysErrorMessage() {
+    using var sut = NewStandardPlaybackQueue();
+    var song = EntityTestFactory.GenerateSong(trackName: "Faulty Track");
+    _mockStreamingClient.Setup(c => c.GetSongStreamAsync(song.Id, It.IsAny<CancellationToken>()))
+      .ThrowsAsync(new InvalidOperationException("Decoder error"));
+
+    sut.QueueNext(song);
+    await sut.Play();
+
+    Assert.Single(_fakeMainWindow.DisplayedErrors);
+    Assert.Equal("Playback failed for 'Faulty Track': Decoder error", _fakeMainWindow.LastDisplayedError);
+  }
+
+  /// <summary>
+  /// Verifies that when MakePlaybackService throws a general exception, the song title and exception message are displayed to the user.
+  /// </summary>
+  [Fact]
+  public async Task Play_AudioServiceThrowsGeneralException_DisplaysErrorMessage() {
+    using var sut = NewStandardPlaybackQueue();
+    var song = EntityTestFactory.GenerateSong(trackName: "Audio Fault Track");
+    _mockStreamingClient.Setup(c => c.GetSongStreamAsync(song.Id, It.IsAny<CancellationToken>()))
+      .ReturnsAsync(new SongStream(song.Id, "m4a", new MemoryStream()));
+    _mockAudioService.Setup(a => a.MakePlaybackService(song, It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+      .Throws(new InvalidOperationException("Audio device initialization error"));
+
+    sut.QueueNext(song);
+    await sut.Play();
+
+    Assert.Single(_fakeMainWindow.DisplayedErrors);
+    Assert.Equal("Playback failed for 'Audio Fault Track': Audio device initialization error", _fakeMainWindow.LastDisplayedError);
+  }
+
+  /// <summary>
+  /// Verifies that when playback setup is cancelled via OperationCanceledException, no error is displayed to the user.
+  /// </summary>
+  [Fact]
+  public async Task Play_OperationCanceledException_DoesNotDisplayError() {
+    using var sut = NewStandardPlaybackQueue();
+    var song = EntityTestFactory.GenerateSong(trackName: "Canceled Track");
+    _mockStreamingClient.Setup(c => c.GetSongStreamAsync(song.Id, It.IsAny<CancellationToken>()))
+      .ThrowsAsync(new OperationCanceledException());
+
+    sut.QueueNext(song);
+    await sut.Play();
+
+    Assert.Empty(_fakeMainWindow.DisplayedErrors);
+  }
+
+  /// <summary>
+  /// Verifies that a non-HTTP exception containing "403" in its message does not trigger the 403 Forbidden message
+  /// and instead displays the standard error message.
+  /// </summary>
+  [Fact]
+  public async Task Play_NonHttpExceptionWithMessageContaining403_DisplaysStandardErrorMessage() {
+    using var sut = NewStandardPlaybackQueue();
+    var song = EntityTestFactory.GenerateSong(trackName: "Non-HTTP 403 Track");
+    _mockStreamingClient.Setup(c => c.GetSongStreamAsync(song.Id, It.IsAny<CancellationToken>()))
+      .ThrowsAsync(new InvalidOperationException("Track 403 failed to decode"));
+
+    sut.QueueNext(song);
+    await sut.Play();
+
+    Assert.Single(_fakeMainWindow.DisplayedErrors);
+    Assert.Equal("Playback failed for 'Non-HTTP 403 Track': Track 403 failed to decode", _fakeMainWindow.LastDisplayedError);
+  }
+
+  /// <summary>
+  /// Verifies that a nested AggregateException containing a 403 Forbidden HttpRequestException is detected.
+  /// </summary>
+  [Fact]
+  public async Task Play_NestedAggregateExceptionWithForbiddenError_DisplaysHelpfulError() {
+    using var sut = NewStandardPlaybackQueue();
+    var song = EntityTestFactory.GenerateSong(trackName: "Nested Aggregate Track");
+    var nestedException = new InvalidOperationException(
+      "Wrapper",
+      new AggregateException(
+        new InvalidOperationException("Other"),
+        new HttpRequestException("Forbidden", null, HttpStatusCode.Forbidden)));
+    _mockStreamingClient.Setup(c => c.GetSongStreamAsync(song.Id, It.IsAny<CancellationToken>()))
+      .ThrowsAsync(nestedException);
+
+    sut.QueueNext(song);
+    await sut.Play();
+
+    Assert.Single(_fakeMainWindow.DisplayedErrors);
+    Assert.Equal(
+      "Playback failed for 'Nested Aggregate Track' (403 Forbidden). Tokens or cookies may be expired; try running with --gentokens.",
+      _fakeMainWindow.LastDisplayedError);
   }
 
   /// <summary>
