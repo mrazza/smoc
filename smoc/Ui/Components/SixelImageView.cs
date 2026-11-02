@@ -78,7 +78,7 @@ public sealed class SixelImageView : ImageView {
     }
 
     var targetSize = FitImageInViewportInPixels(new(_image.Width, _image.Height));
-    var resizedImage = _image.Clone(i => i.Resize(targetSize.Width, targetSize.Height));
+    using var resizedImage = _image.Clone(i => i.Resize(targetSize.Width, targetSize.Height));
     return ConvertToColorArray(resizedImage);
   }
 
@@ -95,5 +95,16 @@ public sealed class SixelImageView : ImageView {
     }
 
     return colors;
+  }
+
+  /// <inheritdoc />
+  protected override void Dispose(bool disposing) {
+    if (disposing) {
+      _cancellationTokenSource?.Cancel();
+      _cancellationTokenSource?.Dispose();
+      _cancellationTokenSource = null;
+    }
+
+    base.Dispose(disposing);
   }
 }

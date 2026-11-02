@@ -15,7 +15,7 @@ namespace Smoc.Services.Audio.SoundFlow;
 /// Implementation of <see cref="IPlaybackService"/> using SoundFlow.
 /// </summary>  
 public sealed class SoundFlowPlaybackService : IPlaybackService {
-  private readonly AudioPlaybackDevice _playbackDevice;
+  private AudioPlaybackDevice _playbackDevice;
   private readonly Stream _songStream;
   private readonly AudioFormat _audioFormat;
   private readonly AssetDataProvider _streamDataProvider;
@@ -24,6 +24,10 @@ public sealed class SoundFlowPlaybackService : IPlaybackService {
   private readonly SpectrumAnalyzer? _spectrumAnalyzer;
   private float[] _cachedSpectrumData = [];
   private readonly object _spectrumLock = new();
+  private readonly object _mixerLock = new();
+  private bool _isAddedToMixer;
+  private readonly Action<SoundFlowPlaybackService>? _onDispose;
+  private bool _isDisposed;
 
   /// <inheritdoc/>
   public event EventHandler? SongEnded;
@@ -35,19 +39,42 @@ public sealed class SoundFlowPlaybackService : IPlaybackService {
   public event EventHandler<PlaybackState>? PlaybackStateChanged;
 
   /// <inheritdoc/>
-  public TimeSpan Duration => TimeSpan.FromSeconds(_soundPlayer.Duration);
+  public TimeSpan Duration {
+    get {
+      var duration = _soundPlayer.Duration;
+      if (float.IsNaN(duration) || float.IsInfinity(duration) || duration < 0) {
+        return TimeSpan.Zero;
+      }
+      return TimeSpan.FromSeconds(duration);
+    }
+  }
 
   /// <inheritdoc/>
-  public TimeSpan CurrentTime => TimeSpan.FromSeconds(_soundPlayer.Time);
+  public TimeSpan CurrentTime {
+    get {
+      var time = _soundPlayer.Time;
+      if (float.IsNaN(time) || float.IsInfinity(time) || time < 0) {
+        return TimeSpan.Zero;
+      }
+      return TimeSpan.FromSeconds(time);
+    }
+  }
 
   /// <inheritdoc/>
   public float[] SpectrumData {
     get {
-      if (_spectrumAnalyzer == null) return [];
+      if (_spectrumAnalyzer == null) {
+        return [];
+      }
       float[] raw = _spectrumAnalyzer.SpectrumData;
-      if (raw == null || raw.Length == 0) return [];
+      if (raw == null || raw.Length == 0) {
+        return [];
+      }
 
-      float gain = _playbackDevice.MasterMixer.Volume;
+      float gain;
+      lock (_mixerLock) {
+        gain = !_playbackDevice.IsDisposed ? _playbackDevice.MasterMixer.Volume : 1.0f;
+      }
       lock (_spectrumLock) {
         if (_cachedSpectrumData.Length != raw.Length) {
           _cachedSpectrumData = new float[raw.Length];
@@ -69,7 +96,17 @@ public sealed class SoundFlowPlaybackService : IPlaybackService {
   }
 
   /// <inheritdoc/>
-  public float Progress => _soundPlayer.Time / _soundPlayer.Duration;
+  public float Progress {
+    get {
+      var time = _soundPlayer.Time;
+      var duration = _soundPlayer.Duration;
+      if (duration <= 0 || float.IsNaN(duration) || float.IsInfinity(duration) ||
+          time <= 0 || float.IsNaN(time) || float.IsInfinity(time)) {
+        return 0f;
+      }
+      return Math.Clamp(time / duration, 0f, 1f);
+    }
+  }
 
   /// <inheritdoc/>
   public Song Song => _song;
@@ -91,16 +128,24 @@ public sealed class SoundFlowPlaybackService : IPlaybackService {
   /// <param name="songStream">The stream of the song to play.</param>
   /// <param name="audioFormat">The format of the audio.</param>
   /// <param name="trackGain">The normalized track gain multiplier.</param>
-  public SoundFlowPlaybackService(MiniAudioEngine audioEngine, AudioPlaybackDevice playbackDevice, Song song, Stream songStream, AudioFormat audioFormat, float trackGain = 1.0f) {
+  /// <param name="onDispose">Optional callback invoked upon disposal.</param>
+  public SoundFlowPlaybackService(
+    MiniAudioEngine audioEngine,
+    AudioPlaybackDevice playbackDevice,
+    Song song,
+    Stream songStream,
+    AudioFormat audioFormat,
+    float trackGain = 1.0f,
+    Action<SoundFlowPlaybackService>? onDispose = null) {
     _playbackDevice = playbackDevice;
     _song = song;
     _songStream = songStream;
     _audioFormat = audioFormat;
+    _onDispose = onDispose;
 
     _streamDataProvider = new AssetDataProvider(audioEngine, audioFormat, songStream);
     _soundPlayer = new SoundPlayer(audioEngine, audioFormat, _streamDataProvider);
     _soundPlayer.Volume = trackGain;
-    _playbackDevice.MasterMixer.AddComponent(_soundPlayer);
 
     try {
       _spectrumAnalyzer = new SpectrumAnalyzer(audioFormat, fftSize: 1024) {
@@ -115,9 +160,40 @@ public sealed class SoundFlowPlaybackService : IPlaybackService {
     _soundPlayer.PlaybackEnded += (sender, args) => SongEnded?.Invoke(this, EventArgs.Empty);
   }
 
+  /// <summary>
+  /// Switches the audio playback device used by this service.
+  /// </summary>
+  /// <param name="newDevice">The new audio playback device.</param>
+  internal void SwitchPlaybackDevice(AudioPlaybackDevice newDevice) {
+    lock (_mixerLock) {
+      if (_isDisposed) {
+        return;
+      }
+      if (_isAddedToMixer && !_playbackDevice.IsDisposed) {
+        _playbackDevice.MasterMixer.RemoveComponent(_soundPlayer);
+      }
+      _playbackDevice = newDevice;
+      if (_isAddedToMixer && !_playbackDevice.IsDisposed) {
+        _playbackDevice.MasterMixer.AddComponent(_soundPlayer);
+      }
+    }
+  }
+
   /// <inheritdoc/>
   public void Play() {
-    if (PlaybackState == PlaybackState.Playing) return;
+    if (PlaybackState == PlaybackState.Playing) {
+      return;
+    }
+
+    lock (_mixerLock) {
+      if (_isDisposed) {
+        return;
+      }
+      if (!_isAddedToMixer && !_playbackDevice.IsDisposed) {
+        _playbackDevice.MasterMixer.AddComponent(_soundPlayer);
+        _isAddedToMixer = true;
+      }
+    }
 
     Logging.Debug("Playing stream...");
     _soundPlayer.Play();
@@ -126,7 +202,9 @@ public sealed class SoundFlowPlaybackService : IPlaybackService {
 
   /// <inheritdoc/>
   public void Pause() {
-    if (PlaybackState == PlaybackState.Paused) return;
+    if (PlaybackState == PlaybackState.Paused) {
+      return;
+    }
 
     Logging.Debug("Pausing stream...");
     _soundPlayer.Pause();
@@ -135,7 +213,9 @@ public sealed class SoundFlowPlaybackService : IPlaybackService {
 
   /// <inheritdoc/>
   public void Stop() {
-    if (PlaybackState == PlaybackState.Stopped) return;
+    if (PlaybackState == PlaybackState.Stopped) {
+      return;
+    }
 
     Logging.Debug("Stopping stream...");
     _soundPlayer.Stop();
@@ -149,10 +229,20 @@ public sealed class SoundFlowPlaybackService : IPlaybackService {
 
   /// <inheritdoc/>
   public void Dispose() {
+    lock (_mixerLock) {
+      if (_isDisposed) {
+        return;
+      }
+      _isDisposed = true;
+      if (_isAddedToMixer && !_playbackDevice.IsDisposed) {
+        _playbackDevice.MasterMixer.RemoveComponent(_soundPlayer);
+        _isAddedToMixer = false;
+      }
+    }
+    _onDispose?.Invoke(this);
     if (_spectrumAnalyzer != null) {
       _soundPlayer.RemoveAnalyzer(_spectrumAnalyzer);
     }
-    _playbackDevice.MasterMixer.RemoveComponent(_soundPlayer);
     _soundPlayer.Dispose();
     _streamDataProvider.Dispose();
     _songStream.Dispose();

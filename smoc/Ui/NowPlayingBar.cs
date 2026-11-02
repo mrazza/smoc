@@ -44,7 +44,7 @@ public sealed class NowPlayingBar : View {
   /// <param name="mainWindow">The main window reference.</param>
   /// <param name="playbackQueueService">The playback queue service for playback information.</param>
   /// <param name="commandService">The command service for registering volume commands.</param>
-  /// <param name="httpClient">The HTTP client for downloading album art.</param>
+  /// <param name="streamingClient">The streaming client for downloading album art.</param>
   public NowPlayingBar(IMainWindow mainWindow, IPlaybackQueueService playbackQueueService, CommandService commandService, IStreamingClient streamingClient) {
     _mainWindow = mainWindow;
     _playbackQueueService = playbackQueueService;
@@ -135,6 +135,9 @@ public sealed class NowPlayingBar : View {
   }
 
   protected override void Dispose(bool disposing) {
+    _albumArtCancellationTokenSource?.Cancel();
+    _albumArtCancellationTokenSource?.Dispose();
+    _albumArtCancellationTokenSource = null;
     _playbackQueueService.SongChanged -= OnSongChanged;
     _playbackQueueService.PositionChanged -= OnPositionChanged;
     _playbackQueueService.VolumeChanged -= OnVolumeChanged;

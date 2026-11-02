@@ -18,17 +18,23 @@ class AsyncLatch : IDisposable {
   /// Locks the latch, blocking until it is free.
   /// </summary>
   public void Latch() {
-    if (_semaphore.CurrentCount == 0) throw new InvalidOperationException("Latch is already latched");
+    if (_semaphore.CurrentCount == 0) {
+      throw new InvalidOperationException("Latch is already latched");
+    }
 
-    if (!_semaphore.Wait(1000)) throw new TimeoutException("Timeout waiting for latch");
+    if (!_semaphore.Wait(30000)) {
+      throw new TimeoutException("Timeout waiting for latch");
+    }
   }
 
   /// <summary>
   /// Waits for the latch to be free.
   /// </summary>
   /// <param name="timeoutMilliseconds">The timeout in milliseconds.</param>
-  public async Task GetWaiter(int timeoutMilliseconds = 1000) {
-    if (!await _semaphore.WaitAsync(timeoutMilliseconds)) throw new TimeoutException("Timeout waiting for latch");
+  public async Task GetWaiter(int timeoutMilliseconds = 30000) {
+    if (!await _semaphore.WaitAsync(timeoutMilliseconds)) {
+      throw new TimeoutException("Timeout waiting for latch");
+    }
   }
 
   /// <summary>
@@ -38,13 +44,10 @@ class AsyncLatch : IDisposable {
     _semaphore.Release();
   }
 
+  /// <summary>
+  /// Disposes the underlying semaphore without releasing unreleased waiters.
+  /// </summary>
   public void Dispose() {
-    try {
-      _semaphore.Release();
-    } catch {
-      // Ignore
-    }
-
     _semaphore.Dispose();
   }
 }

@@ -158,8 +158,9 @@ public sealed class SoundCloudStreamingClient : IStreamingClient {
 
   /// <inheritdoc />
   public async Task<Image<Rgba32>> GetAlbumArtAsync(Album album, Func<IEnumerable<AlbumCover>, AlbumCover>? coverSelector = null, CancellationToken cancellationToken = default) {
-    if (!album.Covers.Any())
+    if (!album.Covers.Any()) {
       throw new ArgumentException("Album has no covers.", nameof(album));
+    }
 
     var cover = coverSelector?.Invoke(album.Covers) ?? album.Covers.First();
 

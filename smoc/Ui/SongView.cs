@@ -1,4 +1,3 @@
-using System.Drawing;
 using Smoc.Services;
 using Smoc.Streaming;
 using Smoc.Ui.Components;
@@ -94,7 +93,9 @@ public sealed class SongView : View {
       Logging.Information($"Searching for track {args}...");
       var songs = await _streamingClient.SearchSongsAsync(args, token);
 
-      if (token.IsCancellationRequested) return;
+      if (token.IsCancellationRequested) {
+        return;
+      }
 
       Logging.Information($"Found {songs.Count} tracks for search '{args}'.");
 

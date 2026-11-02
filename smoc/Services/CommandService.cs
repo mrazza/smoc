@@ -15,8 +15,8 @@ public sealed class CommandService {
   /// <param name="args">The arguments part of the command string.</param>
   public delegate void CommandHandler(string command, string args);
 
-  private readonly Dictionary<string, CommandHandler> commands = new();
-  private readonly Dictionary<string, CompletionHandler> completers = new();
+  private readonly Dictionary<string, CommandHandler> _commands = new();
+  private readonly Dictionary<string, CompletionHandler> _completers = new();
 
   /// <summary>
   /// Delegate for handling command completion.
@@ -33,9 +33,11 @@ public sealed class CommandService {
   /// <param name="handler">The handler to callback when the command is executed.</param>
   /// <exception cref="ArgumentException">Thrown if the command is already registered.</exception>
   public void RegisterCommand(string command, CommandHandler handler) {
-    if (commands.ContainsKey(command)) throw new ArgumentException("Command already registered");
+    if (_commands.ContainsKey(command)) {
+      throw new ArgumentException("Command already registered");
+    }
 
-    commands.Add(command, handler);
+    _commands.Add(command, handler);
   }
 
   /// <summary>
@@ -44,7 +46,17 @@ public sealed class CommandService {
   /// <param name="command">The command name to unregister.</param>
   /// <exception cref="ArgumentException">Thrown if the command is not registered.</exception>
   public void UnregisterCommand(string command) {
-    if (!commands.Remove(command)) throw new ArgumentException("Command not registered");
+    if (!_commands.Remove(command)) {
+      throw new ArgumentException("Command not registered");
+    }
+  }
+
+  /// <summary>
+  /// Gets all registered command names sorted alphabetically.
+  /// </summary>
+  /// <returns>A collection of registered command names.</returns>
+  public IReadOnlyCollection<string> GetRegisteredCommands() {
+    return _commands.Keys.OrderBy(k => k, StringComparer.Ordinal).ToList();
   }
 
   /// <summary>
@@ -60,7 +72,7 @@ public sealed class CommandService {
     }
     var args = argCutoff > 0 ? command[(argCutoff + 1)..] : string.Empty;
 
-    if (commands.TryGetValue(commandName, out var handler)) {
+    if (_commands.TryGetValue(commandName, out var handler)) {
       handler(commandName, args);
       return true;
     }
@@ -73,7 +85,7 @@ public sealed class CommandService {
   /// <param name="command">The command name.</param>
   /// <param name="handler">The handler to callback when completions are requested.</param>
   public void RegisterCompleter(string command, CompletionHandler handler) {
-    completers[command] = handler;
+    _completers[command] = handler;
   }
 
   /// <summary>
@@ -81,15 +93,16 @@ public sealed class CommandService {
   /// </summary>
   /// <param name="command">The command name.</param>
   public void UnregisterCompleter(string command) {
-    completers.Remove(command);
+    _completers.Remove(command);
   }
 
   /// <summary>
-  /// Gets completions for a given command line.
+  /// Gets completions for a given command line or prefix.
   /// </summary>
-  /// <param name="command">The full command line string.</param>
+  /// <param name="command">The full command line string or command prefix.</param>
   /// <returns>A list of possible completions.</returns>
-  public IEnumerable<string> GetCompletions(string command) {
+  public IReadOnlyList<string> GetCompletions(string? command) {
+    command ??= string.Empty;
     var argCutoff = command.IndexOf('/');
     var commandName = command;
     if (argCutoff > 0) {
@@ -97,12 +110,15 @@ public sealed class CommandService {
     }
     var args = argCutoff > 0 ? command[(argCutoff + 1)..] : string.Empty;
 
-    if (argCutoff >= 0 && completers.TryGetValue(commandName, out var handler)) {
-      return handler(commandName, args);
+    if (argCutoff >= 0 && _completers.TryGetValue(commandName, out var handler)) {
+      return handler(commandName, args).ToList();
     }
 
     if (argCutoff <= 0) {
-      return commands.Keys.Where(c => c.StartsWith(commandName, StringComparison.OrdinalIgnoreCase));
+      return _commands.Keys
+          .Where(c => c.StartsWith(commandName, StringComparison.OrdinalIgnoreCase))
+          .OrderBy(k => k, StringComparer.Ordinal)
+          .ToList();
     }
 
     return [];

@@ -90,7 +90,7 @@ public interface IStreamingClient {
   /// Retrieves songs from the specified URL.
   /// </summary>
   /// <remarks>
-  /// The results of this method should be interperted as a playlist by SMoC. However,
+  /// The results of this method should be interpreted as a playlist by SMoC. However,
   /// there is no requirement that the URL actually points to a playlist, rather some
   /// collection of 1 or more songs.
   /// 

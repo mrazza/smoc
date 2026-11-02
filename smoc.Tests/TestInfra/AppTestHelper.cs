@@ -72,6 +72,7 @@ public partial class AppTestHelper : IDisposable {
 
     try {
       App?.Init(driverName);
+      Driver.Force16Colors = false;
       _booting.Release();
 
       // After Init, Application.Screen should be set by the driver
@@ -117,6 +118,7 @@ public partial class AppTestHelper : IDisposable {
       try {
         try {
           App?.Init(driverName);
+          Driver.Force16Colors = false;
         } catch (Exception e) {
           Logging.Error(e.Message);
           _runCancellationTokenSource.Cancel();
@@ -197,6 +199,7 @@ public partial class AppTestHelper : IDisposable {
 
     // Remove frame limit
     Application.MaximumIterationsPerSecond = ushort.MaxValue;
+    Driver.Force16Colors = false;
 
     IComponentFactory? cf = null;
 
@@ -343,6 +346,11 @@ public partial class AppTestHelper : IDisposable {
 
       //Logging.Trace ($"{this.ToIdentifyingString ()}");
       WaitIteration(app => {
+        Driver.Force16Colors = false;
+        if (app.Driver is { } driver) {
+          driver.Force16Colors = false;
+        }
+        app.LayoutAndDraw(true);
         writer?.WriteLine(title + ":");
         string? text = app.Driver?.ToAnsi();
 

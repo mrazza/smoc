@@ -2,9 +2,13 @@ using System.Net.Http.Headers;
 using System.Text;
 using Smoc.Services.Caching;
 using static Smoc.Services.Caching.TempFileCacheService;
+using smoc.Tests.TestInfra;
 
 namespace smoc.Tests.Services.Caching;
 
+/// <summary>
+/// Unit tests for <see cref="TempFileCacheService"/>.
+/// </summary>
 public class TempFileCacheServiceTest : IDisposable {
   private string? _testDirectory;
   private readonly string _subDirectory;
@@ -44,6 +48,9 @@ public class TempFileCacheServiceTest : IDisposable {
     Assert.True(Directory.Exists(_testDirectory));
   }
 
+  /// <summary>
+  /// Verifies that on a cache miss, the file is created on disk and returned as a FileStream.
+  /// </summary>
   [Theory]
   [CombinatorialData]
   public async Task GetOrAddAsync_OnCacheMiss_CreatesFile(CachePersistence cachePersistence) {
@@ -59,11 +66,14 @@ public class TempFileCacheServiceTest : IDisposable {
       TestContext.Current.CancellationToken);
 
     Assert.NotNull(resultStream);
+    var fileStream = Assert.IsType<FileStream>(resultStream);
+    string expectedFilePath = Path.Combine(testDirectory, key);
+    Assert.Equal(Path.GetFullPath(expectedFilePath), Path.GetFullPath(fileStream.Name));
+
     using var reader = new StreamReader(resultStream);
     string content = await reader.ReadToEndAsync(TestContext.Current.CancellationToken);
     Assert.Equal(expectedContent, content);
 
-    string expectedFilePath = Path.Combine(testDirectory, key);
     Assert.True(File.Exists(expectedFilePath), $"Expected file not found: {expectedFilePath}");
   }
 
@@ -211,32 +221,9 @@ public class TempFileCacheServiceTest : IDisposable {
     Assert.True(File.Exists(file1));
   }
 
-  private class NonSeekableStream : Stream {
-    private readonly MemoryStream _inner;
-    public NonSeekableStream(byte[] data) {
-      _inner = new MemoryStream(data);
-    }
-    public override bool CanRead => true;
-    public override bool CanSeek => false;
-    public override bool CanWrite => false;
-    public override long Length => _inner.Length;
-    public override long Position {
-      get => throw new NotSupportedException();
-      set => throw new NotSupportedException();
-    }
-    public override void Flush() => _inner.Flush();
-    public override int Read(byte[] buffer, int offset, int count) => _inner.Read(buffer, offset, count);
-    public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
-    public override void SetLength(long value) => throw new NotSupportedException();
-    public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
-    protected override void Dispose(bool disposing) {
-      if (disposing) {
-        _inner.Dispose();
-      }
-      base.Dispose(disposing);
-    }
-  }
-
+  /// <summary>
+  /// Verifies that GetOrAddAsync succeeds with a non-seekable source stream, disposes it, and returns a seekable FileStream.
+  /// </summary>
   [Theory]
   [CombinatorialData]
   public async Task GetOrAddAsync_WithNonSeekableStream_Succeeds(CachePersistence cachePersistence) {
@@ -245,19 +232,175 @@ public class TempFileCacheServiceTest : IDisposable {
     var service = new TempFileCacheService(_subDirectory, config, cachePersistence);
     string key = "non-seekable-key";
     string expectedContent = "non-seekable stream content";
+    NonSeekableStream? sourceStream = null;
 
     using var resultStream = await service.GetOrAddAsync(
       key,
-      _ => Task.FromResult<Stream>(new NonSeekableStream(Encoding.UTF8.GetBytes(expectedContent))),
+      _ => {
+        sourceStream = new NonSeekableStream(Encoding.UTF8.GetBytes(expectedContent));
+        return Task.FromResult<Stream>(sourceStream);
+      },
       TestContext.Current.CancellationToken);
 
+    Assert.NotNull(sourceStream);
+    Assert.True(sourceStream.IsDisposed, "Source non-seekable stream must be disposed.");
     Assert.NotNull(resultStream);
     Assert.True(resultStream.CanSeek, "Returned stream must be seekable");
+    var fileStream = Assert.IsType<FileStream>(resultStream);
+    string expectedFilePath = Path.Combine(testDirectory, key);
+    Assert.Equal(Path.GetFullPath(expectedFilePath), Path.GetFullPath(fileStream.Name));
+
     using var reader = new StreamReader(resultStream);
     string content = await reader.ReadToEndAsync(TestContext.Current.CancellationToken);
     Assert.Equal(expectedContent, content);
 
-    string expectedFilePath = Path.Combine(testDirectory, key);
     Assert.True(File.Exists(expectedFilePath), $"Expected file not found: {expectedFilePath}");
+  }
+
+  /// <summary>
+  /// Verifies that on a cache miss, GetOrAddAsync always disposes the seekable source stream returned by
+  /// the factory and returns a FileStream backed by the cached file on disk.
+  /// </summary>
+  [Theory]
+  [CombinatorialData]
+  public async Task GetOrAddAsync_OnCacheMiss_DisposesSeekableSourceStreamAndReturnsFileStream(CachePersistence cachePersistence) {
+    var testDirectory = InitDirectory(cachePersistence);
+    var config = new CacheConfig();
+    var service = new TempFileCacheService(_subDirectory, config, cachePersistence);
+    string key = "seekable-key";
+    string expectedContent = "seekable content to cache";
+    TrackedSeekableStream? sourceStream = null;
+    bool wasSeekableBeforeDispose = false;
+
+    using var resultStream = await service.GetOrAddAsync(
+      key,
+      _ => {
+        sourceStream = new TrackedSeekableStream(Encoding.UTF8.GetBytes(expectedContent));
+        wasSeekableBeforeDispose = sourceStream.CanSeek;
+        return Task.FromResult<Stream>(sourceStream);
+      },
+      TestContext.Current.CancellationToken);
+
+    Assert.NotNull(sourceStream);
+    Assert.True(wasSeekableBeforeDispose, "Source stream must report CanSeek == true before disposal.");
+    Assert.True(sourceStream.IsDisposed, "Source seekable stream must be disposed on cache miss.");
+
+    Assert.NotNull(resultStream);
+    var fileStream = Assert.IsType<FileStream>(resultStream);
+    string expectedFilePath = Path.Combine(testDirectory, key);
+    Assert.Equal(Path.GetFullPath(expectedFilePath), Path.GetFullPath(fileStream.Name));
+
+    using var reader = new StreamReader(resultStream);
+    string content = await reader.ReadToEndAsync(TestContext.Current.CancellationToken);
+    Assert.Equal(expectedContent, content);
+
+    Assert.True(File.Exists(expectedFilePath), $"Expected file not found: {expectedFilePath}");
+  }
+
+  [Theory]
+  [CombinatorialData]
+  public async Task GetOrAddAsync_SanitizesInvalidKeyCharacters(CachePersistence cachePersistence) {
+    var testDirectory = InitDirectory(cachePersistence);
+    var config = new CacheConfig();
+    var service = new TempFileCacheService(_subDirectory, config, cachePersistence);
+    string key = "invalid/key:name?test";
+    string expectedContent = "sanitized content";
+
+    using var resultStream = await service.GetOrAddAsync(
+      key,
+      _ => Task.FromResult<Stream>(new MemoryStream(Encoding.UTF8.GetBytes(expectedContent))),
+      TestContext.Current.CancellationToken);
+
+    Assert.NotNull(resultStream);
+    using var reader = new StreamReader(resultStream);
+    string content = await reader.ReadToEndAsync(TestContext.Current.CancellationToken);
+    Assert.Equal(expectedContent, content);
+
+    // Verify sanitized file exists in directory
+    var files = Directory.GetFiles(testDirectory);
+    Assert.Single(files);
+    Assert.False(Path.GetFileName(files[0]).Contains('/'));
+    Assert.False(Path.GetFileName(files[0]).Contains(':'));
+    Assert.False(Path.GetFileName(files[0]).Contains('?'));
+  }
+
+  [Theory]
+  [CombinatorialData]
+  public async Task Evict_LRU_RespectsMaxSizeBytes_DoesNotAccumulateEvictedSizes(CachePersistence cachePersistence) {
+    var testDirectory = InitDirectory(cachePersistence);
+    long maxSizeBytes = 3;
+    var config = new CacheConfig(MaxSizeBytes: maxSizeBytes, EvictionStrategy: EvictionStrategy.LRU);
+    var service = new TempFileCacheService(_subDirectory, config, cachePersistence);
+
+    string file1 = Path.Combine(testDirectory, "f1");
+    string file2 = Path.Combine(testDirectory, "f2");
+    string file3 = Path.Combine(testDirectory, "f3");
+    Directory.CreateDirectory(testDirectory);
+
+    // f1 (oldest): 1 byte
+    // f2 (middle): 5 bytes (oversized)
+    // f3 (newest): 2 bytes
+    await File.WriteAllTextAsync(file1, "a", TestContext.Current.CancellationToken);
+    await File.WriteAllTextAsync(file2, "bbbbb", TestContext.Current.CancellationToken);
+    await File.WriteAllTextAsync(file3, "cc", TestContext.Current.CancellationToken);
+
+    File.SetLastAccessTimeUtc(file1, DateTime.UtcNow.AddMinutes(-30));
+    File.SetLastAccessTimeUtc(file2, DateTime.UtcNow.AddMinutes(-20));
+    File.SetLastAccessTimeUtc(file3, DateTime.UtcNow.AddMinutes(-10));
+
+    await service.Evict(TestContext.Current.CancellationToken);
+
+    Assert.True(File.Exists(file3), "Newest file should be kept");
+    Assert.False(File.Exists(file2), "Oversized file should be evicted");
+    Assert.True(File.Exists(file1), "Oldest file should be kept because f3 (2) + f1 (1) = 3 <= 3");
+  }
+
+  [Theory]
+  [CombinatorialData]
+  public async Task Evict_IgnoresTmpFiles(CachePersistence cachePersistence) {
+    var testDirectory = InitDirectory(cachePersistence);
+    var config = new CacheConfig(MaxElements: 1, EvictionStrategy: EvictionStrategy.LRU);
+    var service = new TempFileCacheService(_subDirectory, config, cachePersistence);
+
+    string normalFile = Path.Combine(testDirectory, "valid-file");
+    string tmpFile = Path.Combine(testDirectory, "active-download.tmp");
+    Directory.CreateDirectory(testDirectory);
+
+    await File.WriteAllTextAsync(normalFile, "valid content", TestContext.Current.CancellationToken);
+    await File.WriteAllTextAsync(tmpFile, "downloading content", TestContext.Current.CancellationToken);
+
+    await service.Evict(TestContext.Current.CancellationToken);
+
+    Assert.True(File.Exists(normalFile), "Normal file within limit should be kept");
+    Assert.True(File.Exists(tmpFile), ".tmp file should not be counted or evicted");
+  }
+
+  /// <summary>
+  /// Verifies that keys longer than 255 characters succeed and produce a bounded filename.
+  /// </summary>
+  [Theory]
+  [CombinatorialData]
+  public async Task GetOrAddAsync_WithKeyLongerThan255Chars_SucceedsAndBoundsFilename(CachePersistence cachePersistence) {
+    var testDirectory = InitDirectory(cachePersistence);
+    var config = new CacheConfig();
+    var service = new TempFileCacheService(_subDirectory, config, cachePersistence);
+    string key = new('a', 300);
+    string expectedContent = "bounded filename content";
+
+    using var resultStream = await service.GetOrAddAsync(
+      key,
+      _ => Task.FromResult<Stream>(new MemoryStream(Encoding.UTF8.GetBytes(expectedContent))),
+      TestContext.Current.CancellationToken);
+
+    Assert.NotNull(resultStream);
+    using var reader = new StreamReader(resultStream);
+    string content = await reader.ReadToEndAsync(TestContext.Current.CancellationToken);
+    Assert.Equal(expectedContent, content);
+
+    var files = Directory.GetFiles(testDirectory);
+    Assert.Single(files);
+    var fileName = Path.GetFileName(files[0]);
+    Assert.True(fileName.Length <= 129);
+    Assert.StartsWith(new string('a', 64) + "_", fileName);
   }
 }

@@ -181,7 +181,16 @@ public sealed class NowPlayingView : View {
     }
   }
 
+  /// <inheritdoc />
+  protected override void OnVisibleChanged() {
+    base.OnVisibleChanged();
+    _playbackQueueService.IsSpectrumActive = Visible && _histogramView.Visible;
+  }
+
   protected override void Dispose(bool disposing) {
+    _albumArtCancellationTokenSource?.Cancel();
+    _albumArtCancellationTokenSource?.Dispose();
+    _albumArtCancellationTokenSource = null;
     _commandService.UnregisterCommand("np");
     _commandService.UnregisterCommand("np-vis");
     _commandService.UnregisterCommand("np-vis-fps");

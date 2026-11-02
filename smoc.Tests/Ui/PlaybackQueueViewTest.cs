@@ -137,4 +137,37 @@ public class PlaybackQueueViewTest {
         .Then((_) => queueView.Visible = true);
     _screenshotDiffer.AssertEqualsGolden(context, ansiShot: true);
   }
+
+  [Fact]
+  public void SongSelected_WhenFiltered_ChangesToUnfilteredIndex() {
+    EventHandler? queueChangedHandler = null;
+    _mockPlaybackQueue.SetupAdd((ps) => ps.QueueChanged += It.IsAny<EventHandler>())
+        .Callback<EventHandler>(h => queueChangedHandler = h);
+    _mockPlaybackQueue.Setup((ps) => ps.ChangeTrack(1)).Verifiable(Times.Once());
+    var song1 = EntityTestFactory.GenerateSong(trackName: "Alpha Song", postfix: "1");
+    var song2 = EntityTestFactory.GenerateSong(trackName: "Beta Song", postfix: "2");
+    _mockPlaybackQueue.Setup((ps) => ps.GetCurrentPlaybackQueue()).Returns([song1, song2]);
+    using var context = NewContext();
+    var queueView = PlaybackQueueView();
+    var songTable = queueView.SubViews.OfType<Smoc.Ui.Components.SongTable>().First();
+    context.Add(queueView)
+        .Then((_) => queueChangedHandler?.Invoke(null, EventArgs.Empty))
+        .Then((_) => songTable.ApplyFilter("Beta"))
+        .KeyDown(Key.Enter);
+    _mockPlaybackQueue.Verify();
+  }
+
+  [Fact]
+  public void EmptyQueue_EnterPressed_DoesNotChangeTrack() {
+    EventHandler? queueChangedHandler = null;
+    _mockPlaybackQueue.SetupAdd((ps) => ps.QueueChanged += It.IsAny<EventHandler>())
+        .Callback<EventHandler>(h => queueChangedHandler = h);
+    _mockPlaybackQueue.Setup((ps) => ps.GetCurrentPlaybackQueue()).Returns([]);
+    using var context = NewContext();
+    var queueView = PlaybackQueueView();
+    context.Add(queueView)
+        .Then((_) => queueChangedHandler?.Invoke(null, EventArgs.Empty))
+        .KeyDown(Key.Enter);
+    _mockPlaybackQueue.Verify((ps) => ps.ChangeTrack(It.IsAny<int>()), Times.Never());
+  }
 }

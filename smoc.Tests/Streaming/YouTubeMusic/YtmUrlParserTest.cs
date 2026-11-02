@@ -3,6 +3,9 @@ using Smoc.Streaming.YouTubeMusic;
 
 namespace smoc.Tests.Streaming.YouTubeMusic;
 
+/// <summary>
+/// Unit tests for <see cref="YtmUrlParser"/>.
+/// </summary>
 public class YtmUrlParserTest {
   [Fact]
   public void Parse_ValidSongUrl_ReturnsCorrectIdAndType() {
@@ -41,6 +44,26 @@ public class YtmUrlParserTest {
   [Fact]
   public void Parse_PlaylistUrlWithUnknownQuery_ThrowsArgumentException() {
     var url = "https://music.youtube.com/playlist?q=unknown";
+    Assert.Throws<ArgumentException>(() => YtmUrlParser.ParseUrl(url));
+  }
+
+  [Fact]
+  public void Parse_MalformedUrl_ThrowsArgumentException() {
+    var url = "not a valid url";
+    Assert.Throws<ArgumentException>(() => YtmUrlParser.ParseUrl(url));
+  }
+
+  [Theory]
+  [InlineData("https://music.youtube.com/watch?v=")]
+  [InlineData("https://music.youtube.com/watch?v=   ")]
+  public void Parse_SongUrlWithEmptyVideoId_ThrowsArgumentException(string url) {
+    Assert.Throws<ArgumentException>(() => YtmUrlParser.ParseUrl(url));
+  }
+
+  [Theory]
+  [InlineData("https://music.youtube.com/playlist?list=")]
+  [InlineData("https://music.youtube.com/playlist?list=   ")]
+  public void Parse_PlaylistUrlWithEmptyPlaylistId_ThrowsArgumentException(string url) {
     Assert.Throws<ArgumentException>(() => YtmUrlParser.ParseUrl(url));
   }
 }

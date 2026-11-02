@@ -27,9 +27,19 @@ public class StreamingListenHistoryService : IPlaybackTrackingService {
 
   /// <inheritdoc/>
   public async void TrackPlayback(Song song, TimeSpan position) {
-    if (song == _lastRecordedTrack) return;
+    bool meetsPosition = position >= _minimumPosition;
+    bool meetsFraction = song.Duration > TimeSpan.Zero && (position / song.Duration) >= _minimumFraction;
 
-    if (position < _minimumPosition && position / song.Duration < _minimumFraction) return;
+    if (!meetsPosition && !meetsFraction) {
+      if (song == _lastRecordedTrack) {
+        _lastRecordedTrack = null;
+      }
+      return;
+    }
+
+    if (song == _lastRecordedTrack) {
+      return;
+    }
 
     _lastRecordedTrack = song;
     try {

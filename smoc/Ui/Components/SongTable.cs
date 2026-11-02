@@ -15,7 +15,7 @@ namespace Smoc.Ui.Components;
 /// <summary>
 /// A table view for displaying a list of songs with configurable columns.
 /// </summary>
-public class SongTable : TableView {
+public class SongTable : TableView, IFilterable {
   /// <summary>
   /// Flags indicating which columns to display in the table.
   /// </summary>
@@ -33,7 +33,9 @@ public class SongTable : TableView {
 
   private readonly DataTable _songTableData;
   private readonly SongTableColumns _columns;
-  private List<Song> _songs;
+  private List<Song> _allSongs = [];
+  private List<Song> _songs = [];
+  private string _filterText = string.Empty;
   private int _highlightedRow = -1;
 
   /// <summary>
@@ -47,6 +49,11 @@ public class SongTable : TableView {
       }
     }
   }
+
+  /// <summary>
+  /// Gets the current filter text applied to the table.
+  /// </summary>
+  public string FilterText => _filterText;
 
   /// <summary>
   /// Gets or sets the index of the highlighted row.
@@ -108,6 +115,7 @@ public class SongTable : TableView {
     _songTableData = CreateDataTable(columns);
     Table = new DataTableSource(_songTableData);
     _songs = [];
+    _allSongs = [];
     CanFocus = false;
 
     // We don't bind left and right as directional keys here because the table
@@ -121,12 +129,31 @@ public class SongTable : TableView {
 
   /// <inheritdoc />
   protected override bool OnAccepting(CommandEventArgs args) {
-    SongSelected?.Invoke(this, GetSelectedSongs());
+    var selectedSongs = GetSelectedSongs();
+    if (selectedSongs.Count > 0) {
+      SongSelected?.Invoke(this, selectedSongs);
+    }
     return true;
   }
 
   /// <inheritdoc />
+  protected override bool OnKeyDown(Key key) {
+    if (key == Key.Esc && !string.IsNullOrEmpty(_filterText)) {
+      ClearFilter();
+      key.Handled = true;
+      return true;
+    }
+
+    return base.OnKeyDown(key);
+  }
+
+  /// <inheritdoc />
   protected override bool OnKeyDownNotHandled(Key key) {
+    if (key == Key.Esc && !string.IsNullOrEmpty(_filterText)) {
+      ClearFilter();
+      return true;
+    }
+
     base.OnKeyDownNotHandled(key);
     return false;
   }
@@ -138,7 +165,43 @@ public class SongTable : TableView {
   public void SetSongs(IEnumerable<Song> songs) {
     ClearSongs();
     CanFocus = true;
-    _songs = songs.ToList();
+    _allSongs = songs.ToList();
+    _filterText = string.Empty;
+    _songs = _allSongs.ToList();
+    PopulateTableRows();
+    RefreshContentSize();
+  }
+
+  /// <summary>
+  /// Applies a filter text to the songs in the table, matching title, artist, or album.
+  /// </summary>
+  /// <param name="filterText">The text to filter songs by.</param>
+  public void ApplyFilter(string? filterText) {
+    _filterText = filterText?.Trim() ?? string.Empty;
+    if (string.IsNullOrEmpty(_filterText)) {
+      _songs = _allSongs.ToList();
+    } else {
+      _songs = _allSongs.Where(song =>
+          song.Title.Contains(_filterText, StringComparison.OrdinalIgnoreCase) ||
+          song.Artist.Name.Contains(_filterText, StringComparison.OrdinalIgnoreCase) ||
+          song.Album.Name.Contains(_filterText, StringComparison.OrdinalIgnoreCase)).ToList();
+    }
+
+    PopulateTableRows();
+    SelectedRow = _songs.Count > 0 ? 0 : -1;
+    RefreshContentSize();
+    SetNeedsDraw();
+  }
+
+  /// <summary>
+  /// Clears the active filter and displays all songs.
+  /// </summary>
+  public void ClearFilter() {
+    ApplyFilter(string.Empty);
+  }
+
+  private void PopulateTableRows() {
+    _songTableData.Clear();
     foreach (var song in _songs) {
       int index = 0;
       var values = new object[_songTableData.Columns.Count];
@@ -162,8 +225,6 @@ public class SongTable : TableView {
       }
       _songTableData.Rows.Add(values);
     }
-
-    RefreshContentSize();
   }
 
   /// <inheritdoc />
@@ -183,19 +244,30 @@ public class SongTable : TableView {
   }
 
   /// <summary>
+  /// Gets the 0-based index in the full unfiltered song list for the specified song, or -1 if not found.
+  /// </summary>
+  /// <param name="song">The song to locate.</param>
+  /// <returns>The 0-based index in the unfiltered song list, or -1 if not found.</returns>
+  public int GetUnfilteredIndex(Song song) {
+    return _allSongs.IndexOf(song);
+  }
+
+  /// <summary>
   /// Gets the list of currently selected songs.
   /// </summary>
   public List<Song> GetSelectedSongs() {
     return MultiSelectedRegions.Where(_ => MultiSelect).Select(region => Enumerable.Range(region.Rectangle.Y, region.Rectangle.Height))
-        .FirstOrDefault()?.Select(index => _songs[index]).ToList() ?? (SelectedRow >= 0 ? [_songs[SelectedRow]] : []);
+        .FirstOrDefault()?.Select(index => _songs[index]).ToList() ?? (SelectedRow >= 0 && SelectedRow < _songs.Count ? [_songs[SelectedRow]] : []);
   }
 
   /// <summary>
   /// Clears all songs from the table.
   /// </summary>
   public void ClearSongs() {
+    _allSongs.Clear();
     _songs.Clear();
     _songTableData.Clear();
+    _filterText = string.Empty;
     SelectedRow = 0;
     CanFocus = false;
   }
@@ -233,15 +305,31 @@ public class SongTable : TableView {
   private void ResizeSongTableColumns(Rectangle frame) {
     int columnIndex = 0;
     int dynamicColumnCount = 0;
-    if (_columns.HasFlag(SongTableColumns.Artist)) dynamicColumnCount++;
-    if (_columns.HasFlag(SongTableColumns.Album)) dynamicColumnCount++;
-    if (_columns.HasFlag(SongTableColumns.Song)) dynamicColumnCount++;
+    if (_columns.HasFlag(SongTableColumns.Artist)) {
+      dynamicColumnCount++;
+    }
+    if (_columns.HasFlag(SongTableColumns.Album)) {
+      dynamicColumnCount++;
+    }
+    if (_columns.HasFlag(SongTableColumns.Song)) {
+      dynamicColumnCount++;
+    }
+
+    if (dynamicColumnCount <= 0) {
+      return;
+    }
 
     // Each column has spacing of 1 pixel between them. Therefore, we need to track that 1 pixel buffer.
-    int narrowColumnWidth = this.GetAdornmentsThickness().Horizontal;
-    if (_columns.HasFlag(SongTableColumns.Number)) narrowColumnWidth += 3 + 1;
-    if (_columns.HasFlag(SongTableColumns.Length)) narrowColumnWidth += 6 + 1;
-    if (_columns.HasFlag(SongTableColumns.Year)) narrowColumnWidth += 5 + 1;
+    int narrowColumnWidth = GetAdornmentsThickness().Horizontal;
+    if (_columns.HasFlag(SongTableColumns.Number)) {
+      narrowColumnWidth += 3 + 1;
+    }
+    if (_columns.HasFlag(SongTableColumns.Length)) {
+      narrowColumnWidth += 6 + 1;
+    }
+    if (_columns.HasFlag(SongTableColumns.Year)) {
+      narrowColumnWidth += 5 + 1;
+    }
 
     int remainingWidth = (frame.Width - narrowColumnWidth) / dynamicColumnCount - 1;
     int widthRemainer = (frame.Width - narrowColumnWidth) % dynamicColumnCount - 1;
@@ -252,20 +340,23 @@ public class SongTable : TableView {
     }
 
     if (_columns.HasFlag(SongTableColumns.Artist)) {
-      Style.GetOrCreateColumnStyle(columnIndex).MinWidth = remainingWidth;
-      Style.GetOrCreateColumnStyle(columnIndex++).MaxWidth = remainingWidth;
+      int artistWidth = Math.Max(0, remainingWidth);
+      Style.GetOrCreateColumnStyle(columnIndex).MinWidth = artistWidth;
+      Style.GetOrCreateColumnStyle(columnIndex++).MaxWidth = artistWidth;
     }
 
     if (_columns.HasFlag(SongTableColumns.Album)) {
-      Style.GetOrCreateColumnStyle(columnIndex).MinWidth = remainingWidth;
-      Style.GetOrCreateColumnStyle(columnIndex++).MaxWidth = remainingWidth;
+      int albumWidth = Math.Max(0, remainingWidth);
+      Style.GetOrCreateColumnStyle(columnIndex).MinWidth = albumWidth;
+      Style.GetOrCreateColumnStyle(columnIndex++).MaxWidth = albumWidth;
     }
 
     if (_columns.HasFlag(SongTableColumns.Song)) {
       // We expect song names to be both the longest and most important field in the table.
       // Therefore, if there is any remaining, non-evenly divisible width, we place it in the song column.
-      Style.GetOrCreateColumnStyle(columnIndex).MinWidth = remainingWidth + widthRemainer;
-      Style.GetOrCreateColumnStyle(columnIndex++).MaxWidth = remainingWidth + widthRemainer;
+      int songWidth = Math.Max(0, remainingWidth + widthRemainer);
+      Style.GetOrCreateColumnStyle(columnIndex).MinWidth = songWidth;
+      Style.GetOrCreateColumnStyle(columnIndex++).MaxWidth = songWidth;
     }
 
     if (_columns.HasFlag(SongTableColumns.Length)) {

@@ -1,10 +1,17 @@
 using System.Text;
 using Smoc.Services.Caching;
+using smoc.Tests.TestInfra;
 
 namespace smoc.Tests.Services.Caching;
 
+/// <summary>
+/// Unit tests for <see cref="InMemoryCacheService"/>.
+/// </summary>
 public class InMemoryCacheServiceTest {
 
+  /// <summary>
+  /// Verifies that cache miss invokes the factory and populates the cache.
+  /// </summary>
   [Fact]
   public async Task GetOrAddAsync_OnCacheMiss_CallsFactoryAndCaches() {
     var config = new CacheConfig();
@@ -222,6 +229,68 @@ public class InMemoryCacheServiceTest {
     await evictTask;
 
     Assert.True(evictTask.IsCompletedSuccessfully);
+  }
+
+  /// <summary>
+  /// Verifies that non-seekable streams returned by factory are handled and cached properly as seekable streams.
+  /// </summary>
+  [Fact]
+  public async Task GetOrAddAsync_WithNonSeekableStream_Succeeds() {
+    var config = new CacheConfig();
+    var service = new InMemoryCacheService(config);
+    string key = "non-seekable-key";
+    string expectedContent = "non-seekable in-memory content";
+
+    using var resultStream = await service.GetOrAddAsync(
+        key,
+        _ => Task.FromResult<Stream>(new NonSeekableStream(Encoding.UTF8.GetBytes(expectedContent))),
+        TestContext.Current.CancellationToken);
+
+    Assert.NotNull(resultStream);
+    Assert.True(resultStream.CanSeek, "Returned stream must be seekable");
+    using var reader = new StreamReader(resultStream);
+    string content = await reader.ReadToEndAsync(TestContext.Current.CancellationToken);
+    Assert.Equal(expectedContent, content);
+
+    // Verify cache hit returns readable content
+    using var hitStream = await service.GetOrAddAsync(
+        key,
+        _ => throw new InvalidOperationException("Factory should not be called on cache hit"),
+        TestContext.Current.CancellationToken);
+    using var hitReader = new StreamReader(hitStream);
+    string hitContent = await hitReader.ReadToEndAsync(TestContext.Current.CancellationToken);
+    Assert.Equal(expectedContent, hitContent);
+  }
+
+  /// <summary>
+  /// Verifies that an evicted item exceeding maxSizeBytes does not accumulate into totalSize.
+  /// </summary>
+  [Fact]
+  public async Task Evict_LRU_RespectsMaxSizeBytes_DoesNotAccumulateEvictedSizes() {
+    long maxSizeBytes = 3;
+    var config = new CacheConfig(MaxSizeBytes: maxSizeBytes, EvictionStrategy: EvictionStrategy.LRU);
+    var service = new InMemoryCacheService(config);
+
+    // key1 (oldest): 1 byte
+    // key2 (middle): 5 bytes (exceeds limit on its own!)
+    // key3 (newest): 2 bytes
+    // Expected: key3 (2 bytes) + key1 (1 byte) = 3 bytes <= maxSizeBytes (3 bytes).
+    // key2 is evicted because 2 + 5 > 3. Its size should not prevent key1 from staying.
+    string key1 = "k1";
+    string key2 = "k2";
+    string key3 = "k3";
+
+    await service.GetOrAddAsync(key1, _ => Task.FromResult<Stream>(new MemoryStream(Encoding.UTF8.GetBytes("a"))), TestContext.Current.CancellationToken);
+    await Task.Delay(10, TestContext.Current.CancellationToken);
+    await service.GetOrAddAsync(key2, _ => Task.FromResult<Stream>(new MemoryStream(Encoding.UTF8.GetBytes("bbbbb"))), TestContext.Current.CancellationToken);
+    await Task.Delay(10, TestContext.Current.CancellationToken);
+    await service.GetOrAddAsync(key3, _ => Task.FromResult<Stream>(new MemoryStream(Encoding.UTF8.GetBytes("cc"))), TestContext.Current.CancellationToken);
+
+    await service.Evict(TestContext.Current.CancellationToken);
+
+    Assert.True(await IsKeyInCache(service, key3), "Newest item should be kept");
+    Assert.False(await IsKeyInCache(service, key2), "Oversized middle item should be evicted");
+    Assert.True(await IsKeyInCache(service, key1), "Oldest item should be kept because key3 + key1 = 3 <= 3");
   }
 
   // Helper to check if a key exists in the cache directly or by side-effect

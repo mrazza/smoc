@@ -11,7 +11,7 @@
 ![Status](https://img.shields.io/badge/status-active_development-green?style=flat-square)
 [![CI](https://github.com/mrazza/smoc/actions/workflows/dotnet.yml/badge.svg)](https://github.com/mrazza/smoc/actions/workflows/dotnet.yml)
 
-A terminal-based music player (TUI) for streaming services, currently supporting **Subsonic**-compatible APIs and **YouTube Music**. Spotify, Apple Music, and other services are _future features_.
+A terminal-based music player (TUI) for streaming services, currently supporting **Subsonic**-compatible APIs, **YouTube Music**, and **SoundCloud**. Spotify, Apple Music, and other services are _future features_.
 
 [Features](#-features) • [Installation](#-installation) • [Configuration and Setup](#%EF%B8%8F-configuration-and-setup) • [Usage](#-usage)
 
@@ -32,6 +32,8 @@ A terminal-based music player (TUI) for streaming services, currently supporting
 - **Google Cast Support**: Stream audio directly to Chromecast devices, Nest smart speakers, and Cast-enabled receivers on your local network using on-demand mDNS discovery and a built-in local streaming proxy.
 - **YouTube Music Integration**: Powered by [YouTubeMusicAPI](https://github.com/IcySnex/YouTubeMusicAPI). Search, stream, and manage your library.
 - **Subsonic API Integration**: Streaming client for any Subsonic-compatible server. For instance, [Navidrome](https://www.navidrome.org/), [Airsonic Advanced](https://github.com/airsonic-advanced/airsonic-advanced), [Gonic](https://github.com/sentriz/gonic), or [Madsonic](https://www.madsonic.org/).
+- **SoundCloud Integration**: Search and stream tracks, artists, and playlists from SoundCloud.
+- **Session Persistence**: Automatically saves and restores your playback queue, active track, playback position, and volume across restarts.
 - **Visuals**: Displays album art using Sixel graphics (requires a compatible terminal) and a beautiful real-time audio frequency spectrum visualizer.
 
 ### Feature Progress
@@ -40,9 +42,10 @@ While most basic functionality is available and SMoC is totally usable, there's 
 <details>
 <summary><strong>Feature Plan</strong> (Click to expand)</summary>
   
-- [ ] UI
+- [x] UI
   - [x] Search Support
-  - [x] Command Bar
+  - [x] Command Bar (with Command History & Tab Completion)
+  - [x] Incremental Table Filtering (`/`)
   - [x] Song Table
   - [x] Now Playing Bar
   - [x] Album Art (Sixel)
@@ -57,9 +60,10 @@ While most basic functionality is available and SMoC is totally usable, there's 
   - [x] Previous
   - [x] Start Over
   - [ ] Repeat Track
-  - [x] Volume
+  - [x] Volume (0–200% with Loudness Normalization)
   - [x] Playback Device Selection (Local & Google Cast)
-  - [ ] Gapless Playback
+  - [x] Gapless Playback (Next-Track Preloading)
+  - [x] Session State Persistence
 - [ ] Queue
   - [x] Add to End of Queue
   - [x] Queue Next (after current song)
@@ -85,6 +89,16 @@ While most basic functionality is available and SMoC is totally usable, there's 
   - [ ] Like
   - [ ] Dislike
 - [ ] Subsonic API-compatible Servers
+  - [x] Authentication
+  - [x] Metadata
+  - [x] Searching
+  - [x] Play Audio Stream
+  - [x] Album Art
+  - [x] Caching
+  - [x] History Tracking
+  - [ ] Like
+  - [ ] Dislike
+- [ ] SoundCloud
   - [x] Authentication
   - [x] Metadata
   - [x] Searching
@@ -124,9 +138,9 @@ While most basic functionality is available and SMoC is totally usable, there's 
 Once installed some setup is required to use SMoC. See the [Configuration and Setup](#%EF%B8%8F-configuration-and-setup) section for more information.
 
 ### Binary Release (Windows/Linux/MacOS)
-Current release is [v0.5.1](https://github.com/mrazza/smoc/releases/tag/v0.5.1).
+Current release is [v0.5.3](https://github.com/mrazza/smoc/releases/tag/v0.5.3).
 
-Available for [Windows x64](https://github.com/mrazza/smoc/releases/download/v0.5.1/smoc-v0.5.1-win-x64-bin.zip), [Linux x64](https://github.com/mrazza/smoc/releases/download/v0.5.1/smoc-v0.5.1-linux-x64-bin.tar.gz), and [MacOS ARM64](https://github.com/mrazza/smoc/releases/download/v0.5.1/smoc-v0.5.1-mac-arm64-bin.zip).
+Available for [Windows x64](https://github.com/mrazza/smoc/releases/download/v0.5.3/smoc-v0.5.3-win-x64-bin.zip), [Linux x64](https://github.com/mrazza/smoc/releases/download/v0.5.3/smoc-v0.5.3-linux-x64-bin.tar.gz), and [MacOS ARM64](https://github.com/mrazza/smoc/releases/download/v0.5.3/smoc-v0.5.3-mac-arm64-bin.zip).
 
 ### Gentoo via Portage
 SMoC is available via [my overlay](https://github.com/mrazza/razza-overlay). To install, add my overlay and emerge it.
@@ -148,29 +162,33 @@ dotnet run --project smoc/smoc.csproj
 
 ## 🎮 Usage
 
-SMoC operates with a Vim-style command bar. Press `:` to enter command mode.
+SMoC operates with a Vim-style command bar. Press `:` to enter command mode (supports `Up`/`Down` command history and `Tab` command completion) or `/` to filter the active view incrementally.
 
 ### Navigation & Commands
 
-| Command         | Description                                             |
-| :-------------- | :------------------------------------------------------ |
-| `:a`            | Switch to **Artist** mode                               |
-| `:a/<artist>`   | Switch to **Artist** mode and search for `<artist>`     |
-| `:t`            | Switch to **Track** mode                                |
-| `:t/<track>`    | Switch to **Track** mode and search for `<track>`       |
-| `:p`            | Switch to **Playlist** mode                             |
-| `:p/<playlist>` | Switch to **Playlist** mode and search for `<playlist>` |
-| `:likes`        | Load your **Liked Songs** playlist                      |
-| `:url`          | Switch to **Playlist** mode from URL                    |
-| `:url/<url>`    | Load songs from a specific YouTube Music URL            |
-| `:pq`           | View the **Playback Queue**                             |
-| `:np`           | View **Now Playing** screen                             |
-| `:np-vis`       | Toggle real-time frequency visualizer in Now Playing    |
-| `:output`          | List available audio output targets (local & Cast devices) |
-| `:output/<device>` | Switch output to a Cast device (name/IP), or `:output/local` |
-| `:output/refresh`  | Perform an active on-demand mDNS scan for Cast devices    |
-| `:v/<0-100>`       | Set volume (e.g., `:v/80`)                                |
-| `:q`               | **Quit** application                                      |
+| Command                  | Description                                                           |
+| :----------------------- | :-------------------------------------------------------------------- |
+| `:a`                     | Switch to **Artist** mode                                             |
+| `:a/<artist>`            | Switch to **Artist** mode and search for `<artist>`                   |
+| `:t`                     | Switch to **Track** mode                                              |
+| `:t/<track>`             | Switch to **Track** mode and search for `<track>`                     |
+| `:p`                     | Switch to **Playlist** mode                                           |
+| `:p/<playlist>`          | Switch to **Playlist** mode and search for `<playlist>`               |
+| `:likes`                 | Load your **Liked Songs** playlist                                    |
+| `:url`                   | Switch to **Playlist** mode from URL                                  |
+| `:url/<url>`             | Load songs from a specific streaming URL                              |
+| `:pq`                    | View the **Playback Queue**                                           |
+| `:np`                    | View **Now Playing** screen                                           |
+| `:np-vis`                | Toggle real-time frequency visualizer in Now Playing                  |
+| `:np-vis-fps/<1-60>`     | Set real-time frequency visualizer refresh rate in FPS                |
+| `:output`                | List available audio output targets (local & Cast devices)            |
+| `:output/<device>`       | Switch output to a Cast device (name/IP), or `:output/local`          |
+| `:output/refresh`        | Perform an active on-demand mDNS scan for Cast devices                |
+| `:v/<0-200>`             | Set volume percentage (0–200%, e.g., `:v/80` or `:v/150`)             |
+| `:devices`               | List available audio playback devices (`*` marks the active device)   |
+| `:device/<name-or-idx>`  | Switch active audio output device by name, substring, or index        |
+| `/<query>`               | Incrementally filter the active table view (`Enter` keeps, `Esc` clears) |
+| `:q`                     | **Quit** application (automatically saves session state)              |
 
 ### Audio Outputs & Casting
 
@@ -184,20 +202,21 @@ SMoC supports switching audio output on the fly without interrupting your listen
 
 ### Playback Controls
 
-| Hotkey               | Action                                   |
-| :------------------- | :--------------------------------------- |
-| `Space`              | Play / Pause                             |
-| `Ctrl+Space`         | Stop                                     |
-| `,` (Comma)          | Previous Track (Restart if > 10s played) |
-| `.` (Period)         | Next Track                               |
-| `[`                  | Seek Backward 10s                        |
-| `]`                  | Seek Forward 10s                         |
-| `Up/Down/Left/Right` | Navigate Tables                          |
-| `h/j/k/l`            | Navigate Tables (Vim style)              |
-| `Shift + Nav Key`    | Select multiple items                    |
-| `Tab`                | Switch active pane                       |
+| Hotkey               | Action                                                        |
+| :------------------- | :------------------------------------------------------------ |
+| `Space`              | Play / Pause                                                  |
+| `Ctrl+Space`         | Stop                                                          |
+| `,` (Comma)          | Previous Track (Restart if > 10s played)                      |
+| `.` (Period)         | Next Track                                                    |
+| `[`                  | Seek Backward 10s                                             |
+| `]`                  | Seek Forward 10s                                              |
+| `Up/Down/Left/Right` | Navigate Tables                                               |
+| `h/j/k/l`            | Navigate Tables (Vim style)                                   |
+| `Shift + Nav Key`    | Select multiple items                                         |
+| `Tab`                | Switch active pane (or autocomplete command in `:` mode)      |
+| `/`                  | Enter incremental filter mode for the active view             |
 | `v` / `V` (Shift+v)  | Toggle real-time frequency visualizer (on Now Playing screen) |
-| `Enter`              | Open Song Context Menu for selected item |
+| `Enter`              | Open Song Context Menu for selected item                      |
 
 ### Song Context Menu
 
@@ -244,12 +263,12 @@ To access your YouTube Music account, you need to extract your cookies from YouT
 2. Open Developer Tools (`F12`) -> **Network** tab.
 3. Find a `POST` request to `music.youtube.com`.
 4. Copy the value of the `cookie` request header.
-5. Save it to `~/.config/smoc/cookie.txt`.
+5. Save it to `~/.config/smoc/cookies.txt`.
 
 > [!TIP]
 > It is recommended to open an incognito window or separate browser profile when getting your cookie information to avoid other browser sessions from invalidating the tokens. Once cookies are retrieved, close the session _without_ logging out.
 
-More recently, additional tokens beyond just cookies are often needed. POToken and Visitor Data are required in the `tokens.json` file in the same directory as your `cookie.txt`.
+More recently, additional tokens beyond just cookies are often needed. POToken and Visitor Data are required in the `tokens.json` file in the same directory as your `cookies.txt`.
 
 > [!TIP]
 > Run `smoc --gentokens` after setting up the cookie to generate necessary PO Tokens and Visitor Data automatically.
@@ -271,7 +290,8 @@ Create or edit `~/.config/smoc/config.json` to customize settings.
     "AlbumCoverCacheMaxElements": 0,
     "VisualizerFps": 24,
     "EnableLoudnessNormalization": true,
-    "LoudnessNormalizationMode": "Full"
+    "LoudnessNormalizationMode": "Full",
+    "AudioDevice": null
   },
   "SubsonicConfig": {
     "ServerScheme": "https",
@@ -309,6 +329,7 @@ Create or edit `~/.config/smoc/config.json` to customize settings.
 | `SmocConfiguration` | `VisualizerFps` | `int` | `24` | Refresh rate for the audio frequency spectrum visualizer (FPS) |
 | `SmocConfiguration` | `EnableLoudnessNormalization` | `bool` | `true` | Enable track loudness normalization |
 | `SmocConfiguration` | `LoudnessNormalizationMode` | `LoudnessNormalizationMode` | `Full` | Loudness normalization mode (`Full`, `AttenuateOnly`) |
+| `SmocConfiguration` | `AudioDevice` | `string` | `null` | Preferred audio output device name or index (`null` = system default) |
 | `SubsonicConfig` | `ServerScheme` | `string` | `http` | Subsonic API URI scheme (`http`, `https`) |
 | `SubsonicConfig` | `ServerHost` | `string` | `null` | Subsonic server hostname |
 | `SubsonicConfig` | `ServerPort` | `int` | `80` | Subsonic server port |

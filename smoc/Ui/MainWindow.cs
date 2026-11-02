@@ -3,6 +3,7 @@ using Sharpcaster.Models;
 using System.Reflection;
 using Smoc.Configuration;
 using Smoc.Services;
+using Smoc.Services.Audio;
 using Smoc.Services.Audio.SoundFlow;
 using Smoc.Services.Audio.Cast;
 using Smoc.Services.Cast;
@@ -23,12 +24,17 @@ public sealed class MainWindow : Runnable, IMainWindow {
   private readonly StatusBar _statusBar;
   private readonly MainContent _mainContent;
   private readonly NowPlayingBar _nowPlayingBar;
+  private readonly IAudioService _audioService;
   private readonly IPlaybackQueueService _playbackQueueService;
   private readonly CommandService _commandService;
   private readonly IPlaybackTrackingService _playbackTrackingService;
   private readonly ICastDiscoveryService _castDiscoveryService;
   private readonly IStreamingProxyService _streamingProxyService;
   private readonly CancellationTokenSource _disposeCts = new();
+  private readonly ISessionStateService _sessionStateService;
+  private readonly EventHandler _processExitHandler;
+  private readonly ConsoleCancelEventHandler _cancelKeyPressHandler;
+  private bool _disposed;
 
   private Mode? _currentMode;
   private View? _preCommandFocusedView;
@@ -38,12 +44,20 @@ public sealed class MainWindow : Runnable, IMainWindow {
   /// Initializes a new instance of the <see cref="MainWindow"/> class.
   /// </summary>
   /// <param name="streamingClient">The initialized streaming client.</param>
-  public MainWindow(IStreamingClient streamingClient) {
+  /// <param name="sessionStateService">Optional session state service for persisting playback state across restarts.</param>
+  /// <param name="audioService">Optional audio service for managing audio playback and sound devices.</param>
+  public MainWindow(IStreamingClient streamingClient, ISessionStateService? sessionStateService = null, IAudioService? audioService = null) {
     Width = Dim.Fill();
     Height = Dim.Fill();
     CanFocus = true;
 
-    _playbackQueueService = StandardPlaybackQueueService.UsingAudioService<SoundFlowAudioService>(this, streamingClient);
+    _sessionStateService = sessionStateService ?? new JsonSessionStateService();
+    _audioService = audioService ?? new SoundFlowAudioService();
+    _playbackQueueService = new StandardPlaybackQueueService(this, streamingClient, _audioService);
+    _processExitHandler = (_, _) => SaveSessionState();
+    _cancelKeyPressHandler = (_, _) => SaveSessionState();
+    AppDomain.CurrentDomain.ProcessExit += _processExitHandler;
+    Console.CancelKeyPress += _cancelKeyPressHandler;
     _playbackTrackingService = new StreamingListenHistoryService(
       streamingClient,
       TimeSpan.FromSeconds(ListenHistoryConfig.Defaults.MinimumPositionSeconds),
@@ -87,9 +101,12 @@ public sealed class MainWindow : Runnable, IMainWindow {
       if (args.Length > 0) {
         _commandLine.DisplayError($"unexpected trailing characters: {args}");
       } else {
+        SaveSessionState();
         App!.RequestStop();
       }
     });
+    _commandService.RegisterCommand("devices", OnDevicesCommand);
+    _commandService.RegisterCommand("device", OnDeviceCommand);
 
     _commandService.RegisterCompleter("output", (_, args) => {
       var devices = new List<string> { "local", "refresh" };
@@ -155,19 +172,30 @@ public sealed class MainWindow : Runnable, IMainWindow {
     AddCommand(Command.HotKey, OnCommandLineHotKey);
     HotKeyBindings.Add(new Key(':'), Command.HotKey);
     HotKeyBindings.Add(new Key(':').WithShift, Command.HotKey);
+    HotKeyBindings.Add(new Key('/'), Command.HotKey);
 
+    _commandLine.FilterChanged += (_, filterText) => {
+      _mainContent.ApplyFilterToCurrentView(filterText);
+    };
+    _commandLine.FilterAccepted += (_, filterText) => {
+      _mainContent.ApplyFilterToCurrentView(filterText);
+    };
     _commandLine.CommandCancelled += (sender, e) => {
+      if (_commandLine.InputMode == CommandLineMode.Filter) {
+        _mainContent.ApplyFilterToCurrentView(string.Empty);
+      }
       SetMode(_preCommandMode!.Value);
       _preCommandFocusedView?.SetFocus();
     };
     _commandLine.Accepted += (sender, e) => {
       var command = (e.Context as CommandLineCommandContext?)?.CommandText;
+      bool isFilter = _commandLine.InputMode == CommandLineMode.Filter || (command is not null && command.StartsWith('/'));
       SetMode(_preCommandMode!.Value);
       _preCommandFocusedView?.SetFocus();
 
-      if (command is not null && command.Length > 0) {
+      if (!isFilter && command is not null && command.Length > 0) {
         if (!_commandService.ExecuteCommand(command)) {
-          _commandLine.DisplayError($"not a valid commmand: {command}");
+          _commandLine.DisplayError($"not a valid command: {command}");
         }
       }
     };
@@ -175,6 +203,10 @@ public sealed class MainWindow : Runnable, IMainWindow {
     _currentMode = null;
     SetMode(Mode.Queue);
     _mainContent.SetFocus();
+
+    if (_sessionStateService.Load() is { } savedSession) {
+      _playbackQueueService.RestoreSessionState(savedSession);
+    }
   }
 
   /// <inheritdoc/>
@@ -183,7 +215,7 @@ public sealed class MainWindow : Runnable, IMainWindow {
       return;
     }
 
-    if (mode != Mode.Command) {
+    if (mode != Mode.Command && mode != Mode.Filter) {
       _nowPlayingBar.Visible = mode switch {
         Mode.NowPlaying => false,
         _ => true,
@@ -199,7 +231,11 @@ public sealed class MainWindow : Runnable, IMainWindow {
 
   /// <inheritdoc/>
   public void DisplayError(string message) {
-    _commandLine.DisplayError(message);
+    if (App is not null) {
+      App.Invoke(() => _commandLine.DisplayError(message));
+    } else {
+      _commandLine.DisplayError(message);
+    }
   }
 
   private ChromecastReceiver? FindDevice(string target) {
@@ -216,20 +252,87 @@ public sealed class MainWindow : Runnable, IMainWindow {
   }
 
   protected override void Dispose(bool disposing) {
-    _disposeCts.Cancel();
-    _disposeCts.Dispose();
-    _commandService.UnregisterCommand("q");
-    _commandService.UnregisterCommand("output");
-    _commandService.UnregisterCompleter("output");
-    _castDiscoveryService.Dispose();
-    _streamingProxyService.Dispose();
+    if (disposing && !_disposed) {
+      AppDomain.CurrentDomain.ProcessExit -= _processExitHandler;
+      Console.CancelKeyPress -= _cancelKeyPressHandler;
+      SaveSessionState();
+      _disposed = true;
+      _disposeCts.Cancel();
+      _disposeCts.Dispose();
+      _commandService.UnregisterCommand("q");
+      _commandService.UnregisterCommand("devices");
+      _commandService.UnregisterCommand("device");
+      _commandService.UnregisterCommand("output");
+      _commandService.UnregisterCompleter("output");
+      _castDiscoveryService.Dispose();
+      _streamingProxyService.Dispose();
+      _playbackQueueService.Dispose();
+    }
     base.Dispose(disposing);
   }
 
+  private void SaveSessionState() {
+    if (_disposed) {
+      return;
+    }
+
+    try {
+      _sessionStateService.Save(_playbackQueueService.GetSessionState());
+    } catch (Exception ex) {
+      Logging.Warning($"Failed to save session state during shutdown: {ex.Message}");
+    }
+  }
+
+  private void OnDevicesCommand(string _, string args) {
+    if (!string.IsNullOrWhiteSpace(args)) {
+      OnDeviceCommand("device", args);
+      return;
+    }
+
+    var devices = _audioService.GetPlaybackDevices();
+    if (devices.Count == 0) {
+      _commandLine.DisplayError("no audio playback devices found");
+      return;
+    }
+
+    var summary = string.Join(" | ", devices.Select(d => $"{(d.IsActive ? "*" : "")}[{d.Index}] {d.Name}"));
+    _commandLine.DisplayError(summary);
+  }
+
+  private void OnDeviceCommand(string _, string args) {
+    var splitArgs = CommandService.GetArgs(args);
+    if (splitArgs.Length == 0) {
+      OnDevicesCommand("devices", string.Empty);
+      return;
+    }
+
+    string query = splitArgs[0];
+    var devices = _audioService.GetPlaybackDevices();
+    AudioDeviceInfo? matchedDevice = null;
+    if (int.TryParse(query, out int index)) {
+      matchedDevice = devices.FirstOrDefault(d => d.Index == index);
+    }
+    matchedDevice ??= devices.FirstOrDefault(d => d.Name.Equals(query, StringComparison.OrdinalIgnoreCase))
+                     ?? devices.FirstOrDefault(d => d.Name.Contains(query, StringComparison.OrdinalIgnoreCase));
+
+    if (matchedDevice is null || !_audioService.SelectPlaybackDevice(matchedDevice)) {
+      _commandLine.DisplayError($"audio device not found: {query}");
+    }
+  }
+
   private bool? OnCommandLineHotKey(ICommandContext? context) {
+    if (context?.Binding is not KeyBinding { Key: { } pressedKey }) {
+      return false;
+    }
+    var (mode, inputMode) = pressedKey switch {
+      _ when pressedKey == new Key(':') || pressedKey == new Key(':').WithShift => (Mode.Command, CommandLineMode.Command),
+      _ when pressedKey == new Key('/') => (Mode.Filter, CommandLineMode.Filter),
+      _ => throw new ArgumentOutOfRangeException(nameof(context), $"Unsupported hotkey: {pressedKey}"),
+    };
     _preCommandMode = _currentMode;
     _preCommandFocusedView = MostFocused;
-    SetMode(Mode.Command);
+    SetMode(mode);
+    _commandLine.StartInput(inputMode);
     return true;
   }
 

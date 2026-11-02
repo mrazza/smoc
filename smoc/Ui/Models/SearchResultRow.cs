@@ -7,5 +7,6 @@ namespace Smoc.Ui.Models;
 /// <param name="Item">The underlying result item.</param>
 /// <param name="DisplayText">The text to display in the list.</param>
 internal record SearchResultRow<T>(T Item, string DisplayText) {
+  /// <inheritdoc />
   public override string ToString() => DisplayText;
 }

@@ -42,6 +42,23 @@ public sealed class CastAudioService : IAudioService {
   }
 
   /// <inheritdoc/>
+  public event EventHandler<AudioDeviceInfo?>? PlaybackDeviceChanged {
+    add { }
+    remove { }
+  }
+
+  /// <inheritdoc/>
+  public AudioDeviceInfo? ActivePlaybackDevice =>
+    new(0, _device.Name ?? _device.DeviceUri?.Host ?? "Google Cast", IsDefault: false, IsActive: true);
+
+  /// <inheritdoc/>
+  public IReadOnlyList<AudioDeviceInfo> GetPlaybackDevices() =>
+    ActivePlaybackDevice is { } active ? [active] : [];
+
+  /// <inheritdoc/>
+  public bool SelectPlaybackDevice(int deviceIndex) => deviceIndex == 0;
+
+  /// <inheritdoc/>
   public float Volume {
     get => _volume;
     set {

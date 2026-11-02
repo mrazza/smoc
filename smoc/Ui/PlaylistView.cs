@@ -1,5 +1,4 @@
 using System.Collections.ObjectModel;
-using System.Drawing;
 using Smoc.Services;
 using Smoc.Services.Util;
 using Smoc.Streaming;
@@ -38,6 +37,13 @@ public class PlaylistView : View {
   private readonly UniqueResource<CancellationTokenSource> _searchCtsResource;
   private readonly IStreamingClient _streamingClient;
 
+  /// <summary>
+  /// Initializes a new instance of the <see cref="PlaylistView"/> class.
+  /// </summary>
+  /// <param name="mainWindow">The main window reference.</param>
+  /// <param name="commandService">The command service for registering playlist commands.</param>
+  /// <param name="playbackQueueService">The playback queue service for playback options.</param>
+  /// <param name="streamingClient">The client for searching and fetching playlist data.</param>
   public PlaylistView(IMainWindow mainWindow, CommandService commandService, IPlaybackQueueService playbackQueueService, IStreamingClient streamingClient) {
     _mainWindow = mainWindow;
     _commandService = commandService;
@@ -127,8 +133,8 @@ public class PlaylistView : View {
     } catch (OperationCanceledException) {
       Logging.Debug("Loading url playlist cancelled");
     } catch (Exception ex) {
-      ResetSongsTable(Messages.SONG_LOAD_ERROR);
       Logging.Error($"Error loading url: {ex.Message}");
+      ResetSongsTable(Messages.SONG_LOAD_ERROR);
       _mainWindow.DisplayError("error loading url");
     }
   }
@@ -162,8 +168,8 @@ public class PlaylistView : View {
     } catch (OperationCanceledException) {
       Logging.Debug("Loading liked playlist cancelled");
     } catch (Exception ex) {
-      ResetSongsTable(Messages.SONG_LOAD_ERROR);
       Logging.Error($"Error loading liked playlist: {ex.Message}");
+      ResetSongsTable(Messages.SONG_LOAD_ERROR);
       _mainWindow.DisplayError("error loading liked playlist");
     }
   }
@@ -243,14 +249,18 @@ public class PlaylistView : View {
   }
 
   private void HideSearchResults() {
-    if (!_searchResults.Visible) return;
+    if (!_searchResults.Visible) {
+      return;
+    }
     _searchResults.Visible = false;
     _searchResults.Width = Dim.Absolute(0);
     _searchResultsLabel.Visible = false;
   }
 
   private void ShowSearchResults() {
-    if (_searchResults.Visible) return;
+    if (_searchResults.Visible) {
+      return;
+    }
     _searchResults.Visible = true;
     _searchResults.Width = Dim.Absolute(30);
     _searchResultsLabel.Visible = true;

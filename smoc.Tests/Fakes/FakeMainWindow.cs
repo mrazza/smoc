@@ -15,9 +15,21 @@ public class FakeMainWindow : IMainWindow {
   /// <inheritdoc/>
   public Mode CurrentMode { get; set; }
 
+  /// <summary>
+  /// Gets the list of error messages displayed via <see cref="DisplayError"/>.
+  /// </summary>
+  public List<string> DisplayedErrors { get; } = [];
+
+  /// <summary>
+  /// Gets the last error message displayed via <see cref="DisplayError"/>, or null if none.
+  /// </summary>
+  public string? LastDisplayedError => DisplayedErrors.LastOrDefault();
+
   /// <inheritdoc/>
   public void SetMode(Mode mode) { CurrentMode = mode; }
 
   /// <inheritdoc/>
-  public void DisplayError(string message) { }
+  public void DisplayError(string message) {
+    DisplayedErrors.Add(message);
+  }
 }

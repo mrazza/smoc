@@ -6,6 +6,7 @@ using Smoc.Streaming.Subsonic;
 using Smoc.Streaming;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
+using Smoc.Services;
 using Smoc.Services.Caching;
 
 namespace smoc.Tests.Streaming.Subsonic;
@@ -34,6 +35,8 @@ public class SubsonicStreamingClientServiceTest {
 
   private static SubsonicStreamingClient CreateClientWithMockStreamResponse(byte[] contentBytes) {
     var handlerMock = new Mock<HttpMessageHandler>(MockBehavior.Strict);
+    var content = new ByteArrayContent(contentBytes);
+
     handlerMock
       .Protected()
       .Setup<Task<HttpResponseMessage>>(
@@ -43,7 +46,7 @@ public class SubsonicStreamingClientServiceTest {
       )
       .ReturnsAsync(new HttpResponseMessage {
         StatusCode = HttpStatusCode.OK,
-        Content = new ByteArrayContent(contentBytes),
+        Content = content,
       });
 
     var httpClient = new HttpClient(handlerMock.Object);
@@ -359,6 +362,63 @@ public class SubsonicStreamingClientServiceTest {
     Assert.Equal("s1", stream.Id);
     Assert.Equal("mp3", stream.Codec);
     Assert.Equal(5, stream.Stream.Length);
+  }
+
+  [Fact]
+  public async Task GetSongStreamAsync_OnCacheHit_DoesNotMakeHttpRequest() {
+    var handlerMock = new Mock<HttpMessageHandler>(MockBehavior.Strict);
+    var httpClient = new HttpClient(handlerMock.Object);
+    var cacheMock = new Mock<ICacheService>();
+    cacheMock
+      .Setup(c => c.GetOrAddAsync(
+        "subsonic-s1",
+        It.IsAny<Func<CancellationToken, Task<Stream>>>(),
+        It.IsAny<CancellationToken>()))
+      .ReturnsAsync(new MemoryStream(new byte[] { 1, 2, 3 }));
+
+    var client = SubsonicStreamingClient.CreateForTesting("localhost", "user", "pass", true, songCacheService: cacheMock.Object);
+    var httpClientField = typeof(SubsonicStreamingClient).GetField("_httpClient", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+    httpClientField?.SetValue(client, httpClient);
+
+    var stream = await client.GetSongStreamAsync("s1", TestContext.Current.CancellationToken);
+    Assert.Equal("s1", stream.Id);
+    Assert.Equal("mp3", stream.Codec);
+    Assert.Equal(3, stream.Stream.Length);
+    handlerMock.Protected().Verify("SendAsync", Times.Never(), ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>());
+  }
+
+  [Fact]
+  public async Task BuildUrl_EscapesUsernameAndPassword() {
+    var jsonResponse = @"{
+      ""subsonic-response"": {
+        ""status"": ""ok"",
+        ""version"": ""1.16.1"",
+        ""artist"": { ""id"": ""a1"", ""name"": ""Artist One"" }
+      }
+    }";
+
+    var handlerMock = new Mock<HttpMessageHandler>(MockBehavior.Strict);
+    handlerMock
+      .Protected()
+      .Setup<Task<HttpResponseMessage>>(
+        "SendAsync",
+        ItExpr.Is<HttpRequestMessage>(req =>
+          req.RequestUri!.ToString().Contains("u=user%40test.com") &&
+          req.RequestUri!.ToString().Contains("p=p%40ss%26word%3D")
+        ),
+        ItExpr.IsAny<CancellationToken>()
+      )
+      .ReturnsAsync(new HttpResponseMessage {
+        StatusCode = HttpStatusCode.OK,
+        Content = new StringContent(jsonResponse),
+      });
+
+    var httpClient = new HttpClient(handlerMock.Object);
+    var client = SubsonicStreamingClient.CreateForTesting("localhost", "user@test.com", "p@ss&word=", false);
+    var httpClientField = typeof(SubsonicStreamingClient).GetField("_httpClient", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+    httpClientField?.SetValue(client, httpClient);
+
+    await client.GetArtistAsync("a1", TestContext.Current.CancellationToken);
   }
 
   [Fact]

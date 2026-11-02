@@ -164,4 +164,16 @@ public interface IPlaybackQueueService : IDisposable {
   /// </summary>
   /// <param name="audioService">The audio service to use.</param>
   Task SetAudioServiceAsync(IAudioService audioService);
+
+  /// <summary>
+  /// Restores a previously saved playback session state without auto-starting playback.
+  /// </summary>
+  /// <param name="state">The session state to restore.</param>
+  void RestoreSessionState(SessionState state) { }
+
+  /// <summary>
+  /// Captures a snapshot of the current playback session state.
+  /// </summary>
+  /// <returns>The current <see cref="SessionState"/>.</returns>
+  SessionState GetSessionState() => new(GetCurrentPlaybackQueue().ToList(), CurrentPlaybackIndex, CurrentTime.TotalSeconds, Volume);
 }
