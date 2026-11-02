@@ -19,7 +19,8 @@ public class ConfigurationBindingTest {
         "AlbumCoverCacheMaxElements": 40,
         "VisualizerFps": 30,
         "EnableLoudnessNormalization": true,
-        "LoudnessNormalizationMode": "Full"
+        "LoudnessNormalizationMode": "Full",
+        "DeduplicateArtistSingles": false
       }
     }
     """;
@@ -37,6 +38,13 @@ public class ConfigurationBindingTest {
     Assert.Equal(30, SmocConfiguration.Defaults.VisualizerFps);
     Assert.True(SmocConfiguration.Defaults.EnableLoudnessNormalization);
     Assert.Equal(LoudnessNormalizationMode.Full, SmocConfiguration.Defaults.LoudnessNormalizationMode);
+    Assert.False(SmocConfiguration.Defaults.DeduplicateArtistSingles);
+  }
+
+  [Fact]
+  public void Defaults_DeduplicateArtistSingles_IsTrue() {
+    var config = new SmocConfiguration();
+    Assert.True(config.DeduplicateArtistSingles);
   }
 
   [Fact]

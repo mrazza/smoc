@@ -1,4 +1,5 @@
 using Moq;
+using Smoc.Configuration;
 using Smoc.Services;
 using Smoc.Streaming;
 using Smoc.Ui;
@@ -377,5 +378,90 @@ public class ArtistViewTest {
     var screen = textWriter.ToString();
     Assert.Contains("Dogs", screen);
     Assert.Contains("Animals", screen);
+  }
+
+  [Fact]
+  public void ArtistSelected_DeduplicationEnabled_FiltersTeaserSinglesAndPreservesUniqueSingles() {
+    var previousConfig = SmocConfiguration.Defaults;
+    try {
+      SmocConfiguration.Defaults = new SmocConfiguration { DeduplicateArtistSingles = true };
+      using var context = NewArtistViewContext();
+
+      var artist = new Artist("123", "Billie Eilish");
+      _mockStreamingClient.Setup(client => client.SearchArtistsAsync("billie", It.IsAny<CancellationToken>()))
+        .ReturnsAsync([artist]);
+
+      context.Then((_) => _commandService.ExecuteCommand("a/billie"));
+
+      var album = new Album("alb-1", artist, "HIT ME HARD AND SOFT", [EntityTestFactory.GenerateAlbumCover()], 2024, AlbumType.Album);
+      var teaserSingle = new Album("sng-1", artist, "[Single] CHIHIRO", [EntityTestFactory.GenerateAlbumCover()], 2024, AlbumType.Single);
+      var uniqueSingle = new Album("sng-2", artist, "[Single] What Was I Made For", [EntityTestFactory.GenerateAlbumCover()], 2025, AlbumType.Single);
+
+      _mockStreamingClient.Setup(client => client.GetAlbumsByArtistAsync(artist, It.IsAny<CancellationToken>()))
+        .ReturnsAsync([album, teaserSingle, uniqueSingle]);
+
+      var albumTrack = new Song("trk-1", album, "CHIHIRO", TimeSpan.FromMinutes(5), 1);
+      var teaserTrack = new Song("trk-2", teaserSingle, "CHIHIRO", TimeSpan.FromMinutes(5), 1);
+      var uniqueTrack = new Song("trk-3", uniqueSingle, "What Was I Made For", TimeSpan.FromMinutes(3), 1);
+
+      _mockStreamingClient.Setup(client => client.GetSongsByAlbumAsync(album, It.IsAny<CancellationToken>()))
+        .ReturnsAsync([albumTrack]);
+      _mockStreamingClient.Setup(client => client.GetSongsByAlbumAsync(teaserSingle, It.IsAny<CancellationToken>()))
+        .ReturnsAsync([teaserTrack]);
+      _mockStreamingClient.Setup(client => client.GetSongsByAlbumAsync(uniqueSingle, It.IsAny<CancellationToken>()))
+        .ReturnsAsync([uniqueTrack]);
+
+      context.KeyDown(Key.Enter);
+
+      using var textWriter = new StringWriter();
+      context.ScreenShot("", textWriter);
+      var screen = textWriter.ToString();
+
+      Assert.Contains("HIT ME HARD AND SOFT", screen);
+      Assert.Contains("What Was I Made For", screen);
+      Assert.DoesNotContain("[Single] CHIHIRO", screen);
+    } finally {
+      SmocConfiguration.Defaults = previousConfig;
+    }
+  }
+
+  [Fact]
+  public void ArtistSelected_DeduplicationDisabled_PreservesAllSingles() {
+    var previousConfig = SmocConfiguration.Defaults;
+    try {
+      SmocConfiguration.Defaults = new SmocConfiguration { DeduplicateArtistSingles = false };
+      using var context = NewArtistViewContext();
+
+      var artist = new Artist("123", "Billie Eilish");
+      _mockStreamingClient.Setup(client => client.SearchArtistsAsync("billie", It.IsAny<CancellationToken>()))
+        .ReturnsAsync([artist]);
+
+      context.Then((_) => _commandService.ExecuteCommand("a/billie"));
+
+      var album = new Album("alb-1", artist, "HIT ME HARD AND SOFT", [EntityTestFactory.GenerateAlbumCover()], 2024, AlbumType.Album);
+      var teaserSingle = new Album("sng-1", artist, "[Single] CHIHIRO", [EntityTestFactory.GenerateAlbumCover()], 2024, AlbumType.Single);
+
+      _mockStreamingClient.Setup(client => client.GetAlbumsByArtistAsync(artist, It.IsAny<CancellationToken>()))
+        .ReturnsAsync([album, teaserSingle]);
+
+      var albumTrack = new Song("trk-1", album, "CHIHIRO", TimeSpan.FromMinutes(5), 1);
+      var teaserTrack = new Song("trk-2", teaserSingle, "CHIHIRO", TimeSpan.FromMinutes(5), 1);
+
+      _mockStreamingClient.Setup(client => client.GetSongsByAlbumAsync(album, It.IsAny<CancellationToken>()))
+        .ReturnsAsync([albumTrack]);
+      _mockStreamingClient.Setup(client => client.GetSongsByAlbumAsync(teaserSingle, It.IsAny<CancellationToken>()))
+        .ReturnsAsync([teaserTrack]);
+
+      context.KeyDown(Key.Enter);
+
+      using var textWriter = new StringWriter();
+      context.ScreenShot("", textWriter);
+      var screen = textWriter.ToString();
+
+      Assert.Contains("HIT ME HARD AND SOFT", screen);
+      Assert.Contains("[Single] CHIHIRO", screen);
+    } finally {
+      SmocConfiguration.Defaults = previousConfig;
+    }
   }
 }
