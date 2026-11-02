@@ -26,6 +26,9 @@ public sealed class MainWindow : Runnable, IMainWindow {
   private readonly CommandService _commandService;
   private readonly IPlaybackTrackingService _playbackTrackingService;
   private readonly ISessionStateService _sessionStateService;
+  private readonly EventHandler _processExitHandler;
+  private readonly ConsoleCancelEventHandler _cancelKeyPressHandler;
+  private bool _disposed;
 
   private Mode? _currentMode;
   private View? _preCommandFocusedView;
@@ -45,6 +48,10 @@ public sealed class MainWindow : Runnable, IMainWindow {
     _sessionStateService = sessionStateService ?? new JsonSessionStateService();
     _audioService = audioService ?? new SoundFlowAudioService();
     _playbackQueueService = new StandardPlaybackQueueService(this, streamingClient, _audioService);
+    _processExitHandler = (_, _) => SaveSessionState();
+    _cancelKeyPressHandler = (_, _) => SaveSessionState();
+    AppDomain.CurrentDomain.ProcessExit += _processExitHandler;
+    Console.CancelKeyPress += _cancelKeyPressHandler;
     _playbackTrackingService = new StreamingListenHistoryService(
       streamingClient,
       TimeSpan.FromSeconds(ListenHistoryConfig.Defaults.MinimumPositionSeconds),
@@ -148,8 +155,11 @@ public sealed class MainWindow : Runnable, IMainWindow {
   }
 
   protected override void Dispose(bool disposing) {
-    if (disposing) {
+    if (disposing && !_disposed) {
+      AppDomain.CurrentDomain.ProcessExit -= _processExitHandler;
+      Console.CancelKeyPress -= _cancelKeyPressHandler;
       SaveSessionState();
+      _disposed = true;
       _commandService.UnregisterCommand("q");
       _commandService.UnregisterCommand("devices");
       _commandService.UnregisterCommand("device");
@@ -159,6 +169,10 @@ public sealed class MainWindow : Runnable, IMainWindow {
   }
 
   private void SaveSessionState() {
+    if (_disposed) {
+      return;
+    }
+
     try {
       _sessionStateService.Save(_playbackQueueService.GetSessionState());
     } catch (Exception ex) {

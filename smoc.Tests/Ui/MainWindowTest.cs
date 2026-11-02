@@ -4,6 +4,7 @@ using Smoc.Services;
 using Smoc.Services.Audio;
 using Smoc.Streaming;
 using Smoc.Ui;
+using Smoc.Ui.Components;
 using Smoc.Ui.Models;
 using Terminal.Gui.Input;
 using Terminal.Gui.Views;
@@ -113,5 +114,39 @@ public class MainWindowTest {
         .KeyDown(Key.Enter);
 
     _mockAudioService.Verify(a => a.SelectPlaybackDevice(It.Is<AudioDeviceInfo>(d => d.Index == 1)), Times.Once());
+  }
+
+  /// <summary>
+  /// Verifies that constructing MainWindow with saved session state populates the queue UI
+  /// and now playing UI before the window is added to the application context, and saves session state on dispose.
+  /// </summary>
+  [Fact]
+  public void Constructor_WithSavedSessionState_PopulatesQueueAndNowPlayingUi() {
+    using var context = NewContext();
+    var song1 = EntityTestFactory.GenerateSong(id: "1", trackName: "Song 1", noArt: true);
+    var song2 = EntityTestFactory.GenerateSong(id: "2", trackName: "Song 2", noArt: true);
+    var savedSession = new SessionState([song1, song2], CurrentPlaybackIndex: 1, CurrentPositionSeconds: 42, Volume: 0.8f);
+    _mockSessionStateService.Setup(s => s.Load()).Returns(savedSession);
+
+    using var mainWindow = NewMainWindow();
+
+    var mainContent = mainWindow.SubViews.OfType<MainContent>().First();
+    var queueView = mainContent.SubViews.OfType<PlaybackQueueView>().First();
+    var songTable = queueView.SubViews.OfType<SongTable>().First();
+    var emptyLabel = queueView.SubViews.OfType<Label>().First(l => l.Text == "queue is empty");
+
+    Assert.False(emptyLabel.Visible);
+    Assert.Equal(2, songTable.GetSongs().Count);
+    Assert.Equal(1, songTable.SelectedRow);
+    Assert.Equal(1, songTable.HighlightedRow);
+
+    var nowPlayingBar = mainWindow.SubViews.OfType<NowPlayingBar>().First();
+    Assert.Contains(nowPlayingBar.SubViews.OfType<Label>(), l => l.Text == song2.Title);
+
+    mainWindow.Dispose();
+
+    _mockSessionStateService.Verify(
+      s => s.Save(It.Is<SessionState>(st => st.Queue.Count == 2 && st.CurrentPlaybackIndex == 1)),
+      Times.Once());
   }
 }
