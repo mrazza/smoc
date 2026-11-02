@@ -151,7 +151,11 @@ public sealed class MainWindow : Runnable, IMainWindow {
 
   /// <inheritdoc/>
   public void DisplayError(string message) {
-    _commandLine.DisplayError(message);
+    if (App is not null) {
+      App.Invoke(() => _commandLine.DisplayError(message));
+    } else {
+      _commandLine.DisplayError(message);
+    }
   }
 
   protected override void Dispose(bool disposing) {
