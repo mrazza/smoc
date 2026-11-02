@@ -125,16 +125,12 @@ public sealed class YtmStreamingClient : IStreamingClient {
         .Select(s => new Album(
             s.Id,
             artist,
-            s.IsSingle ? $"[Single] {s.Name}" : s.IsEp ? $"[EP] {s.Name}" : s.Name,
+            s.Name,
             s.Thumbnails.Select(t => new AlbumCover(t.Url, t.Width, t.Height)),
             s.ReleaseYear,
-            s.IsSingle ? AlbumType.Single : s.IsEp ? AlbumType.Ep : AlbumType.Album));
+            s.IsEp ? AlbumType.Ep : AlbumType.Single));
 
-    return albums.Concat(singlesAndEps)
-        .OrderByDescending(a => a.ReleaseYear ?? 0)
-        .ThenBy(a => a.Type == AlbumType.Album ? 0 : a.Type == AlbumType.Ep ? 1 : 2)
-        .ThenBy(a => a.Name, StringComparer.OrdinalIgnoreCase)
-        .ToList();
+    return albums.Concat(singlesAndEps).ToList();
   }
 
   /// <inheritdoc/>
@@ -172,18 +168,16 @@ public sealed class YtmStreamingClient : IStreamingClient {
 
     var result = _authedYtmClient.GetCommunityPlaylistSongsAsync(_authedYtmClient.GetCommunityPlaylistBrowseId("LM"));
     var results = await result.FetchItemsAsync(limit: 1000, cancellationToken: cancellationToken);
-    return results.OfType<CommunityPlaylistSong>()
-        .Where(s => !string.IsNullOrWhiteSpace(s.Id) && s.Album?.Id is not null && s.Artists.Length > 0)
-        .Select(s =>
-            new Song(
-              s.Id!,
-              new Album(
-                s.Album!.Id!,
-                new Artist(s.Artists.First().Id!, s.Artists.First().Name),
-                s.Album.Name,
-                s.Thumbnails.Select(t => new AlbumCover(t.Url, t.Width, t.Height))),
-              s.Name,
-              s.Duration)).ToList();
+    return results.OfType<CommunityPlaylistSong>().Select(s =>
+        new Song(
+          s.Id!,
+          new Album(
+            s.Album!.Id!,
+            new Artist(s.Artists.First().Id!, s.Artists.First().Name),
+            s.Album.Name,
+            s.Thumbnails.Select(t => new AlbumCover(t.Url, t.Width, t.Height))),
+          s.Name,
+          s.Duration)).ToList();
   }
 
   /// <inheritdoc/>
@@ -210,7 +204,7 @@ public sealed class YtmStreamingClient : IStreamingClient {
 
     var result = _authedYtmClient.GetCommunityPlaylistSongsAsync(_authedYtmClient.GetCommunityPlaylistBrowseId(playlist.Id));
     var results = await result.FetchItemsAsync(limit: 1000, cancellationToken: cancellationToken);
-    return results.OfType<CommunityPlaylistSong>().Where(r => !string.IsNullOrWhiteSpace(r.Id) && r.Album?.Id is not null && r.Artists.Length > 0).Select(s =>
+    return results.OfType<CommunityPlaylistSong>().Where(r => r.Album is not null && r.Artists.Length > 0).Select(s =>
         new Song(
           s.Id!,
           new Album(

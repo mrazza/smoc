@@ -394,8 +394,8 @@ public class ArtistViewTest {
       context.Then((_) => _commandService.ExecuteCommand("a/billie"));
 
       var album = new Album("alb-1", artist, "HIT ME HARD AND SOFT", [EntityTestFactory.GenerateAlbumCover()], 2024, AlbumType.Album);
-      var teaserSingle = new Album("sng-1", artist, "[Single] CHIHIRO", [EntityTestFactory.GenerateAlbumCover()], 2024, AlbumType.Single);
-      var uniqueSingle = new Album("sng-2", artist, "[Single] What Was I Made For", [EntityTestFactory.GenerateAlbumCover()], 2025, AlbumType.Single);
+      var teaserSingle = new Album("sng-1", artist, "CHIHIRO", [EntityTestFactory.GenerateAlbumCover()], 2024, AlbumType.Single);
+      var uniqueSingle = new Album("sng-2", artist, "What Was I Made For", [EntityTestFactory.GenerateAlbumCover()], 2025, AlbumType.Single);
 
       _mockStreamingClient.Setup(client => client.GetAlbumsByArtistAsync(artist, It.IsAny<CancellationToken>()))
         .ReturnsAsync([album, teaserSingle, uniqueSingle]);
@@ -439,7 +439,7 @@ public class ArtistViewTest {
       context.Then((_) => _commandService.ExecuteCommand("a/billie"));
 
       var album = new Album("alb-1", artist, "HIT ME HARD AND SOFT", [EntityTestFactory.GenerateAlbumCover()], 2024, AlbumType.Album);
-      var teaserSingle = new Album("sng-1", artist, "[Single] CHIHIRO", [EntityTestFactory.GenerateAlbumCover()], 2024, AlbumType.Single);
+      var teaserSingle = new Album("sng-1", artist, "CHIHIRO", [EntityTestFactory.GenerateAlbumCover()], 2024, AlbumType.Single);
 
       _mockStreamingClient.Setup(client => client.GetAlbumsByArtistAsync(artist, It.IsAny<CancellationToken>()))
         .ReturnsAsync([album, teaserSingle]);

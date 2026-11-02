@@ -184,7 +184,8 @@ public class SongTable : TableView, IFilterable {
       _songs = _allSongs.Where(song =>
           song.Title.Contains(_filterText, StringComparison.OrdinalIgnoreCase) ||
           song.Artist.Name.Contains(_filterText, StringComparison.OrdinalIgnoreCase) ||
-          song.Album.Name.Contains(_filterText, StringComparison.OrdinalIgnoreCase)).ToList();
+          song.Album.Name.Contains(_filterText, StringComparison.OrdinalIgnoreCase) ||
+          FormatAlbumName(song.Album).Contains(_filterText, StringComparison.OrdinalIgnoreCase)).ToList();
     }
 
     PopulateTableRows();
@@ -200,6 +201,12 @@ public class SongTable : TableView, IFilterable {
     ApplyFilter(string.Empty);
   }
 
+  private static string FormatAlbumName(Album album) => album.Type switch {
+    AlbumType.Single => $"[Single] {album.Name}",
+    AlbumType.Ep => $"[EP] {album.Name}",
+    _ => album.Name,
+  };
+
   private void PopulateTableRows() {
     _songTableData.Clear();
     foreach (var song in _songs) {
@@ -212,7 +219,7 @@ public class SongTable : TableView, IFilterable {
         values[index++] = song.Artist.Name;
       }
       if (_columns.HasFlag(SongTableColumns.Album)) {
-        values[index++] = song.Album.Name;
+        values[index++] = FormatAlbumName(song.Album);
       }
       if (_columns.HasFlag(SongTableColumns.Song)) {
         values[index++] = song.Title;
