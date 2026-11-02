@@ -268,4 +268,29 @@ public class SongTableTest {
     using var songTable = NewSongTable();
     Assert.IsAssignableFrom<IFilterable>(songTable);
   }
+
+  [Fact]
+  public void SetSongs_FormatsSingleAndEpAlbumNames() {
+    using var context = NewContext();
+    var songTable = NewSongTable();
+    var artist = new Artist("1", "Artist");
+    var album = new Album("1", artist, "Full Length", [], 2024, AlbumType.Album);
+    var ep = new Album("2", artist, "Mini EP", [], 2024, AlbumType.Ep);
+    var single = new Album("3", artist, "Hit Song", [], 2024, AlbumType.Single);
+
+    var song1 = new Song("1", album, "Track 1", TimeSpan.FromMinutes(3));
+    var song2 = new Song("2", ep, "Track 2", TimeSpan.FromMinutes(3));
+    var song3 = new Song("3", single, "Track 3", TimeSpan.FromMinutes(3));
+
+    context.Add(songTable)
+        .Then((_) => songTable.SetSongs([song1, song2, song3]));
+
+    using var textWriter = new StringWriter();
+    context.ScreenShot("", textWriter);
+    var screen = textWriter.ToString();
+
+    Assert.Contains("Full Length", screen);
+    Assert.Contains("[EP] Mini EP", screen);
+    Assert.Contains("[Single] Hit Song", screen);
+  }
 }
