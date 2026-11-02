@@ -2,6 +2,9 @@ using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 using Terminal.Gui.App;
+using Terminal.Gui.Drawing;
+using Terminal.Gui.Drivers;
+using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
 using Color = Terminal.Gui.Drawing.Color;
 
@@ -11,8 +14,20 @@ namespace Smoc.Ui.Components;
 /// A view that renders images using Sixel graphics sequences.
 /// </summary>
 public sealed class SixelImageView : ImageView {
+  private readonly object _renderLock = new();
   private Image<Rgba32>? _image;
   private CancellationTokenSource? _cancellationTokenSource;
+  private IDriver? _subscribedDriver;
+  private IDriver? _driverOverride;
+
+  /// <summary>
+  /// Gets or sets the driver used for Sixel detection. Defaults to <see cref="View.App"/>'s driver.
+  /// </summary>
+  public IDriver? Driver {
+    get => _driverOverride ?? App?.Driver;
+    set => _driverOverride = value;
+  }
+
 
   /// <summary>
   /// Initializes a new instance of the <see cref="SixelImageView"/> class.
@@ -20,12 +35,19 @@ public sealed class SixelImageView : ImageView {
   /// <param name="image">The initial image to display.</param>
   public SixelImageView(Image<Rgba32>? image = null) {
     _image = image;
+    Initialized += OnInitialized;
   }
 
   /// <summary>
   /// Clears the currently displayed image.
   /// </summary>
   public void ClearImage() {
+    lock (_renderLock) {
+      _cancellationTokenSource?.Cancel();
+      _cancellationTokenSource?.Dispose();
+      _cancellationTokenSource = null;
+    }
+
     if (_image is null) {
       return;
     }
@@ -44,15 +66,79 @@ public sealed class SixelImageView : ImageView {
     UpdateSixelData();
   }
 
+  /// <inheritdoc />
   protected override void OnFrameChanged(in System.Drawing.Rectangle frame) {
+    base.OnFrameChanged(frame);
+    EnsureDriverSubscribed();
     UpdateSixelData();
   }
 
-  private void UpdateSixelData() {
-    _cancellationTokenSource?.Cancel();
-    _cancellationTokenSource = new CancellationTokenSource();
+  /// <inheritdoc />
+  protected override void OnSuperViewChanged(ValueChangedEventArgs<View?> args) {
+    base.OnSuperViewChanged(args);
+    EnsureDriverSubscribed();
+    if (_image is not null && Image is null && Driver?.SixelSupport is { IsSupported: true }) {
+      UpdateSixelData();
+    }
+  }
 
-    var token = _cancellationTokenSource.Token;
+  /// <inheritdoc />
+  protected override bool OnDrawingContent(DrawContext? context) {
+    EnsureDriverSubscribed();
+    if (_image is not null && Image is null && Driver?.SixelSupport is { IsSupported: true }) {
+      UpdateSixelData();
+    }
+
+    return base.OnDrawingContent(context);
+  }
+
+  private void OnInitialized(object? sender, EventArgs e) {
+    EnsureDriverSubscribed();
+    if (_image is not null && Image is null && Driver?.SixelSupport is { IsSupported: true }) {
+      UpdateSixelData();
+    }
+  }
+
+  private void EnsureDriverSubscribed() {
+    lock (_renderLock) {
+      var driver = Driver;
+      if (driver is not null && !ReferenceEquals(_subscribedDriver, driver)) {
+        if (_subscribedDriver is not null) {
+          _subscribedDriver.SixelSupportChanged -= OnSixelSupportChanged;
+        }
+
+        _subscribedDriver = driver;
+        _subscribedDriver.SixelSupportChanged += OnSixelSupportChanged;
+      }
+    }
+  }
+
+  private void OnSixelSupportChanged(object? sender, ValueChangedEventArgs<SixelSupportResult?> e) {
+    if (e.NewValue is { IsSupported: true } && _image is not null) {
+      SetNeedsLayout();
+      UpdateSixelData();
+    }
+  }
+
+  private void UpdateSixelData() {
+    if (_image is null) {
+      return;
+    }
+
+    EnsureDriverSubscribed();
+
+    if (Driver?.SixelSupport is not { IsSupported: true }) {
+      return;
+    }
+
+    CancellationToken token;
+    lock (_renderLock) {
+      _cancellationTokenSource?.Cancel();
+      _cancellationTokenSource?.Dispose();
+      _cancellationTokenSource = new CancellationTokenSource();
+      token = _cancellationTokenSource.Token;
+    }
+
     Task.Run(() => {
       Color[,]? data = null;
       try {
@@ -62,23 +148,54 @@ public sealed class SixelImageView : ImageView {
         return;
       }
 
-      App?.Invoke(() => {
+      if (data is null) {
+        return;
+      }
+
+      void ApplyData() {
         if (token.IsCancellationRequested) {
           return;
         }
+
         Image = data;
         SetNeedsDraw();
-      });
+      }
+
+      if (App is { } app) {
+        app.Invoke(ApplyData);
+      } else {
+        ApplyData();
+      }
     }, token);
   }
 
-  private Color[,] GenerateSixelData() {
-    if (_image is null || App?.Driver?.SixelSupport is not { IsSupported: true }) {
+  private Color[,]? GenerateSixelData() {
+    var support = Driver?.SixelSupport;
+    if (_image is null || support is not { IsSupported: true }) {
       throw new InvalidOperationException("Sixel not supported.");
     }
 
-    var targetSize = FitImageInViewportInPixels(new(_image.Width, _image.Height));
-    using var resizedImage = _image.Clone(i => i.Resize(targetSize.Width, targetSize.Height));
+    if (Viewport.Width <= 0 || Viewport.Height <= 0) {
+      return null;
+    }
+
+    int pixelsPerCellX = support.Resolution.Width;
+    int pixelsPerCellY = support.Resolution.Height;
+    int targetWidthInPixels = Viewport.Width * pixelsPerCellX;
+    int targetHeightInPixels = Viewport.Height * pixelsPerCellY;
+
+    if (targetWidthInPixels <= 0 || targetHeightInPixels <= 0) {
+      return null;
+    }
+
+    double widthScale = (double)targetWidthInPixels / _image.Width;
+    double heightScale = (double)targetHeightInPixels / _image.Height;
+    double scale = Math.Min(widthScale, heightScale);
+
+    int newWidth = Math.Max(1, (int)(_image.Width * scale));
+    int newHeight = Math.Max(1, (int)(_image.Height * scale));
+
+    using var resizedImage = _image.Clone(i => i.Resize(newWidth, newHeight));
     return ConvertToColorArray(resizedImage);
   }
 
@@ -100,9 +217,16 @@ public sealed class SixelImageView : ImageView {
   /// <inheritdoc />
   protected override void Dispose(bool disposing) {
     if (disposing) {
-      _cancellationTokenSource?.Cancel();
-      _cancellationTokenSource?.Dispose();
-      _cancellationTokenSource = null;
+      lock (_renderLock) {
+        if (_subscribedDriver is not null) {
+          _subscribedDriver.SixelSupportChanged -= OnSixelSupportChanged;
+          _subscribedDriver = null;
+        }
+
+        _cancellationTokenSource?.Cancel();
+        _cancellationTokenSource?.Dispose();
+        _cancellationTokenSource = null;
+      }
     }
 
     base.Dispose(disposing);
