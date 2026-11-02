@@ -734,6 +734,8 @@ public class StandardPlaybackQueueServiceTest {
       .ReturnsAsync(new SongStream(song2.Id, "m4a", new MemoryStream()));
     sut.QueueNext([song1, song2]);
     await sut.Play();
+    Assert.NotNull(sut.PreloadingTask);
+    await sut.PreloadingTask;
     Assert.Equal(PlaybackState.Playing, sut.PlaybackState);
     Assert.Equal(song1, sut.CurrentSong);
     fakePlayerService1.EndSong();
@@ -992,8 +994,11 @@ public class StandardPlaybackQueueServiceTest {
     _mockAudioService.Verify(a => a.Dispose(), Times.Once);
   }
 
+  /// <summary>
+  /// Verifies that queuing next tracks starts preloading the upcoming track.
+  /// </summary>
   [Fact]
-  public void Preload_QueueNext_StartsPreloadingNextTrack() {
+  public async Task Preload_QueueNext_StartsPreloadingNextTrack() {
     var song1 = EntityTestFactory.GenerateSong(id: "1", postfix: "1");
     var song2 = EntityTestFactory.GenerateSong(id: "2", postfix: "2");
     using var sut = NewStandardPlaybackQueue();
@@ -1009,6 +1014,8 @@ public class StandardPlaybackQueueServiceTest {
       .ReturnsAsync(new SongStream(song2.Id, "m4a", new MemoryStream()));
 
     sut.QueueNext([song1, song2]);
+    Assert.NotNull(sut.PreloadingTask);
+    await sut.PreloadingTask;
 
     _mockStreamingClient.Verify(c => c.GetSongStreamAsync(song2.Id, It.IsAny<CancellationToken>()), Times.Once);
     _mockAudioService.Verify(a => a.MakePlaybackService(song2, It.IsAny<Stream>(), "m4a", It.IsAny<CancellationToken>()), Times.Once);
@@ -1039,6 +1046,9 @@ public class StandardPlaybackQueueServiceTest {
     _mockStreamingClient.Verify(c => c.GetSongStreamAsync(song2.Id, It.IsAny<CancellationToken>()), Times.Once);
   }
 
+  /// <summary>
+  /// Verifies that when a song ends, a preloaded track transitions to playing immediately.
+  /// </summary>
   [Fact]
   public async Task OnSongEnded_PreloadedTrackPlaysImmediately() {
     var song1 = EntityTestFactory.GenerateSong(id: "1", postfix: "1");
@@ -1057,6 +1067,8 @@ public class StandardPlaybackQueueServiceTest {
 
     sut.QueueNext([song1, song2]);
     await sut.Play();
+    Assert.NotNull(sut.PreloadingTask);
+    await sut.PreloadingTask;
 
     fakePlayerService1.EndSong();
 
@@ -1115,8 +1127,11 @@ public class StandardPlaybackQueueServiceTest {
     _mockAudioService.Verify(a => a.MakePlaybackService(song, It.IsAny<Stream>(), "m4a", 3.5f, It.IsAny<CancellationToken>()), Times.Once);
   }
 
+  /// <summary>
+  /// Verifies that when preloading a song with loudness dB, the loudness is passed to the audio service.
+  /// </summary>
   [Fact]
-  public void Preload_SongWithLoudnessDb_PassesLoudnessToAudioService() {
+  public async Task Preload_SongWithLoudnessDb_PassesLoudnessToAudioService() {
     using var sut = NewStandardPlaybackQueue();
     var song1 = EntityTestFactory.GenerateSong(id: "1", postfix: "_1");
     var song2 = EntityTestFactory.GenerateSong(id: "2", postfix: "_2");
@@ -1128,6 +1143,8 @@ public class StandardPlaybackQueueServiceTest {
       .ReturnsAsync(new SongStream(song2.Id, "m4a", new MemoryStream(), -2.5f));
 
     sut.QueueNext([song1, song2]);
+    Assert.NotNull(sut.PreloadingTask);
+    await sut.PreloadingTask;
 
     _mockAudioService.Verify(a => a.MakePlaybackService(song2, It.IsAny<Stream>(), "m4a", -2.5f, It.IsAny<CancellationToken>()), Times.Once);
   }
@@ -1320,6 +1337,104 @@ public class StandardPlaybackQueueServiceTest {
     Assert.Equal(
       "Playback failed for 'Nested Aggregate Track' (403 Forbidden). Tokens or cookies may be expired; try running with --gentokens.",
       _fakeMainWindow.LastDisplayedError);
+  }
+
+  /// <summary>
+  /// Verifies that when a song is played and a different song is currently preloading,
+  /// the stale preload is cancelled immediately before fetching the new song's stream.
+  /// </summary>
+  [Fact]
+  public async Task Play_WhenPreloadingDifferentSong_CancelsStalePreloadImmediately() {
+    using var sut = NewStandardPlaybackQueue();
+    var song1 = EntityTestFactory.GenerateSong(id: "1", postfix: "1");
+    var song2 = EntityTestFactory.GenerateSong(id: "2", postfix: "2");
+    var song3 = EntityTestFactory.GenerateSong(id: "3", postfix: "3");
+
+    var fakePlayback1 = new FakePlaybackService(song1);
+    var fakePlayback3 = new FakePlaybackService(song3);
+
+    _mockAudioService.Setup(a => a.MakePlaybackService(song1, It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+      .Returns(fakePlayback1);
+    _mockAudioService.Setup(a => a.MakePlaybackService(song3, It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+      .Returns(fakePlayback3);
+
+    _mockStreamingClient.Setup(c => c.GetSongStreamAsync(song1.Id, It.IsAny<CancellationToken>()))
+      .ReturnsAsync(new SongStream(song1.Id, "m4a", new MemoryStream()));
+
+    CancellationToken preloadToken = default;
+    var song2Tcs = new TaskCompletionSource<SongStream>();
+    _mockStreamingClient.Setup(c => c.GetSongStreamAsync(song2.Id, It.IsAny<CancellationToken>()))
+      .Returns<string, CancellationToken>((_, ct) => {
+        preloadToken = ct;
+        ct.Register(() => song2Tcs.TrySetCanceled(ct));
+        return song2Tcs.Task;
+      });
+
+    bool preloadCancelledWhenSong3StreamRequested = false;
+    _mockStreamingClient.Setup(c => c.GetSongStreamAsync(song3.Id, It.IsAny<CancellationToken>()))
+      .Returns<string, CancellationToken>((_, __) => {
+        preloadCancelledWhenSong3StreamRequested = preloadToken.IsCancellationRequested;
+        return Task.FromResult(new SongStream(song3.Id, "m4a", new MemoryStream()));
+      });
+
+    sut.QueueNext([song1, song2, song3]);
+    await sut.Play();
+
+    await sut.ChangeTrack(2);
+
+    Assert.True(preloadCancelledWhenSong3StreamRequested);
+    Assert.True(preloadToken.IsCancellationRequested);
+    Assert.Equal(PlaybackState.Playing, fakePlayback3.PlaybackState);
+  }
+
+  /// <summary>
+  /// Verifies that when playback setup is waiting on an in-progress preload task and is cancelled
+  /// (e.g. by changing track), the preload task is cancelled immediately.
+  /// </summary>
+  [Fact]
+  public async Task Play_CancelledWhileWaitingForPreloadTask_CancelsPreloadTask() {
+    using var sut = NewStandardPlaybackQueue();
+    var song1 = EntityTestFactory.GenerateSong(id: "1", postfix: "1");
+    var song2 = EntityTestFactory.GenerateSong(id: "2", postfix: "2");
+    var song3 = EntityTestFactory.GenerateSong(id: "3", postfix: "3");
+
+    var fakePlayback1 = new FakePlaybackService(song1);
+    var fakePlayback3 = new FakePlaybackService(song3);
+
+    _mockAudioService.Setup(a => a.MakePlaybackService(song1, It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+      .Returns(fakePlayback1);
+    _mockAudioService.Setup(a => a.MakePlaybackService(song3, It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+      .Returns(fakePlayback3);
+
+    _mockStreamingClient.Setup(c => c.GetSongStreamAsync(song1.Id, It.IsAny<CancellationToken>()))
+      .ReturnsAsync(new SongStream(song1.Id, "m4a", new MemoryStream()));
+
+    CancellationToken preloadToken = default;
+    TaskCompletionSource<SongStream>? activeSong2Tcs = null;
+    _mockStreamingClient.Setup(c => c.GetSongStreamAsync(song2.Id, It.IsAny<CancellationToken>()))
+      .Returns<string, CancellationToken>((_, ct) => {
+        var tcs = new TaskCompletionSource<SongStream>();
+        activeSong2Tcs = tcs;
+        preloadToken = ct;
+        ct.Register(() => tcs.TrySetCanceled(ct));
+        return tcs.Task;
+      });
+
+    _mockStreamingClient.Setup(c => c.GetSongStreamAsync(song3.Id, It.IsAny<CancellationToken>()))
+      .ReturnsAsync(new SongStream(song3.Id, "m4a", new MemoryStream()));
+
+    sut.QueueNext([song1, song2, song3]);
+    await sut.Play();
+
+    var nextTask = sut.NextTrack();
+
+    await sut.ChangeTrack(2);
+    await nextTask;
+
+    Assert.NotNull(activeSong2Tcs);
+    Assert.True(preloadToken.IsCancellationRequested);
+    Assert.Equal(PlaybackState.Playing, fakePlayback3.PlaybackState);
+    Assert.Equal(song3, sut.CurrentSong);
   }
 
   /// <summary>
