@@ -23,6 +23,12 @@ public enum Mode {
   Command,
 
   /// <summary>
+  /// The Filter input mode.
+  /// </summary>
+  [DisplayName("FILTER")]
+  Filter,
+
+  /// <summary>
   /// The Song / Track list view.
   /// </summary>
   [DisplayName("TRACK")]

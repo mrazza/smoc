@@ -15,7 +15,7 @@ namespace Smoc.Ui.Components;
 /// <summary>
 /// A table view for displaying a list of songs with configurable columns.
 /// </summary>
-public class SongTable : TableView {
+public class SongTable : TableView, IFilterable {
   /// <summary>
   /// Flags indicating which columns to display in the table.
   /// </summary>
@@ -129,7 +129,10 @@ public class SongTable : TableView {
 
   /// <inheritdoc />
   protected override bool OnAccepting(CommandEventArgs args) {
-    SongSelected?.Invoke(this, GetSelectedSongs());
+    var selectedSongs = GetSelectedSongs();
+    if (selectedSongs.Count > 0) {
+      SongSelected?.Invoke(this, selectedSongs);
+    }
     return true;
   }
 

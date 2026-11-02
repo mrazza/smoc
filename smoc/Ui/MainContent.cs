@@ -70,7 +70,7 @@ public sealed class MainContent : View {
   }
 
   /// <summary>
-  /// Applies a filter to the active view's song table, if the active view contains one.
+  /// Applies a filter to the active view's filterable component, if the active view supports filtering.
   /// </summary>
   /// <param name="filterText">The filter text to apply.</param>
   public void ApplyFilterToCurrentView(string? filterText) {
@@ -78,7 +78,7 @@ public sealed class MainContent : View {
       return;
     }
 
-    var songTable = currentView.SubViews.OfType<Components.SongTable>().FirstOrDefault();
-    songTable?.ApplyFilter(filterText);
+    var filterable = (currentView as Components.IFilterable) ?? currentView.SubViews.OfType<Components.IFilterable>().FirstOrDefault();
+    filterable?.ApplyFilter(filterText);
   }
 }

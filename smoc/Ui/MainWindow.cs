@@ -94,7 +94,7 @@ public sealed class MainWindow : Runnable, IMainWindow {
       _mainContent.ApplyFilterToCurrentView(filterText);
     };
     _commandLine.CommandCancelled += (sender, e) => {
-      if (_commandLine.Prefix == '/') {
+      if (_commandLine.InputMode == CommandLineMode.Filter) {
         _mainContent.ApplyFilterToCurrentView(string.Empty);
       }
       SetMode(_preCommandMode!.Value);
@@ -102,7 +102,7 @@ public sealed class MainWindow : Runnable, IMainWindow {
     };
     _commandLine.Accepted += (sender, e) => {
       var command = (e.Context as CommandLineCommandContext?)?.CommandText;
-      bool isFilter = _commandLine.Prefix == '/' || (command is not null && command.StartsWith('/'));
+      bool isFilter = _commandLine.InputMode == CommandLineMode.Filter || (command is not null && command.StartsWith('/'));
       SetMode(_preCommandMode!.Value);
       _preCommandFocusedView?.SetFocus();
 
@@ -128,7 +128,7 @@ public sealed class MainWindow : Runnable, IMainWindow {
       return;
     }
 
-    if (mode != Mode.Command) {
+    if (mode != Mode.Command && mode != Mode.Filter) {
       _nowPlayingBar.Visible = mode switch {
         Mode.NowPlaying => false,
         _ => true,
@@ -190,20 +190,32 @@ public sealed class MainWindow : Runnable, IMainWindow {
     }
 
     string query = splitArgs[0];
-    if (!_audioService.SelectPlaybackDevice(query)) {
+    var devices = _audioService.GetPlaybackDevices();
+    AudioDeviceInfo? matchedDevice = null;
+    if (int.TryParse(query, out int index)) {
+      matchedDevice = devices.FirstOrDefault(d => d.Index == index);
+    }
+    matchedDevice ??= devices.FirstOrDefault(d => d.Name.Equals(query, StringComparison.OrdinalIgnoreCase))
+                     ?? devices.FirstOrDefault(d => d.Name.Contains(query, StringComparison.OrdinalIgnoreCase));
+
+    if (matchedDevice is null || !_audioService.SelectPlaybackDevice(matchedDevice)) {
       _commandLine.DisplayError($"audio device not found: {query}");
     }
   }
 
   private bool? OnCommandLineHotKey(ICommandContext? context) {
+    if (context?.Binding is not KeyBinding { Key: { } pressedKey }) {
+      return false;
+    }
+    var (mode, inputMode) = pressedKey switch {
+      _ when pressedKey == new Key(':') || pressedKey == new Key(':').WithShift => (Mode.Command, CommandLineMode.Command),
+      _ when pressedKey == new Key('/') => (Mode.Filter, CommandLineMode.Filter),
+      _ => throw new ArgumentOutOfRangeException(nameof(context), $"Unsupported hotkey: {pressedKey}"),
+    };
     _preCommandMode = _currentMode;
     _preCommandFocusedView = MostFocused;
-    char prefix = ':';
-    if (context?.Binding is KeyBinding { Key: { } pressedKey } && pressedKey == new Key('/')) {
-      prefix = '/';
-    }
-    SetMode(Mode.Command);
-    _commandLine.StartInput(prefix);
+    SetMode(mode);
+    _commandLine.StartInput(inputMode);
     return true;
   }
 

@@ -10,10 +10,7 @@ public interface IAudioService : IDisposable {
   /// <summary>
   /// Occurs when the active audio playback device changes.
   /// </summary>
-  event EventHandler<AudioDeviceInfo?>? PlaybackDeviceChanged {
-    add { }
-    remove { }
-  }
+  event EventHandler<AudioDeviceInfo?>? PlaybackDeviceChanged;
 
   /// <summary>
   /// Gets or sets the master volume (0.0 to 2.0).
@@ -35,17 +32,24 @@ public interface IAudioService : IDisposable {
   /// Gets the list of available audio playback devices.
   /// </summary>
   /// <returns>A read-only list of available <see cref="AudioDeviceInfo"/> records.</returns>
-  IReadOnlyList<AudioDeviceInfo> GetPlaybackDevices() => [];
+  IReadOnlyList<AudioDeviceInfo> GetPlaybackDevices();
 
   /// <summary>
-  /// Switches audio output to the device matching the specified index or name.
+  /// Switches audio output to the device matching the specified index.
   /// </summary>
-  /// <param name="deviceIndexOrName">The 0-based device index or partial/full device name.</param>
-  /// <returns><c>true</c> if the device was found and selected; otherwise, <c>false</c>.</returns>
-  bool SelectPlaybackDevice(string deviceIndexOrName) => false;
+  /// <param name="deviceIndex">The 0-based index of the audio device.</param>
+  /// <returns><c>true</c> if the device was selected; otherwise, <c>false</c>.</returns>
+  bool SelectPlaybackDevice(int deviceIndex);
+
+  /// <summary>
+  /// Switches audio output to the specified audio device.
+  /// </summary>
+  /// <param name="device">The audio device to select.</param>
+  /// <returns><c>true</c> if the device was selected; otherwise, <c>false</c>.</returns>
+  bool SelectPlaybackDevice(AudioDeviceInfo device) => SelectPlaybackDevice(device.Index);
 
   /// <summary>
   /// Gets the currently active playback device, or <c>null</c> if none is initialized.
   /// </summary>
-  AudioDeviceInfo? ActivePlaybackDevice => null;
+  AudioDeviceInfo? ActivePlaybackDevice { get; }
 }

@@ -39,9 +39,11 @@ public sealed class CommandLine : View {
   public CommandService? CommandService { get; set; }
 
   /// <summary>
-  /// Gets the current command line prefix character (':' or '/').
+  /// Gets the current command line input mode.
   /// </summary>
-  public char Prefix { get; private set; } = ':';
+  public CommandLineMode InputMode { get; private set; } = CommandLineMode.Command;
+
+  private char PrefixChar => InputMode == CommandLineMode.Filter ? '/' : ':';
 
   /// <summary>
   /// Occurs when the filter text changes during '/' input mode.
@@ -94,13 +96,13 @@ public sealed class CommandLine : View {
   }
 
   /// <summary>
-  /// Starts input with the specified prefix character (':' for commands, '/' for filter).
+  /// Starts input with the specified command line mode (Command for ':', Filter for '/').
   /// </summary>
-  /// <param name="prefix">The prefix character to use.</param>
-  public void StartInput(char prefix = ':') {
+  /// <param name="mode">The command line mode to use.</param>
+  public void StartInput(CommandLineMode mode = CommandLineMode.Command) {
     _suppressCancel = true;
     try {
-      Prefix = prefix;
+      InputMode = mode;
       _commandTextField.DeleteAll();
       _commandTextField.ClearHistoryChanges();
       _historyIndex = -1;
@@ -110,7 +112,7 @@ public sealed class CommandLine : View {
       if (!HasFocus) {
         SetFocus();
       } else {
-        _commandTextField.InsertText(prefix.ToString());
+        _commandTextField.InsertText(PrefixChar.ToString());
       }
     } finally {
       _suppressCancel = false;
@@ -158,10 +160,10 @@ public sealed class CommandLine : View {
     if (newHasFocus) {
       ClearError();
       if (string.IsNullOrEmpty(_commandTextField.Text)) {
-        _commandTextField.InsertText(Prefix.ToString());
+        _commandTextField.InsertText(PrefixChar.ToString());
       }
     } else {
-      Prefix = ':';
+      InputMode = CommandLineMode.Command;
       _historyIndex = -1;
       _currentDraft = string.Empty;
       ResetTabCompletion();
@@ -200,7 +202,7 @@ public sealed class CommandLine : View {
   }
 
   private bool HandleCursorUp() {
-    if (Prefix != ':') {
+    if (InputMode != CommandLineMode.Command) {
       return true;
     }
 
@@ -215,13 +217,13 @@ public sealed class CommandLine : View {
       _historyIndex--;
     }
 
-    _commandTextField.Text = $"{Prefix}{_history[_historyIndex]}";
+    _commandTextField.Text = $"{PrefixChar}{_history[_historyIndex]}";
     _commandTextField.InsertionPoint = _commandTextField.Text.Length;
     return true;
   }
 
   private bool HandleCursorDown() {
-    if (Prefix != ':') {
+    if (InputMode != CommandLineMode.Command) {
       return true;
     }
 
@@ -231,10 +233,10 @@ public sealed class CommandLine : View {
 
     if (_historyIndex < _history.Count - 1) {
       _historyIndex++;
-      _commandTextField.Text = $"{Prefix}{_history[_historyIndex]}";
+      _commandTextField.Text = $"{PrefixChar}{_history[_historyIndex]}";
     } else {
       _historyIndex = -1;
-      _commandTextField.Text = $"{Prefix}{_currentDraft}";
+      _commandTextField.Text = $"{PrefixChar}{_currentDraft}";
     }
 
     _commandTextField.InsertionPoint = _commandTextField.Text.Length;
@@ -242,7 +244,7 @@ public sealed class CommandLine : View {
   }
 
   private bool HandleTab(bool isShift) {
-    if (Prefix != ':' || CommandService == null) {
+    if (InputMode != CommandLineMode.Command || CommandService == null) {
       return true;
     }
 
@@ -293,7 +295,7 @@ public sealed class CommandLine : View {
       return;
     }
 
-    if (!_suppressCancel && Prefix == '/' && e.Result.Length >= 1 && e.Result.StartsWith('/')) {
+    if (!_suppressCancel && InputMode == CommandLineMode.Filter && e.Result.Length >= 1 && e.Result.StartsWith('/')) {
       FilterChanged?.Invoke(this, e.Result[1..]);
     }
   }
@@ -307,7 +309,7 @@ public sealed class CommandLine : View {
   }
 
   private bool? OnCommandAccepted(ICommandContext? ctx) {
-    if (Prefix == ':') {
+    if (InputMode == CommandLineMode.Command) {
       var commandText = _commandTextField.Text.TrimStart(':');
       if (!string.IsNullOrEmpty(commandText)) {
         if (_history.Count == 0 || _history[^1] != commandText) {
@@ -317,7 +319,7 @@ public sealed class CommandLine : View {
       _historyIndex = -1;
       _currentDraft = string.Empty;
       RaiseAccepted(new CommandLineCommandContext(Command.Accept, new WeakReference<View>(this), ctx?.Binding, ctx?.Routing ?? CommandRouting.Direct, commandText));
-    } else if (Prefix == '/') {
+    } else if (InputMode == CommandLineMode.Filter) {
       var filterText = _commandTextField.Text.Length > 1 ? _commandTextField.Text[1..] : string.Empty;
       FilterAccepted?.Invoke(this, filterText);
       RaiseAccepted(new CommandLineCommandContext(Command.Accept, new WeakReference<View>(this), ctx?.Binding, ctx?.Routing ?? CommandRouting.Direct, $"/{filterText}"));
