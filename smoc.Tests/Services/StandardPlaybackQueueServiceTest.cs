@@ -4,6 +4,7 @@ using smoc.Tests.TestInfra;
 using Smoc.Services;
 using Smoc.Services.Audio;
 using Smoc.Streaming;
+using Smoc.Ui;
 
 namespace smoc.Tests.Services;
 
@@ -1165,5 +1166,37 @@ public class StandardPlaybackQueueServiceTest {
     await sut.Play();
     Assert.Equal(PlaybackState.Playing, sut.PlaybackState);
     Assert.Equal(TimeSpan.FromSeconds(45), fakePlayerService2.CurrentTime);
+  }
+
+  /// <summary>
+  /// Verifies that when IMainWindow.App is null, RestoreSessionState invokes
+  /// QueueChanged, SongChanged, PositionChanged, and VolumeChanged synchronously.
+  /// </summary>
+  [Fact]
+  public void RestoreSessionState_WhenMainWindowAppIsNull_InvokesEventsSynchronously() {
+    var mockMainWindow = new Mock<IMainWindow>();
+    mockMainWindow.SetupGet(m => m.App).Returns((Terminal.Gui.App.IApplication?)null);
+    using var sut = new StandardPlaybackQueueService(mockMainWindow.Object, _mockStreamingClient.Object, _mockAudioService.Object);
+
+    var song1 = EntityTestFactory.GenerateSong(id: "1", postfix: "_1", duration: TimeSpan.FromMinutes(3));
+    var song2 = EntityTestFactory.GenerateSong(id: "2", postfix: "_2", duration: TimeSpan.FromMinutes(3));
+
+    bool queueChangedFired = false;
+    Song? changedSong = null;
+    TimeSpan changedPosition = TimeSpan.Zero;
+    float changedVolume = 0f;
+
+    sut.QueueChanged += (_, _) => queueChangedFired = true;
+    sut.SongChanged += (_, s) => changedSong = s;
+    sut.PositionChanged += (_, pos) => changedPosition = pos;
+    sut.VolumeChanged += (_, vol) => changedVolume = vol;
+
+    var state = new SessionState([song1, song2], CurrentPlaybackIndex: 1, CurrentPositionSeconds: 42.0, Volume: 0.75f);
+    sut.RestoreSessionState(state);
+
+    Assert.True(queueChangedFired);
+    Assert.Equal(song2, changedSong);
+    Assert.Equal(TimeSpan.FromSeconds(42.0), changedPosition);
+    Assert.Equal(0.75f, changedVolume);
   }
 }

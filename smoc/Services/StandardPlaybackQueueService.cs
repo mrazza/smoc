@@ -490,7 +490,11 @@ public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
   /// </remarks>
   /// <param name="eventHandler">The event handler to invoke.</param>
   private void InvokeAppEvent(EventHandler? eventHandler) {
-    _mainWindow.App?.Invoke(() => eventHandler?.Invoke(this, EventArgs.Empty));
+    if (_mainWindow.App is { } app) {
+      app.Invoke(() => eventHandler?.Invoke(this, EventArgs.Empty));
+    } else {
+      eventHandler?.Invoke(this, EventArgs.Empty);
+    }
   }
 
   /// <summary>
@@ -504,7 +508,11 @@ public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
   /// <param name="eventHandler">The event handler to invoke.</param>
   /// <param name="args">The arguments to pass to the event handler.</param>
   private void InvokeAppEvent<T>(EventHandler<T>? eventHandler, T args) {
-    _mainWindow.App?.Invoke(() => eventHandler?.Invoke(this, args));
+    if (_mainWindow.App is { } app) {
+      app.Invoke(() => eventHandler?.Invoke(this, args));
+    } else {
+      eventHandler?.Invoke(this, args);
+    }
   }
 
   /// <summary>
