@@ -14,7 +14,6 @@ namespace Smoc.Ui.Components;
 /// A view that renders images using Sixel graphics sequences.
 /// </summary>
 public sealed class SixelImageView : ImageView {
-  private readonly object _renderLock = new();
   private Image<Rgba32>? _image;
   private CancellationTokenSource? _cancellationTokenSource;
   private IDriver? _subscribedDriver;
@@ -23,6 +22,10 @@ public sealed class SixelImageView : ImageView {
   /// <summary>
   /// Gets or sets the driver used for Sixel detection. Defaults to <see cref="View.App"/>'s driver.
   /// </summary>
+  /// <remarks>
+  /// Overriding this property is primarily intended for unit testing, allowing mock drivers to be injected
+  /// without requiring a fully initialized <see cref="IApplication"/> runtime environment.
+  /// </remarks>
   public IDriver? Driver {
     get => _driverOverride ?? App?.Driver;
     set => _driverOverride = value;
@@ -42,11 +45,9 @@ public sealed class SixelImageView : ImageView {
   /// Clears the currently displayed image.
   /// </summary>
   public void ClearImage() {
-    lock (_renderLock) {
-      _cancellationTokenSource?.Cancel();
-      _cancellationTokenSource?.Dispose();
-      _cancellationTokenSource = null;
-    }
+    _cancellationTokenSource?.Cancel();
+    _cancellationTokenSource?.Dispose();
+    _cancellationTokenSource = null;
 
     if (_image is null) {
       return;
@@ -100,16 +101,14 @@ public sealed class SixelImageView : ImageView {
   }
 
   private void EnsureDriverSubscribed() {
-    lock (_renderLock) {
-      var driver = Driver;
-      if (driver is not null && !ReferenceEquals(_subscribedDriver, driver)) {
-        if (_subscribedDriver is not null) {
-          _subscribedDriver.SixelSupportChanged -= OnSixelSupportChanged;
-        }
-
-        _subscribedDriver = driver;
-        _subscribedDriver.SixelSupportChanged += OnSixelSupportChanged;
+    var driver = Driver;
+    if (driver is not null && !ReferenceEquals(_subscribedDriver, driver)) {
+      if (_subscribedDriver is not null) {
+        _subscribedDriver.SixelSupportChanged -= OnSixelSupportChanged;
       }
+
+      _subscribedDriver = driver;
+      _subscribedDriver.SixelSupportChanged += OnSixelSupportChanged;
     }
   }
 
@@ -131,16 +130,18 @@ public sealed class SixelImageView : ImageView {
       return;
     }
 
-    CancellationToken token;
-    lock (_renderLock) {
-      _cancellationTokenSource?.Cancel();
-      _cancellationTokenSource?.Dispose();
-      _cancellationTokenSource = new CancellationTokenSource();
-      token = _cancellationTokenSource.Token;
+    if (Viewport.Width <= 0 || Viewport.Height <= 0) {
+      return;
     }
 
+    CancellationToken token;
+    _cancellationTokenSource?.Cancel();
+    _cancellationTokenSource?.Dispose();
+    _cancellationTokenSource = new CancellationTokenSource();
+    token = _cancellationTokenSource.Token;
+
     Task.Run(() => {
-      Color[,]? data = null;
+      Color[,] data;
       try {
         data = GenerateSixelData();
       } catch (Exception ex) {
@@ -148,35 +149,25 @@ public sealed class SixelImageView : ImageView {
         return;
       }
 
-      if (data is null) {
-        return;
-      }
-
-      void ApplyData() {
+      App!.Invoke(() => {
         if (token.IsCancellationRequested) {
           return;
         }
 
         Image = data;
         SetNeedsDraw();
-      }
-
-      if (App is { } app) {
-        app.Invoke(ApplyData);
-      } else {
-        ApplyData();
-      }
+      });
     }, token);
   }
 
-  private Color[,]? GenerateSixelData() {
+  private Color[,] GenerateSixelData() {
     var support = Driver?.SixelSupport;
     if (_image is null || support is not { IsSupported: true }) {
       throw new InvalidOperationException("Sixel not supported.");
     }
 
     if (Viewport.Width <= 0 || Viewport.Height <= 0) {
-      return null;
+      throw new InvalidOperationException("Viewport must have positive dimensions to generate Sixel data.");
     }
 
     int pixelsPerCellX = support.Resolution.Width;
@@ -185,7 +176,7 @@ public sealed class SixelImageView : ImageView {
     int targetHeightInPixels = Viewport.Height * pixelsPerCellY;
 
     if (targetWidthInPixels <= 0 || targetHeightInPixels <= 0) {
-      return null;
+      throw new InvalidOperationException("Target pixel dimensions must be positive to generate Sixel data.");
     }
 
     double widthScale = (double)targetWidthInPixels / _image.Width;
@@ -217,16 +208,14 @@ public sealed class SixelImageView : ImageView {
   /// <inheritdoc />
   protected override void Dispose(bool disposing) {
     if (disposing) {
-      lock (_renderLock) {
-        if (_subscribedDriver is not null) {
-          _subscribedDriver.SixelSupportChanged -= OnSixelSupportChanged;
-          _subscribedDriver = null;
-        }
-
-        _cancellationTokenSource?.Cancel();
-        _cancellationTokenSource?.Dispose();
-        _cancellationTokenSource = null;
+      if (_subscribedDriver is not null) {
+        _subscribedDriver.SixelSupportChanged -= OnSixelSupportChanged;
+        _subscribedDriver = null;
       }
+
+      _cancellationTokenSource?.Cancel();
+      _cancellationTokenSource?.Dispose();
+      _cancellationTokenSource = null;
     }
 
     base.Dispose(disposing);
