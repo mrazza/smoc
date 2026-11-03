@@ -165,7 +165,17 @@ public class SongTable : TableView, IFilterable {
   public void SetSongs(IEnumerable<Song> songs) {
     ClearSongs();
     CanFocus = true;
-    _allSongs = songs.ToList();
+    _allSongs = songs
+        .OrderByDescending(s => s.Album.ReleaseYear ?? 0)
+        .ThenBy(s => s.Album.Type switch {
+          AlbumType.Album => 0,
+          AlbumType.Ep => 1,
+          AlbumType.Single => 2,
+          _ => 3
+        })
+        .ThenBy(s => s.Album.Name, StringComparer.OrdinalIgnoreCase)
+        .ThenBy(s => s.TrackNumber ?? int.MaxValue)
+        .ToList();
     _filterText = string.Empty;
     _songs = _allSongs.ToList();
     PopulateTableRows();
