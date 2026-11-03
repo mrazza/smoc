@@ -131,6 +131,7 @@ public sealed class ArtistView : View {
 
       var failedAlbums = 0;
       Exception? lastAlbumError = null;
+      // Rate limit the number of concurrent RPCs when loading album songs.
       using var semaphore = new SemaphoreSlim(10, 10);
       var songTasks = albums.Select(async album => {
         await semaphore.WaitAsync(token);
