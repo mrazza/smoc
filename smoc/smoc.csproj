@@ -18,6 +18,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="Resources/config.json" />
+  </ItemGroup>
+
+  <ItemGroup>
     <InternalsVisibleTo Include="smoc.tests" />
   </ItemGroup>
 

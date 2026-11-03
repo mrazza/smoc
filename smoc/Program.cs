@@ -58,7 +58,6 @@ public static class Program {
              .BindAppSettings<YouTubeMusicConfig>("YouTubeMusicConfig", s => YouTubeMusicConfig.Defaults = s);
 
       builder.ApplyToStaticFacades();
-      AppSchemes.RegisterDefaultSchemes();
 
       Application.SetDefaultKeyBinding(Terminal.Gui.Input.Command.Quit, new Terminal.Gui.Input.PlatformKeyBinding() {
         All = [new Terminal.Gui.Input.Key(':')]
