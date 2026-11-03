@@ -293,4 +293,30 @@ public class SongTableTest {
     Assert.Contains("[EP] Mini EP", screen);
     Assert.Contains("[Single] Hit Song", screen);
   }
+
+  [Fact]
+  public void SetSongs_SortsSongsByReleaseYearAlbumTypeAndTrackNumber() {
+    using var songTable = NewSongTable();
+    var artist = new Artist("1", "Artist");
+    var album2020 = new Album("alb-2020", artist, "Older Album", [], 2020, AlbumType.Album);
+    var album2024 = new Album("alb-2024", artist, "Newer Album", [], 2024, AlbumType.Album);
+    var ep2024 = new Album("ep-2024", artist, "EP Release", [], 2024, AlbumType.Ep);
+    var single2024 = new Album("sng-2024", artist, "Single Release", [], 2024, AlbumType.Single);
+
+    var songOlder = new Song("1", album2020, "Old Track", TimeSpan.FromMinutes(3), 1);
+    var songNewerTrk2 = new Song("2", album2024, "Track Two", TimeSpan.FromMinutes(3), 2);
+    var songNewerTrk1 = new Song("3", album2024, "Track One", TimeSpan.FromMinutes(3), 1);
+    var songEp = new Song("4", ep2024, "EP Track", TimeSpan.FromMinutes(3), 1);
+    var songSingle = new Song("5", single2024, "Single Track", TimeSpan.FromMinutes(3), 1);
+
+    // Pass in unsorted/arbitrary order
+    songTable.SetSongs([songOlder, songSingle, songNewerTrk2, songEp, songNewerTrk1]);
+
+    var sorted = songTable.GetSongs();
+    Assert.Equal("3", sorted[0].Id); // Newer Album (2024), track 1
+    Assert.Equal("2", sorted[1].Id); // Newer Album (2024), track 2
+    Assert.Equal("4", sorted[2].Id); // EP Release (2024), track 1
+    Assert.Equal("5", sorted[3].Id); // Single Release (2024), track 1
+    Assert.Equal("1", sorted[4].Id); // Older Album (2020), track 1
+  }
 }
