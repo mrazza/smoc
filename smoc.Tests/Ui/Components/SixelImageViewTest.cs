@@ -194,6 +194,36 @@ public class SixelImageViewTest {
   }
 
   /// <summary>
+  /// Verifies that setting Driver subscribes to SixelSupportChanged immediately.
+  /// </summary>
+  [Fact]
+  public async Task Driver_WhenSet_SubscribesToSixelSupportChanged() {
+    using var context = NewContext();
+    using var image = CreateTestImage();
+    var mockDriver = CreateMockDriver(sixelSupported: false);
+
+    var sut = new SixelImageView(image) {
+      Frame = new Rectangle(0, 0, 10, 5)
+    };
+    context.Add(sut);
+
+    sut.Driver = mockDriver.Object;
+
+    Assert.Null(sut.Image);
+
+    var supportedResult = new SixelSupportResult {
+      IsSupported = true,
+      Resolution = new System.Drawing.Size(10, 20)
+    };
+    mockDriver.SetupGet(d => d.SixelSupport).Returns(supportedResult);
+    mockDriver.Raise(d => d.SixelSupportChanged += null, mockDriver.Object, new ValueChangedEventArgs<SixelSupportResult?>(null, supportedResult));
+
+    await WaitForAsync(() => sut.Image != null, TimeSpan.FromSeconds(3), TestContext.Current.CancellationToken);
+
+    Assert.NotNull(sut.Image);
+  }
+
+  /// <summary>
   /// Verifies that when Viewport has zero dimensions, image generation is skipped and Image remains null.
   /// </summary>
   [Fact]

@@ -28,9 +28,11 @@ public sealed class SixelImageView : ImageView {
   /// </remarks>
   public IDriver? Driver {
     get => _driverOverride ?? App?.Driver;
-    set => _driverOverride = value;
+    set {
+      _driverOverride = value;
+      EnsureDriverSubscribed();
+    }
   }
-
 
   /// <summary>
   /// Initializes a new instance of the <see cref="SixelImageView"/> class.
@@ -70,44 +72,25 @@ public sealed class SixelImageView : ImageView {
   /// <inheritdoc />
   protected override void OnFrameChanged(in System.Drawing.Rectangle frame) {
     base.OnFrameChanged(frame);
-    EnsureDriverSubscribed();
     UpdateSixelData();
   }
 
-  /// <inheritdoc />
-  protected override void OnSuperViewChanged(ValueChangedEventArgs<View?> args) {
-    base.OnSuperViewChanged(args);
-    EnsureDriverSubscribed();
-    if (_image is not null && Image is null && Driver?.SixelSupport is { IsSupported: true }) {
-      UpdateSixelData();
-    }
-  }
-
-  /// <inheritdoc />
-  protected override bool OnDrawingContent(DrawContext? context) {
-    EnsureDriverSubscribed();
-    if (_image is not null && Image is null && Driver?.SixelSupport is { IsSupported: true }) {
-      UpdateSixelData();
-    }
-
-    return base.OnDrawingContent(context);
-  }
-
   private void OnInitialized(object? sender, EventArgs e) {
-    EnsureDriverSubscribed();
-    if (_image is not null && Image is null && Driver?.SixelSupport is { IsSupported: true }) {
-      UpdateSixelData();
-    }
+    UpdateSixelData();
   }
 
   private void EnsureDriverSubscribed() {
     var driver = Driver;
-    if (driver is not null && !ReferenceEquals(_subscribedDriver, driver)) {
-      if (_subscribedDriver is not null) {
-        _subscribedDriver.SixelSupportChanged -= OnSixelSupportChanged;
-      }
+    if (ReferenceEquals(_subscribedDriver, driver)) {
+      return;
+    }
 
-      _subscribedDriver = driver;
+    if (_subscribedDriver is not null) {
+      _subscribedDriver.SixelSupportChanged -= OnSixelSupportChanged;
+    }
+
+    _subscribedDriver = driver;
+    if (_subscribedDriver is not null) {
       _subscribedDriver.SixelSupportChanged += OnSixelSupportChanged;
     }
   }
