@@ -76,6 +76,7 @@ public sealed class SixelImageView : ImageView {
   }
 
   private void OnInitialized(object? sender, EventArgs e) {
+    EnsureDriverSubscribed();
     UpdateSixelData();
   }
 
@@ -106,8 +107,6 @@ public sealed class SixelImageView : ImageView {
     if (_image is null) {
       return;
     }
-
-    EnsureDriverSubscribed();
 
     if (Driver?.SixelSupport is not { IsSupported: true }) {
       return;

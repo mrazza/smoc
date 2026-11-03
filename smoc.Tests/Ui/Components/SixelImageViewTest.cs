@@ -149,7 +149,7 @@ public class SixelImageViewTest {
 
     Assert.NotNull(sut.Image);
 
-    sut.ClearImage();
+    context.WaitIteration(_ => sut.ClearImage());
 
     Assert.Null(sut.Image);
   }
@@ -243,5 +243,30 @@ public class SixelImageViewTest {
     await Task.Delay(50, TestContext.Current.CancellationToken);
 
     Assert.Null(sut.Image);
+  }
+
+  /// <summary>
+  /// Verifies that when SixelImageView is initialized without an initial image,
+  /// setting an image subsequently renders once Sixel support is available.
+  /// </summary>
+  [Fact]
+  public async Task Initialized_WhenNoImageAtInitialization_RendersWhenImageSet() {
+    using var context = NewContext();
+    using var image = CreateTestImage();
+    var mockDriver = CreateMockDriver(sixelSupported: true);
+
+    var sut = new SixelImageView {
+      Driver = mockDriver.Object,
+      Frame = new Rectangle(0, 0, 10, 5)
+    };
+    context.Add(sut);
+
+    Assert.Null(sut.Image);
+
+    sut.SetImage(image);
+
+    await WaitForAsync(() => sut.Image != null, TimeSpan.FromSeconds(3), TestContext.Current.CancellationToken);
+
+    Assert.NotNull(sut.Image);
   }
 }
