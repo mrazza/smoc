@@ -6,6 +6,10 @@ using Xunit;
 
 namespace smoc.Tests.Configuration;
 
+[CollectionDefinition("ThemeConfigurationTests", DisableParallelization = true)]
+public class ThemeConfigurationTestCollection { }
+
+[Collection("ThemeConfigurationTests")]
 public class ThemeConfigurationTests : IDisposable {
   private static readonly string _appDefaultsJson = LoadAppDefaultsJson();
 
