@@ -331,6 +331,50 @@ Create or edit `~/.config/smoc/config.json` to customize settings.
 | `SoundCloudConfig` | `AuthToken` | `string` | `null` | SoundCloud authentication token |
 | `YouTubeMusicConfig` | `PlayerId` | `string` | `null` | Custom YouTube Music player ID |
 
+### Theming and Color Schemes
+
+SMoC supports custom themes and color schemes via Terminal.Gui's configuration format. You can customize colors globally or define theme-specific scheme overrides in `~/.config/smoc/config.json`.
+
+<details>
+<summary><strong>Custom Theme Configuration Example</strong> (Click to expand)</summary>
+
+```json
+{
+  "Theme": "CustomDark",
+  "Themes": {
+    "CustomDark": {
+      "Schemes": {
+        "Accent": {
+          "Normal": { "Foreground": "#ebdbb2", "Background": "None" },
+          "Focus": { "Foreground": "#ebdbb2", "Background": "#639494" },
+          "Active": { "Foreground": "#ebdbb2", "Background": "#394e4e" }
+        },
+        "ProgressBar": {
+          "Normal": { "Foreground": "#ebdbb2", "Background": "#394e4e" }
+        }
+      }
+    }
+  }
+}
+```
+</details>
+
+#### Available Scheme Keys
+You can override individual schemes either at the root level (`"Schemes": { ... }`) or scoped within a theme (`"Themes": { "<ThemeName>": { "Schemes": { ... } } }`). Any unspecified schemes automatically fall back to SMoC's default values:
+
+| Scheme Key | Description |
+| :--- | :---------- |
+| `Accent` | Accent highlights across views |
+| `ProgressBar` | Audio playback progress bars |
+| `TableCurrentTrack` | Currently playing track in playlist and track tables |
+| `TableHeaders` | Column headers in tables |
+| `TableNormalTracks` | Normal track rows in tables |
+| `Menu` | Navigation menus and dropdowns |
+| `StatusBar` | Main status bar container |
+| `StatusBar_State` | Playback state label within the status bar |
+| `CommandLine` | Command line input prompt (`:`) |
+| `CommandLineError` | Command line error messages and alerts |
+
 ## 🤝 Contributing
 
 Contributions are welcome!
