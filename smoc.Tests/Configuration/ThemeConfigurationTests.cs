@@ -19,6 +19,7 @@ public class ThemeConfigurationTests : IDisposable {
     TuiConfigurationBuilder.Shared.RuntimeConfig = null;
     ThemeManager.Theme = ThemeManager.DEFAULT_THEME_NAME;
     TuiConfigurationBuilder.Shared.ApplyToStaticFacades();
+    smoc.Tests.TestInfra.ContextExtensions.EnsureDefaultTestSchemes();
   }
 
   [Fact]

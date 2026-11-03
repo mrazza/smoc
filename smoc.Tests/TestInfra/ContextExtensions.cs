@@ -1,3 +1,4 @@
+using Smoc.Ui;
 using Terminal.Gui.Configuration;
 using Terminal.Gui.Drawing;
 using Terminal.Gui.Time;
@@ -9,7 +10,6 @@ namespace smoc.Tests.TestInfra;
 /// Extension methods for <see cref="TerminalGuiFluentTesting.TestContext"/>.
 /// </summary>
 public static class ContextExtensions {
-  private static volatile bool _isConfigSet = false;
   private static readonly object _configLock = new();
 
   /// <summary>
@@ -37,6 +37,30 @@ public static class ContextExtensions {
   }
 
   /// <summary>
+  /// Configures the default theme schemes for unit tests.
+  /// </summary>
+  public static void EnsureDefaultTestSchemes() {
+    lock (_configLock) {
+      if (SchemeManager.Schemes is null) return;
+      SchemeManager.Schemes["CommandLine"] = new Scheme {
+        Normal = new Terminal.Gui.Drawing.Attribute(new Color("#ebdbb2"), new Color(0, 0, 0, 0))
+      };
+      SchemeManager.Schemes["CommandLineError"] = new Scheme {
+        Normal = new Terminal.Gui.Drawing.Attribute(new Color("#262626"), new Color("#d75f5f"), TextStyle.Bold)
+      };
+      SchemeManager.Schemes["ProgressBar"] = new Scheme {
+        Normal = new Terminal.Gui.Drawing.Attribute(new Color("#ebdbb2"), new Color("#394e4e"))
+      };
+      SchemeManager.Schemes["StatusBar_State"] = new Scheme {
+        Normal = new Terminal.Gui.Drawing.Attribute(new Color("#949494"), new Color("#3a3a3a"))
+      };
+      SchemeManager.Schemes["StatusBar"] = new Scheme {
+        Normal = new Terminal.Gui.Drawing.Attribute(new Color("#262626"), new Color("#949494"), TextStyle.Bold)
+      };
+    }
+  }
+
+  /// <summary>
   /// Configures the default theme for the test context.
   /// </summary>
   /// <remarks>
@@ -45,26 +69,7 @@ public static class ContextExtensions {
   /// <param name="context">The test context.</param>
   /// <returns>The test context.</returns>
   public static AppTestHelper ConfigureDefaultTheme(this AppTestHelper context) {
-    if (_isConfigSet) return context;
-    lock (_configLock) {
-      if (_isConfigSet) return context;
-      SchemeManager.AddScheme("CommandLine", new Scheme {
-        Normal = new Terminal.Gui.Drawing.Attribute(new Color("#ebdbb2"), new Color(0, 0, 0, 0))
-      });
-      SchemeManager.AddScheme("CommandLineError", new Scheme {
-        Normal = new Terminal.Gui.Drawing.Attribute(new Color("#262626"), new Color("#d75f5f"), TextStyle.Bold)
-      });
-      SchemeManager.AddScheme("ProgressBar", new Scheme {
-        Normal = new Terminal.Gui.Drawing.Attribute(new Color("#ebdbb2"), new Color("#394e4e"))
-      });
-      SchemeManager.AddScheme("StatusBar_State", new Scheme {
-        Normal = new Terminal.Gui.Drawing.Attribute(new Color("#949494"), new Color("#3a3a3a"))
-      });
-      SchemeManager.AddScheme("StatusBar", new Scheme {
-        Normal = new Terminal.Gui.Drawing.Attribute(new Color("#262626"), new Color("#949494"), TextStyle.Bold)
-      });
-      _isConfigSet = true;
-    }
+    EnsureDefaultTestSchemes();
     return context;
   }
 }

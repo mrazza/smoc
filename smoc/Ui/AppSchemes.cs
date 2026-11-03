@@ -80,7 +80,12 @@ public static class AppSchemes {
       }
 
       foreach (var name in _defaultSchemeFactories.Keys) {
-        SchemeManager.Schemes.Remove(name);
+        SchemeManager.Schemes?.Remove(name);
+        try {
+          SchemeManager.RemoveScheme(name);
+        } catch {
+          // Ignore if not present or cannot remove
+        }
       }
     }
   }
