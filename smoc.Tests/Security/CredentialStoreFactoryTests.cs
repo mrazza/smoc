@@ -1,4 +1,7 @@
 using Smoc.Security;
+using Smoc.Security.Linux;
+using Smoc.Security.MacOs;
+using Smoc.Security.Windows;
 using Xunit;
 
 namespace smoc.Tests.Security;
