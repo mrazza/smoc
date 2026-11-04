@@ -222,23 +222,13 @@ The Song Context Menu provides options for playback and queue management. It app
 
 SMoC stores configuration and authentication data in `~/.config/smoc/` (on Linux).
 
-### Subsonic
-To use a Subsonic-compatible service (like Navidrome, Gonic, or Airsonic):
-1. Ensure your server has the Subsonic API enabled.
-2. Configure your server hostname, port, scheme, username, and password under `SubsonicConfig` in `config.json` (see below).
-3. Set `ActiveService` to `Subsonic` under `SmocConfiguration`.
+### YouTube Music (Default)
 
-### YouTube Music
-To use YouTube Music:
-1. Set `ActiveService` to `YouTubeMusic` under `SmocConfiguration`.
-2. Setup required settings for YouTube Music authentication (see below).
-
-### SoundCloud
-To use SoundCloud:
-1. Set `ActiveService` to `SoundCloud` under `SmocConfiguration`.
-2. Configure `ClientId` and `AuthToken` under `SoundCloudConfig` in `config.json`.
+YouTube Music is the default streaming service in SMoC. Setting `ActiveService` to `YouTubeMusic` under `SmocConfiguration` is optional unless you need to switch back from another service.
 
 #### Authentication
+
+Unlike other services where credentials are saved directly in `config.json`, YouTube Music authenticates using session cookies and tokens.
 
 > [!NOTE]
 > You need a YouTube Music Premium subscription to play most content.
@@ -258,6 +248,19 @@ More recently, additional tokens beyond just cookies are often needed. POToken a
 
 > [!TIP]
 > Run `smoc --gentokens` after setting up the cookie to generate necessary PO Tokens and Visitor Data automatically.
+
+### Subsonic
+
+To use a Subsonic-compatible service (like Navidrome, Gonic, or Airsonic):
+1. Ensure your server has the Subsonic API enabled.
+2. Set `ActiveService` to `Subsonic` under `SmocConfiguration` in `config.json`.
+3. Configure your server hostname, port, scheme, username, and password under `SubsonicConfig` in `config.json` (see below).
+
+### SoundCloud
+
+To use SoundCloud:
+1. Set `ActiveService` to `SoundCloud` under `SmocConfiguration` in `config.json`.
+2. Configure `ClientId` and `AuthToken` under `SoundCloudConfig` in `config.json` (see below).
 
 ### Config File
 Create or edit `~/.config/smoc/config.json` to customize settings.
