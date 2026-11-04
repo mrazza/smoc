@@ -1,8 +1,9 @@
 using Moq;
 using Smoc.Security;
+using Smoc.Security.MacOs;
 using Xunit;
 
-namespace smoc.Tests.Security;
+namespace smoc.Tests.Security.MacOs;
 
 public class MacOsKeychainCredentialStoreTests {
   [Fact]

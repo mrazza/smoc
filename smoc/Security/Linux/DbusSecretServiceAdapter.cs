@@ -2,70 +2,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using Tmds.DBus;
 
-namespace Smoc.Security;
-
-/// <summary>
-/// Internal D-Bus contracts and structures for FreeDesktop Secret Service specification.
-/// </summary>
-internal static class SecretServiceDbusContracts {
-  public const string ServiceName = "org.freedesktop.secrets";
-  public const string SchemaName = "org.mrazza.smoc.Credential";
-  public static readonly ObjectPath DefaultCollectionPath = new("/org/freedesktop/secrets/aliases/default");
-  public static readonly ObjectPath ServicePath = new("/org/freedesktop/secrets");
-
-  [DBusInterface("org.freedesktop.Secret.Service")]
-  public interface ISecretService : IDBusObject {
-    Task<(object output, ObjectPath result)> OpenSessionAsync(string algorithm, object input);
-    Task<(ObjectPath[] unlocked, ObjectPath[] locked)> SearchItemsAsync(IDictionary<string, string> attributes);
-    Task<IDictionary<ObjectPath, Secret>> GetSecretsAsync(ObjectPath[] items, ObjectPath session);
-    Task<ObjectPath[]> UnlockAsync(ObjectPath[] objects);
-  }
-
-  [DBusInterface("org.freedesktop.Secret.Collection")]
-  public interface ISecretCollection : IDBusObject {
-    Task<(ObjectPath item, ObjectPath prompt)> CreateItemAsync(IDictionary<string, object> properties, Secret secret, bool replace);
-    Task<ObjectPath[]> SearchItemsAsync(IDictionary<string, string> attributes);
-  }
-
-  [DBusInterface("org.freedesktop.Secret.Item")]
-  public interface ISecretItem : IDBusObject {
-    Task<Secret> GetSecretAsync(ObjectPath session);
-    Task SetSecretAsync(Secret secret);
-    Task<ObjectPath> DeleteAsync();
-  }
-
-  public struct Secret {
-    public ObjectPath Session { get; set; }
-    public byte[] Parameters { get; set; }
-    public byte[] Value { get; set; }
-    public string ContentType { get; set; }
-  }
-}
-
-/// <summary>
-/// Abstraction over FreeDesktop Secret Service communications for unit testability.
-/// </summary>
-public interface ISecretServiceAdapter {
-  /// <summary>
-  /// Checks whether the Secret Service daemon is available on the current session bus.
-  /// </summary>
-  Task<bool> IsAvailableAsync(CancellationToken cancellationToken);
-
-  /// <summary>
-  /// Retrieves a secret stored with the given service and account attributes.
-  /// </summary>
-  Task<string?> GetSecretAsync(string service, string account, CancellationToken cancellationToken);
-
-  /// <summary>
-  /// Stores a secret with the given service and account attributes.
-  /// </summary>
-  Task SetSecretAsync(string service, string account, string secret, CancellationToken cancellationToken);
-
-  /// <summary>
-  /// Deletes any secret stored with the given service and account attributes.
-  /// </summary>
-  Task DeleteSecretAsync(string service, string account, CancellationToken cancellationToken);
-}
+namespace Smoc.Security.Linux;
 
 /// <summary>
 /// Default implementation of <see cref="ISecretServiceAdapter"/> using <see cref="Connection.Session"/>.
@@ -213,61 +150,5 @@ internal sealed class DbusSecretServiceAdapter : ISecretServiceAdapter {
       ["account"] = account,
       ["xdg:schema"] = SecretServiceDbusContracts.SchemaName
     };
-  }
-}
-
-/// <summary>
-/// An <see cref="ICredentialStore"/> that uses the Linux FreeDesktop Secret Service over D-Bus (GNOME Keyring / KWallet).
-/// </summary>
-public sealed class LinuxSecretServiceCredentialStore : ICredentialStore {
-  private readonly ISecretServiceAdapter _adapter;
-
-  /// <summary>
-  /// Initializes a new instance of <see cref="LinuxSecretServiceCredentialStore"/> using the default D-Bus adapter.
-  /// </summary>
-  public LinuxSecretServiceCredentialStore()
-      : this(new DbusSecretServiceAdapter()) {
-  }
-
-  /// <summary>
-  /// Initializes a new instance of <see cref="LinuxSecretServiceCredentialStore"/> with a custom adapter for testing.
-  /// </summary>
-  /// <param name="adapter">The secret service adapter.</param>
-  public LinuxSecretServiceCredentialStore(ISecretServiceAdapter adapter) {
-    _adapter = adapter ?? throw new ArgumentNullException(nameof(adapter));
-  }
-
-  /// <inheritdoc />
-  public Task<string?> GetCredentialAsync(string service, string account, CancellationToken cancellationToken = default) {
-    cancellationToken.ThrowIfCancellationRequested();
-    ArgumentNullException.ThrowIfNull(service);
-    ArgumentNullException.ThrowIfNull(account);
-
-    return _adapter.GetSecretAsync(service, account, cancellationToken);
-  }
-
-  /// <inheritdoc />
-  public Task SetCredentialAsync(string service, string account, string secret, CancellationToken cancellationToken = default) {
-    cancellationToken.ThrowIfCancellationRequested();
-    ArgumentNullException.ThrowIfNull(service);
-    ArgumentNullException.ThrowIfNull(account);
-    ArgumentNullException.ThrowIfNull(secret);
-
-    return _adapter.SetSecretAsync(service, account, secret, cancellationToken);
-  }
-
-  /// <inheritdoc />
-  public Task DeleteCredentialAsync(string service, string account, CancellationToken cancellationToken = default) {
-    cancellationToken.ThrowIfCancellationRequested();
-    ArgumentNullException.ThrowIfNull(service);
-    ArgumentNullException.ThrowIfNull(account);
-
-    return _adapter.DeleteSecretAsync(service, account, cancellationToken);
-  }
-
-  /// <inheritdoc />
-  public Task<bool> IsAvailableAsync(CancellationToken cancellationToken = default) {
-    cancellationToken.ThrowIfCancellationRequested();
-    return _adapter.IsAvailableAsync(cancellationToken);
   }
 }

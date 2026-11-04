@@ -1,8 +1,9 @@
 using Moq;
 using Smoc.Security;
+using Smoc.Security.Windows;
 using Xunit;
 
-namespace smoc.Tests.Security;
+namespace smoc.Tests.Security.Windows;
 
 public class WindowsCredentialManagerCredentialStoreTests {
   [Fact]

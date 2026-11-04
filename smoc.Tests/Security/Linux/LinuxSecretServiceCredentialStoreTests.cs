@@ -1,8 +1,9 @@
 using Moq;
 using Smoc.Security;
+using Smoc.Security.Linux;
 using Xunit;
 
-namespace smoc.Tests.Security;
+namespace smoc.Tests.Security.Linux;
 
 public class LinuxSecretServiceCredentialStoreTests {
   [Fact]
