@@ -349,9 +349,6 @@ public class ArtistViewTest {
     _screenshotDiffer.AssertEqualsGolden(context);
   }
 
-  /// <summary>
-  /// Verifies that if one album throws during song lookup, tracks from the remaining albums still load.
-  /// </summary>
   [Fact]
   public void ArtistSelected_SingleAlbumFailure_ShowsSongsFromRemainingAlbums() {
     using var context = NewArtistViewContext();
@@ -467,10 +464,6 @@ public class ArtistViewTest {
     }
   }
 
-  /// <summary>
-  /// Verifies that pressing playback hotkeys when SearchResultsList in ArtistView has focus
-  /// triggers the corresponding playback queue service actions.
-  /// </summary>
   [Fact]
   public void PlaybackHotKeys_WhenSearchResultsListFocused_TriggerPlaybackQueue() {
     var nowPlayingBar = new NowPlayingBar(_fakeMainWindow, _mockPlaybackQueue.Object, _commandService, _mockStreamingClient.Object);
