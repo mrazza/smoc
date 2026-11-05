@@ -116,6 +116,28 @@ public class SongContextMenuTest : IDisposable {
   }
 
   [Fact]
+  public void PlayAll_RowZero_QueuesAllTracksAndChangesTrackToZero() {
+    using var context = NewContext();
+    var songContextMenu = NewSongContextMenu();
+    context.Add(songContextMenu);
+    var radiohead = new Artist("123", "Radiohead");
+    var okComputer = new Album("321", radiohead, "OK Computer", [EntityTestFactory.GenerateAlbumCover()], 1970);
+    var paranoidAndroid = new Song("456", okComputer, "Paranoid Android", TimeSpan.FromMinutes(5), 1);
+    var climbingUpTheWalls = new Song("457", okComputer, "Climbing Up the Walls", TimeSpan.FromMinutes(3), 2);
+    List<Song> songs = [paranoidAndroid, climbingUpTheWalls];
+    _songTable.SetSongs(songs);
+    _songTable.SelectedRow = 0;
+    _mockPlaybackQueue.Setup((p) => p.ClearPlaybackQueue()).Verifiable(Times.Once());
+    _mockPlaybackQueue.Setup((p) => p.QueueLast(songs)).Verifiable(Times.Once());
+    _mockPlaybackQueue.Setup((p) => p.ChangeTrack(0)).Returns(Task.CompletedTask).Verifiable(Times.Once());
+    _mockPlaybackQueue.Setup((p) => p.Play()).Returns(Task.CompletedTask).Verifiable(Times.Once());
+    context
+      .Then((_) => songContextMenu.MakeVisible())
+      .KeyDown(Key.Enter);
+    _mockPlaybackQueue.Verify();
+  }
+
+  [Fact]
   public void PlaySelection__MultiTracks_QueuesSelectedTracks() {
     using var context = NewContext();
     var songContextMenu = NewSongContextMenu();
