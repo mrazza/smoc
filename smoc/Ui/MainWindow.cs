@@ -20,6 +20,8 @@ public sealed class MainWindow : Runnable, IMainWindow {
   /// <summary>
   /// The collection of command-line hotkeys handled by <see cref="MainWindow"/>.
   /// </summary>
+  // TODO: Consider extracting various hotkey definitions into a shared location or,
+  // perhaps, supporting configuration.
   public static readonly IReadOnlyCollection<Key> CommandHotKeys = [
     new Key(':'),
     new Key(':').WithShift,

@@ -42,6 +42,8 @@ public sealed class NowPlayingBar : View {
   /// <summary>
   /// The collection of playback hotkeys handled by <see cref="NowPlayingBar"/>.
   /// </summary>
+  // TODO: Consider extracting various hotkey definitions into a shared location or,
+  // perhaps, supporting configuration.
   public static readonly IReadOnlyCollection<Key> PlaybackHotKeys = [
     Key.Space,
     Key.Space.WithCtrl,
