@@ -243,6 +243,178 @@ public class StandardPlaybackQueueServiceTest {
   }
 
   [Fact]
+  public async Task ClearPlaybackQueue_WhilePlaying_StopsPlaybackAndDisposesPlaybackService() {
+    var song = EntityTestFactory.GenerateSong(id: "1", postfix: "_1");
+    var fakePlayback = new FakePlaybackService(song);
+    _mockAudioService.Setup(a => a.MakePlaybackService(song, It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+      .Returns(fakePlayback);
+    _mockStreamingClient.Setup(c => c.GetSongStreamAsync(song.Id, It.IsAny<CancellationToken>()))
+      .ReturnsAsync(new SongStream(song.Id, "m4a", new MemoryStream()));
+
+    using var sut = NewStandardPlaybackQueue();
+    sut.QueueNext([song]);
+    await sut.Play();
+
+    Assert.Equal(PlaybackState.Playing, sut.PlaybackState);
+    Assert.False(fakePlayback.IsDisposed);
+
+    sut.ClearPlaybackQueue();
+
+    Assert.Equal(PlaybackState.Stopped, sut.PlaybackState);
+    Assert.Equal(PlaybackState.Stopped, fakePlayback.PlaybackState);
+    Assert.True(fakePlayback.IsDisposed);
+    Assert.Null(sut.CurrentSong);
+    Assert.Empty(sut.GetCurrentPlaybackQueue());
+  }
+
+  [Fact]
+  public async Task ClearPlaybackQueue_WhilePaused_StopsPlaybackAndDisposesPlaybackService() {
+    var song = EntityTestFactory.GenerateSong(id: "1", postfix: "_1");
+    var fakePlayback = new FakePlaybackService(song);
+    _mockAudioService.Setup(a => a.MakePlaybackService(song, It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+      .Returns(fakePlayback);
+    _mockStreamingClient.Setup(c => c.GetSongStreamAsync(song.Id, It.IsAny<CancellationToken>()))
+      .ReturnsAsync(new SongStream(song.Id, "m4a", new MemoryStream()));
+
+    using var sut = NewStandardPlaybackQueue();
+    sut.QueueNext([song]);
+    await sut.Play();
+    sut.Pause();
+
+    Assert.Equal(PlaybackState.Paused, sut.PlaybackState);
+    Assert.False(fakePlayback.IsDisposed);
+
+    sut.ClearPlaybackQueue();
+
+    Assert.Equal(PlaybackState.Stopped, sut.PlaybackState);
+    Assert.Equal(PlaybackState.Stopped, fakePlayback.PlaybackState);
+    Assert.True(fakePlayback.IsDisposed);
+    Assert.Null(sut.CurrentSong);
+    Assert.Empty(sut.GetCurrentPlaybackQueue());
+  }
+
+  [Fact]
+  public async Task ClearPlaybackQueue_WhilePlaying_QueueLastChangeTrackZeroAndPlay_PlaysNewTrack() {
+    var song1 = EntityTestFactory.GenerateSong(id: "1", postfix: "_1");
+    var song2 = EntityTestFactory.GenerateSong(id: "2", postfix: "_2");
+    var fakePlayback1 = new FakePlaybackService(song1);
+    var fakePlayback2 = new FakePlaybackService(song2);
+
+    _mockAudioService.Setup(a => a.MakePlaybackService(song1, It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+      .Returns(fakePlayback1);
+    _mockAudioService.Setup(a => a.MakePlaybackService(song2, It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+      .Returns(fakePlayback2);
+    _mockStreamingClient.Setup(c => c.GetSongStreamAsync(song1.Id, It.IsAny<CancellationToken>()))
+      .ReturnsAsync(new SongStream(song1.Id, "m4a", new MemoryStream()));
+    _mockStreamingClient.Setup(c => c.GetSongStreamAsync(song2.Id, It.IsAny<CancellationToken>()))
+      .ReturnsAsync(new SongStream(song2.Id, "m4a", new MemoryStream()));
+
+    using var sut = NewStandardPlaybackQueue();
+    sut.QueueNext([song1]);
+    await sut.Play();
+
+    Assert.Equal(PlaybackState.Playing, sut.PlaybackState);
+    Assert.Equal(song1, sut.CurrentSong);
+
+    // Simulate SongContextMenu "play selection only" or "play all from here" on row 0:
+    sut.ClearPlaybackQueue();
+    sut.QueueLast([song2]);
+    await sut.ChangeTrack(0);
+    await sut.Play();
+
+    Assert.Equal(PlaybackState.Stopped, fakePlayback1.PlaybackState);
+    Assert.True(fakePlayback1.IsDisposed);
+    Assert.Equal(PlaybackState.Playing, fakePlayback2.PlaybackState);
+    Assert.Equal(PlaybackState.Playing, sut.PlaybackState);
+    Assert.Equal(song2, sut.CurrentSong);
+    Assert.Equal(0, sut.CurrentPlaybackIndex);
+  }
+
+  [Fact]
+  public async Task ClearPlaybackQueue_WhilePlayPending_CancelsPlayback() {
+    var song = EntityTestFactory.GenerateSong(id: "1", postfix: "_1");
+    var streamTcs = new TaskCompletionSource<SongStream>();
+
+    _mockStreamingClient.Setup(c => c.GetSongStreamAsync(song.Id, It.IsAny<CancellationToken>()))
+      .Returns(async (string _, CancellationToken ct) => {
+        using var reg = ct.Register(() => streamTcs.TrySetCanceled(ct));
+        return await streamTcs.Task;
+      });
+
+    using var sut = NewStandardPlaybackQueue();
+    sut.QueueNext([song]);
+    var playTask = sut.Play();
+
+    sut.ClearPlaybackQueue();
+    await playTask;
+
+    Assert.Equal(PlaybackState.Stopped, sut.PlaybackState);
+    Assert.Null(sut.CurrentSong);
+    Assert.Empty(sut.GetCurrentPlaybackQueue());
+  }
+
+  [Fact]
+  public async Task Play_WhenPlaybackServiceHasDifferentSong_StopsOldAndPlaysCurrentSong() {
+    var song1 = EntityTestFactory.GenerateSong(id: "1", postfix: "_1");
+    var song2 = EntityTestFactory.GenerateSong(id: "2", postfix: "_2");
+    var fakePlayback1 = new FakePlaybackService(song1);
+    var fakePlayback2 = new FakePlaybackService(song2);
+
+    _mockAudioService.Setup(a => a.MakePlaybackService(song1, It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+      .Returns(fakePlayback1);
+    _mockAudioService.Setup(a => a.MakePlaybackService(song2, It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+      .Returns(fakePlayback2);
+    _mockStreamingClient.Setup(c => c.GetSongStreamAsync(song1.Id, It.IsAny<CancellationToken>()))
+      .ReturnsAsync(new SongStream(song1.Id, "m4a", new MemoryStream()));
+    _mockStreamingClient.Setup(c => c.GetSongStreamAsync(song2.Id, It.IsAny<CancellationToken>()))
+      .ReturnsAsync(new SongStream(song2.Id, "m4a", new MemoryStream()));
+
+    using var sut = NewStandardPlaybackQueue();
+    sut.QueueNext([song1]);
+    await sut.Play();
+
+    Assert.Equal(PlaybackState.Playing, fakePlayback1.PlaybackState);
+
+    sut.ClearPlaybackQueue();
+    sut.QueueNext([song2]);
+    await sut.Play();
+
+    Assert.Equal(PlaybackState.Stopped, fakePlayback1.PlaybackState);
+    Assert.True(fakePlayback1.IsDisposed);
+    Assert.Equal(PlaybackState.Playing, fakePlayback2.PlaybackState);
+    Assert.Equal(song2, sut.CurrentSong);
+  }
+
+  [Fact]
+  public async Task ChangeTrack_SameIndexWithDifferentPlaybackSong_StopsAndPlaysNewSong() {
+    var song1 = EntityTestFactory.GenerateSong(id: "1", postfix: "_1");
+    var song2 = EntityTestFactory.GenerateSong(id: "2", postfix: "_2");
+    var fakePlayback1 = new FakePlaybackService(song1);
+    var fakePlayback2 = new FakePlaybackService(song2);
+
+    _mockAudioService.Setup(a => a.MakePlaybackService(song1, It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+      .Returns(fakePlayback1);
+    _mockAudioService.Setup(a => a.MakePlaybackService(song2, It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+      .Returns(fakePlayback2);
+    _mockStreamingClient.Setup(c => c.GetSongStreamAsync(song1.Id, It.IsAny<CancellationToken>()))
+      .ReturnsAsync(new SongStream(song1.Id, "m4a", new MemoryStream()));
+    _mockStreamingClient.Setup(c => c.GetSongStreamAsync(song2.Id, It.IsAny<CancellationToken>()))
+      .ReturnsAsync(new SongStream(song2.Id, "m4a", new MemoryStream()));
+
+    using var sut = NewStandardPlaybackQueue();
+    sut.QueueNext([song1]);
+    await sut.Play();
+
+    sut.ClearPlaybackQueue();
+    sut.QueueLast([song2]);
+    await sut.ChangeTrack(0);
+    await sut.Play();
+
+    Assert.Equal(PlaybackState.Playing, fakePlayback2.PlaybackState);
+    Assert.Equal(song2, sut.CurrentSong);
+  }
+
+  [Fact]
   public async Task ChangeTrack_InvalidTrackIndex_TooLarge_ThrowsArgumentOutOfRangeException() {
     using var sut = NewStandardPlaybackQueue();
     sut.QueueNext([EntityTestFactory.GenerateSong(), EntityTestFactory.GenerateSong()]);

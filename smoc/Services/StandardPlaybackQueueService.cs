@@ -168,16 +168,20 @@ public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
 
   /// <inheritdoc/>
   public void ClearPlaybackQueue() {
-    if (_playbackQueue.Count == 0) {
+    if (_playbackQueue.Count == 0 && _playbackService.Resource == null && !_isPlayPending) {
       return;
     }
+
+    Stop();
+    _playbackCts.Replace(new CancellationTokenSource());
+    _playbackService.Replace(null!);
+    CancelPreload();
 
     _playbackQueue.Clear();
     _currentPlaybackIndex = 0;
     _pendingRestorePosition = null;
     InvokeAppEvent(QueueChanged);
     InvokeAppEvent(SongChanged, null);
-    EnsurePreload();
   }
 
   /// <inheritdoc/>
@@ -186,7 +190,7 @@ public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
       throw new ArgumentOutOfRangeException(nameof(index));
     }
 
-    if (_currentPlaybackIndex == index) {
+    if (_currentPlaybackIndex == index && (_playbackService.Resource == null || _playbackService.Resource.Song == _playbackQueue[index])) {
       return;
     }
 
@@ -217,7 +221,7 @@ public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
 
   /// <inheritdoc/>
   public async Task Play() {
-    if (PlaybackState == PlaybackState.Playing) {
+    if (PlaybackState == PlaybackState.Playing && _playbackService.Resource?.Song == GetCurrentSong()) {
       return;
     }
 
@@ -225,6 +229,11 @@ public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
       _playbackService.Resource.Play();
       EnsurePreload();
       return;
+    }
+
+    if (_playbackService.Resource is { } existingPlayback && existingPlayback.Song != GetCurrentSong()) {
+      Stop();
+      _playbackService.Replace(null!);
     }
 
     if (GetCurrentSong() is not { } currentSong) {
@@ -477,6 +486,9 @@ public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
   public void RestoreSessionState(SessionState state) {
     ArgumentNullException.ThrowIfNull(state);
     Stop();
+    _playbackCts.Replace(new CancellationTokenSource());
+    _playbackService.Replace(null!);
+    CancelPreload();
     _playbackQueue.Clear();
     _pendingRestorePosition = null;
 
