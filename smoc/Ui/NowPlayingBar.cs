@@ -19,10 +19,37 @@ public sealed class NowPlayingBar : View {
     public const string VOLUME = "volume: {0}%";
   }
 
-  private static readonly Key _previousKey = new(',');
-  private static readonly Key _nextKey = new('.');
-  private static readonly Key _seekBackwardKey = new('[');
-  private static readonly Key _seekForwardKey = new(']');
+  /// <summary>
+  /// The key used to jump to the previous track.
+  /// </summary>
+  public static readonly Key PreviousKey = new(',');
+
+  /// <summary>
+  /// The key used to jump to the next track.
+  /// </summary>
+  public static readonly Key NextKey = new('.');
+
+  /// <summary>
+  /// The key used to seek backward in the current track.
+  /// </summary>
+  public static readonly Key SeekBackwardKey = new('[');
+
+  /// <summary>
+  /// The key used to seek forward in the current track.
+  /// </summary>
+  public static readonly Key SeekForwardKey = new(']');
+
+  /// <summary>
+  /// The collection of playback hotkeys handled by <see cref="NowPlayingBar"/>.
+  /// </summary>
+  public static readonly IReadOnlyCollection<Key> PlaybackHotKeys = [
+    Key.Space,
+    Key.Space.WithCtrl,
+    PreviousKey,
+    NextKey,
+    SeekBackwardKey,
+    SeekForwardKey,
+  ];
 
   private readonly IMainWindow _mainWindow;
   private readonly IPlaybackQueueService _playbackQueueService;
@@ -126,12 +153,9 @@ public sealed class NowPlayingBar : View {
 
     _commandService.RegisterCommand("v", OnSetVolumeCommand);
     AddCommand(Command.HotKey, OnHotKey);
-    HotKeyBindings.Add(Key.Space, Command.HotKey);
-    HotKeyBindings.Add(Key.Space.WithCtrl, Command.HotKey);
-    HotKeyBindings.Add(_previousKey, Command.HotKey);
-    HotKeyBindings.Add(_nextKey, Command.HotKey);
-    HotKeyBindings.Add(_seekBackwardKey, Command.HotKey);
-    HotKeyBindings.Add(_seekForwardKey, Command.HotKey);
+    foreach (var key in PlaybackHotKeys) {
+      HotKeyBindings.Add(key, Command.HotKey);
+    }
   }
 
   protected override void Dispose(bool disposing) {
@@ -151,13 +175,13 @@ public sealed class NowPlayingBar : View {
         _ = _playbackQueueService.PlayPause();
       } else if (pressedKey == Key.Space.WithCtrl) {
         _playbackQueueService.Stop();
-      } else if (pressedKey == _previousKey) {
+      } else if (pressedKey == PreviousKey) {
         _ = _playbackQueueService.PreviousTrack();
-      } else if (pressedKey == _nextKey) {
+      } else if (pressedKey == NextKey) {
         _ = _playbackQueueService.NextTrack();
-      } else if (pressedKey == _seekBackwardKey) {
+      } else if (pressedKey == SeekBackwardKey) {
         _playbackQueueService.SeekBackward(TimeSpan.FromSeconds(10));
-      } else if (pressedKey == _seekForwardKey) {
+      } else if (pressedKey == SeekForwardKey) {
         _playbackQueueService.SeekForward(TimeSpan.FromSeconds(10));
       }
     }

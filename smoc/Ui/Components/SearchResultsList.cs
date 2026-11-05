@@ -6,9 +6,12 @@ namespace Smoc.Ui.Components;
 /// <summary>
 /// A ListView specialized for displaying search results, with custom key handling.
 /// </summary>
+/// <typeparam name="T">The type of items displayed in the list.</typeparam>
 public sealed class SearchResultsList<T> : ListView {
-  // TODO: Extract this so that its shared with the actual command bindings
-  private static readonly Key[] _commandKeys = [new Key(':'), new Key(':').WithShift, new Key('/')];
+  private static readonly HashSet<Key> _ignoredKeys = [
+    ..MainWindow.CommandHotKeys,
+    ..NowPlayingBar.PlaybackHotKeys,
+  ];
 
   /// <summary>
   /// Occurs when the user selects a search result.
@@ -22,6 +25,7 @@ public sealed class SearchResultsList<T> : ListView {
       : base() {
     VimKeyBindings.AddDirectionalKeyBindings(KeyBindings, bindLeftRight: false);
     VimKeyBindings.AddNavigationKeyBindings(KeyBindings, bindUpDown: false);
+    KeyBindings.Remove(Key.Space);
 
     Accepting += (_, args) => {
       if (SelectedItem is int itemId && itemId >= 0 && Source is { }) {
@@ -34,8 +38,9 @@ public sealed class SearchResultsList<T> : ListView {
     };
   }
 
+  /// <inheritdoc />
   protected override bool OnKeyDown(Key key) {
-    if (_commandKeys.Contains(key)) {
+    if (_ignoredKeys.Contains(key)) {
       return false;
     }
 
