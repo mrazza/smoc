@@ -17,6 +17,15 @@ namespace Smoc.Ui;
 /// The main application window management class.
 /// </summary>
 public sealed class MainWindow : Runnable, IMainWindow {
+  /// <summary>
+  /// The collection of command-line hotkeys handled by <see cref="MainWindow"/>.
+  /// </summary>
+  public static readonly IReadOnlyCollection<Key> CommandHotKeys = [
+    new Key(':'),
+    new Key(':').WithShift,
+    new Key('/'),
+  ];
+
   private readonly CommandLine _commandLine;
   private readonly StatusBar _statusBar;
   private readonly MainContent _mainContent;
@@ -90,9 +99,9 @@ public sealed class MainWindow : Runnable, IMainWindow {
     _commandService.RegisterCommand("device", OnDeviceCommand);
 
     AddCommand(Command.HotKey, OnCommandLineHotKey);
-    HotKeyBindings.Add(new Key(':'), Command.HotKey);
-    HotKeyBindings.Add(new Key(':').WithShift, Command.HotKey);
-    HotKeyBindings.Add(new Key('/'), Command.HotKey);
+    foreach (var key in CommandHotKeys) {
+      HotKeyBindings.Add(key, Command.HotKey);
+    }
 
     _commandLine.FilterChanged += (_, filterText) => {
       _mainContent.ApplyFilterToCurrentView(filterText);

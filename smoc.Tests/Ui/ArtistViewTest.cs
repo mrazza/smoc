@@ -3,10 +3,12 @@ using Smoc.Configuration;
 using Smoc.Services;
 using Smoc.Streaming;
 using Smoc.Ui;
+using Smoc.Ui.Components;
 using Smoc.Ui.Models;
+using Terminal.Gui.Input;
+using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
 using smoc.Tests.Fakes;
-using Terminal.Gui.Input;
 using smoc.Tests.TestInfra;
 using Xunit.Sdk;
 
@@ -463,5 +465,70 @@ public class ArtistViewTest {
     } finally {
       SmocConfiguration.Defaults = previousConfig;
     }
+  }
+
+  /// <summary>
+  /// Verifies that pressing playback hotkeys when SearchResultsList in ArtistView has focus
+  /// triggers the corresponding playback queue service actions.
+  /// </summary>
+  [Fact]
+  public void PlaybackHotKeys_WhenSearchResultsListFocused_TriggerPlaybackQueue() {
+    var nowPlayingBar = new NowPlayingBar(_fakeMainWindow, _mockPlaybackQueue.Object, _commandService, _mockStreamingClient.Object);
+    var artistView = new ArtistView(_fakeMainWindow, _commandService, _mockStreamingClient.Object, _mockPlaybackQueue.Object);
+    var container = new View {
+      Width = Dim.Fill(),
+      Height = Dim.Fill(),
+      CanFocus = true,
+    };
+    container.Add(nowPlayingBar, artistView);
+
+    using var context = With.A<Runnable>(100, 20, TestDriver.ANSI.ToString())
+      .AddAndLayout(container);
+
+    var artists = new List<Artist> {
+      new("1", "Radiohead"),
+      new("2", "[Soundtrack]"),
+      new("3", ",Comma Artist"),
+      new("4", ".Period Artist"),
+      new("5", "]Right Bracket Artist"),
+      new("6", " Space Artist"),
+    };
+    _mockStreamingClient.Setup(client => client.SearchArtistsAsync("test", It.IsAny<CancellationToken>()))
+      .ReturnsAsync(artists);
+
+    context.Then((_) => _commandService.ExecuteCommand("a/test"));
+
+    var searchResults = artistView.SubViews.OfType<SearchResultsList<SearchResultRow<Artist>>>().First();
+    Assert.True(searchResults.HasFocus);
+
+    // Verify Space -> PlayPause
+    _mockPlaybackQueue.Setup(q => q.PlayPause()).Returns(Task.CompletedTask).Verifiable(Times.Once());
+    context.KeyDown(Key.Space);
+    _mockPlaybackQueue.Verify(q => q.PlayPause(), Times.Once());
+
+    // Verify Ctrl+Space -> Stop
+    _mockPlaybackQueue.Setup(q => q.Stop()).Verifiable(Times.Once());
+    context.KeyDown(Key.Space.WithCtrl);
+    _mockPlaybackQueue.Verify(q => q.Stop(), Times.Once());
+
+    // Verify , -> PreviousTrack
+    _mockPlaybackQueue.Setup(q => q.PreviousTrack(false, null)).Returns(Task.CompletedTask).Verifiable(Times.Once());
+    context.KeyDown(NowPlayingBar.PreviousKey);
+    _mockPlaybackQueue.Verify(q => q.PreviousTrack(false, null), Times.Once());
+
+    // Verify . -> NextTrack
+    _mockPlaybackQueue.Setup(q => q.NextTrack()).Returns(Task.CompletedTask).Verifiable(Times.Once());
+    context.KeyDown(NowPlayingBar.NextKey);
+    _mockPlaybackQueue.Verify(q => q.NextTrack(), Times.Once());
+
+    // Verify [ -> SeekBackward
+    _mockPlaybackQueue.Setup(q => q.SeekBackward(TimeSpan.FromSeconds(10))).Verifiable(Times.Once());
+    context.KeyDown(NowPlayingBar.SeekBackwardKey);
+    _mockPlaybackQueue.Verify(q => q.SeekBackward(TimeSpan.FromSeconds(10)), Times.Once());
+
+    // Verify ] -> SeekForward
+    _mockPlaybackQueue.Setup(q => q.SeekForward(TimeSpan.FromSeconds(10))).Verifiable(Times.Once());
+    context.KeyDown(NowPlayingBar.SeekForwardKey);
+    _mockPlaybackQueue.Verify(q => q.SeekForward(TimeSpan.FromSeconds(10)), Times.Once());
   }
 }
