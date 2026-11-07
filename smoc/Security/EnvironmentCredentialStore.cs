@@ -4,17 +4,17 @@ namespace Smoc.Security;
 
 /// <summary>
 /// An <see cref="ICredentialStore"/> that resolves credentials from environment variables.
-/// Ideal for headless, CI, and containerized environments.
+/// Read-only by default; ideal for headless, CI, and containerized environments.
 /// </summary>
-public partial class EnvironmentCredentialStore : ICredentialStore {
+public sealed partial class EnvironmentCredentialStore : ICredentialStore {
   private readonly Func<string, string?> _getEnv;
   private readonly Action<string, string?>? _setEnv;
 
   /// <summary>
-  /// Initializes a new instance of <see cref="EnvironmentCredentialStore"/> using system environment variables.
+  /// Initializes a new instance of <see cref="EnvironmentCredentialStore"/> using system environment variables in read-only mode.
   /// </summary>
   public EnvironmentCredentialStore()
-      : this(Environment.GetEnvironmentVariable, Environment.SetEnvironmentVariable) {
+      : this(Environment.GetEnvironmentVariable, setEnv: null) {
   }
 
   /// <summary>
@@ -28,55 +28,58 @@ public partial class EnvironmentCredentialStore : ICredentialStore {
   }
 
   /// <inheritdoc />
-  public async Task<string?> GetCredentialAsync(string service, string account, CancellationToken cancellationToken = default) {
-    cancellationToken.ThrowIfCancellationRequested();
+  public Task<string?> GetCredentialAsync(string service, string account, CancellationToken cancellationToken = default) {
     ArgumentNullException.ThrowIfNull(service);
     ArgumentNullException.ThrowIfNull(account);
+    cancellationToken.ThrowIfCancellationRequested();
 
     foreach (string varName in GetCandidateVariableNames(service, account)) {
       string? value = _getEnv(varName);
       if (!string.IsNullOrEmpty(value)) {
-        return value;
+        return Task.FromResult<string?>(value);
       }
     }
 
-    return null;
+    return Task.FromResult<string?>(null);
   }
 
   /// <inheritdoc />
-  public async Task SetCredentialAsync(string service, string account, string secret, CancellationToken cancellationToken = default) {
-    cancellationToken.ThrowIfCancellationRequested();
+  public Task SetCredentialAsync(string service, string account, string secret, CancellationToken cancellationToken = default) {
     ArgumentNullException.ThrowIfNull(service);
     ArgumentNullException.ThrowIfNull(account);
     ArgumentNullException.ThrowIfNull(secret);
+    cancellationToken.ThrowIfCancellationRequested();
 
     if (_setEnv == null) {
-      return;
+      throw new NotSupportedException("EnvironmentCredentialStore is read-only when configured without a setter.");
     }
 
     string primaryVar = GetCandidateVariableNames(service, account).First();
     _setEnv(primaryVar, secret);
+    return Task.CompletedTask;
   }
 
   /// <inheritdoc />
-  public async Task DeleteCredentialAsync(string service, string account, CancellationToken cancellationToken = default) {
-    cancellationToken.ThrowIfCancellationRequested();
+  public Task DeleteCredentialAsync(string service, string account, CancellationToken cancellationToken = default) {
     ArgumentNullException.ThrowIfNull(service);
     ArgumentNullException.ThrowIfNull(account);
+    cancellationToken.ThrowIfCancellationRequested();
 
     if (_setEnv == null) {
-      return;
+      throw new NotSupportedException("EnvironmentCredentialStore is read-only when configured without a setter.");
     }
 
     foreach (string varName in GetCandidateVariableNames(service, account)) {
       _setEnv(varName, null);
     }
+
+    return Task.CompletedTask;
   }
 
   /// <inheritdoc />
-  public async Task<bool> IsAvailableAsync(CancellationToken cancellationToken = default) {
+  public Task<bool> IsAvailableAsync(CancellationToken cancellationToken = default) {
     cancellationToken.ThrowIfCancellationRequested();
-    return true;
+    return Task.FromResult(true);
   }
 
   /// <summary>

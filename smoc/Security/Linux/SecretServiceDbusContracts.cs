@@ -1,4 +1,8 @@
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using Tmds.DBus;
+
+[assembly: InternalsVisibleTo(Tmds.DBus.Connection.DynamicAssemblyName)]
 
 namespace Smoc.Security.Linux;
 
@@ -58,8 +62,8 @@ internal static class SecretServiceDbusContracts {
     /// Unlocks a collection of locked items or collections.
     /// </summary>
     /// <param name="objects">The object paths to unlock.</param>
-    /// <returns>An array of object paths that were unlocked.</returns>
-    Task<ObjectPath[]> UnlockAsync(ObjectPath[] objects);
+    /// <returns>A tuple containing an array of unlocked object paths and an optional prompt object path.</returns>
+    Task<(ObjectPath[] unlocked, ObjectPath prompt)> UnlockAsync(ObjectPath[] objects);
   }
 
   /// <summary>
@@ -113,6 +117,7 @@ internal static class SecretServiceDbusContracts {
   /// <summary>
   /// Represents a secret payload passed across the FreeDesktop Secret Service D-Bus interface.
   /// </summary>
+  [StructLayout(LayoutKind.Sequential)]
   public struct Secret {
     /// <summary>
     /// Gets or sets the D-Bus object path of the session used to transfer this secret.

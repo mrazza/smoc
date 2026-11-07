@@ -3,7 +3,7 @@ namespace Smoc.Security.MacOs;
 /// <summary>
 /// Abstraction over macOS Keychain operations for testability.
 /// </summary>
-public interface IMacOsKeychainAdapter {
+internal interface IMacOsKeychainAdapter {
   /// <summary>
   /// Gets whether macOS Keychain is supported and available on the current operating system.
   /// </summary>

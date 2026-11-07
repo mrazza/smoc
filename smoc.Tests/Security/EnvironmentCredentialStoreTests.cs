@@ -59,13 +59,13 @@ public class EnvironmentCredentialStoreTests {
   [Fact]
   public async Task Environment_GetAsync_ResolvesGenericEnvVarFallback() {
     var env = new Dictionary<string, string> {
-      ["SMOC_CREDENTIAL_SMOC_SPOTIFY_CLIENT_SECRET"] = "spotify_secret_123"
+      ["SMOC_CREDENTIAL_SMOC_CUSTOM_CLIENT_SECRET"] = "custom_secret_123"
     };
 
     var store = new EnvironmentCredentialStore(key => env.GetValueOrDefault(key));
-    string? result = await store.GetCredentialAsync("smoc:spotify", "client_secret", TestContext.Current.CancellationToken);
+    string? result = await store.GetCredentialAsync("smoc:custom", "client_secret", TestContext.Current.CancellationToken);
 
-    Assert.Equal("spotify_secret_123", result);
+    Assert.Equal("custom_secret_123", result);
   }
 
   [Fact]
@@ -83,5 +83,29 @@ public class EnvironmentCredentialStoreTests {
 
     await store.DeleteCredentialAsync(CredentialTargets.YouTubeMusic, CredentialTargets.AccountCookies, TestContext.Current.CancellationToken);
     Assert.False(env.ContainsKey("SMOC_YTM_COOKIES"));
+  }
+
+  [Fact]
+  public async Task Environment_ReadOnly_ThrowsNotSupportedExceptionOnSet() {
+    var storeDefault = new EnvironmentCredentialStore();
+    var storeExplicitNull = new EnvironmentCredentialStore(_ => null, setEnv: null);
+
+    await Assert.ThrowsAsync<NotSupportedException>(() =>
+        storeDefault.SetCredentialAsync(CredentialTargets.Subsonic, "razza", "secret", TestContext.Current.CancellationToken));
+
+    await Assert.ThrowsAsync<NotSupportedException>(() =>
+        storeExplicitNull.SetCredentialAsync(CredentialTargets.Subsonic, "razza", "secret", TestContext.Current.CancellationToken));
+  }
+
+  [Fact]
+  public async Task Environment_ReadOnly_ThrowsNotSupportedExceptionOnDelete() {
+    var storeDefault = new EnvironmentCredentialStore();
+    var storeExplicitNull = new EnvironmentCredentialStore(_ => null, setEnv: null);
+
+    await Assert.ThrowsAsync<NotSupportedException>(() =>
+        storeDefault.DeleteCredentialAsync(CredentialTargets.Subsonic, "razza", TestContext.Current.CancellationToken));
+
+    await Assert.ThrowsAsync<NotSupportedException>(() =>
+        storeExplicitNull.DeleteCredentialAsync(CredentialTargets.Subsonic, "razza", TestContext.Current.CancellationToken));
   }
 }

@@ -17,41 +17,41 @@ public sealed class MacOsKeychainCredentialStore : ICredentialStore {
   /// Initializes a new instance of <see cref="MacOsKeychainCredentialStore"/> with a custom adapter for testing.
   /// </summary>
   /// <param name="adapter">The macOS Keychain adapter.</param>
-  public MacOsKeychainCredentialStore(IMacOsKeychainAdapter adapter) {
+  internal MacOsKeychainCredentialStore(IMacOsKeychainAdapter adapter) {
     _adapter = adapter ?? throw new ArgumentNullException(nameof(adapter));
   }
 
   /// <inheritdoc />
   public async Task<string?> GetCredentialAsync(string service, string account, CancellationToken cancellationToken = default) {
-    cancellationToken.ThrowIfCancellationRequested();
     ArgumentNullException.ThrowIfNull(service);
     ArgumentNullException.ThrowIfNull(account);
+    cancellationToken.ThrowIfCancellationRequested();
 
     return await _adapter.GetSecretAsync(service, account, cancellationToken);
   }
 
   /// <inheritdoc />
   public async Task SetCredentialAsync(string service, string account, string secret, CancellationToken cancellationToken = default) {
-    cancellationToken.ThrowIfCancellationRequested();
     ArgumentNullException.ThrowIfNull(service);
     ArgumentNullException.ThrowIfNull(account);
     ArgumentNullException.ThrowIfNull(secret);
+    cancellationToken.ThrowIfCancellationRequested();
 
     await _adapter.SetSecretAsync(service, account, secret, cancellationToken);
   }
 
   /// <inheritdoc />
   public async Task DeleteCredentialAsync(string service, string account, CancellationToken cancellationToken = default) {
-    cancellationToken.ThrowIfCancellationRequested();
     ArgumentNullException.ThrowIfNull(service);
     ArgumentNullException.ThrowIfNull(account);
+    cancellationToken.ThrowIfCancellationRequested();
 
     await _adapter.DeleteSecretAsync(service, account, cancellationToken);
   }
 
   /// <inheritdoc />
-  public async Task<bool> IsAvailableAsync(CancellationToken cancellationToken = default) {
+  public Task<bool> IsAvailableAsync(CancellationToken cancellationToken = default) {
     cancellationToken.ThrowIfCancellationRequested();
-    return _adapter.IsSupportedPlatform;
+    return Task.FromResult(_adapter.IsSupportedPlatform);
   }
 }

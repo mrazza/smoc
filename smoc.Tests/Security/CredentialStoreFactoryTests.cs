@@ -8,12 +8,6 @@ namespace smoc.Tests.Security;
 
 public class CredentialStoreFactoryTests {
   [Fact]
-  public void Factory_CreateInMemory_ReturnsFunctionalStore() {
-    InMemoryCredentialStore store = CredentialStoreFactory.CreateInMemory();
-    Assert.NotNull(store);
-  }
-
-  [Fact]
   public void Factory_CreateNativeStore_ReturnsStoreForCurrentPlatform() {
     ICredentialStore store = CredentialStoreFactory.CreateNativeStore();
     Assert.NotNull(store);

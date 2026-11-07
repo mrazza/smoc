@@ -6,12 +6,22 @@ using System.Text;
 namespace Smoc.Security.Windows;
 
 /// <summary>
-/// Native implementation of <see cref="IWindowsCredentialAdapter"/> using <c>advapi32.dll</c> and <see cref="ProtectedData"/>.
+/// Native implementation of <see cref="IWindowsCredentialAdapter"/> using Windows Credential Manager (<c>advapi32.dll</c>)
+/// and DPAPI (<see cref="ProtectedData"/>) encrypted files in <c>%APPDATA%\smoc\credentials</c>.
 /// </summary>
 [SupportedOSPlatform("windows")]
 internal sealed class NativeWindowsCredentialAdapter : IWindowsCredentialAdapter {
   private const int CRED_TYPE_GENERIC = 1;
   private const int CRED_PERSIST_LOCAL_MACHINE = 2;
+
+  /// <summary>
+  /// Directory where DPAPI encrypted blobs are persisted on Windows.
+  /// Standard Windows user data location is <c>%APPDATA%\smoc\credentials</c>.
+  /// </summary>
+  private static readonly string CredentialsDirectory = Path.Combine(
+      Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+      "smoc",
+      "credentials");
 
   [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
   private struct CREDENTIAL {
@@ -43,12 +53,6 @@ internal sealed class NativeWindowsCredentialAdapter : IWindowsCredentialAdapter
 
   /// <inheritdoc />
   public bool IsSupportedPlatform => RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
-
-  /// <inheritdoc />
-  public string CredentialsDirectory => Path.Combine(
-      Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-      "smoc",
-      "credentials");
 
   /// <inheritdoc />
   public bool ReadCredential(string target, out string? secret) {
@@ -109,12 +113,46 @@ internal sealed class NativeWindowsCredentialAdapter : IWindowsCredentialAdapter
   }
 
   /// <inheritdoc />
-  public byte[] ProtectData(byte[] userData) {
-    return ProtectedData.Protect(userData, optionalEntropy: null, DataProtectionScope.CurrentUser);
+  public bool HasDpapiSecret(string target) {
+    string filePath = GetDpapiFilePath(target);
+    return File.Exists(filePath);
   }
 
   /// <inheritdoc />
-  public byte[] UnprotectData(byte[] encryptedData) {
-    return ProtectedData.Unprotect(encryptedData, optionalEntropy: null, DataProtectionScope.CurrentUser);
+  public async Task<string?> ReadDpapiSecretAsync(string target, CancellationToken cancellationToken) {
+    string filePath = GetDpapiFilePath(target);
+    if (!File.Exists(filePath)) {
+      return null;
+    }
+
+    byte[] encryptedBytes = await File.ReadAllBytesAsync(filePath, cancellationToken);
+    byte[] decryptedBytes = ProtectedData.Unprotect(encryptedBytes, optionalEntropy: null, DataProtectionScope.CurrentUser);
+    return Encoding.UTF8.GetString(decryptedBytes);
+  }
+
+  /// <inheritdoc />
+  public async Task WriteDpapiSecretAsync(string target, string secret, CancellationToken cancellationToken) {
+    string filePath = GetDpapiFilePath(target);
+    string? directory = Path.GetDirectoryName(filePath);
+    if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory)) {
+      Directory.CreateDirectory(directory);
+    }
+
+    byte[] secretBytes = Encoding.UTF8.GetBytes(secret);
+    byte[] encryptedBytes = ProtectedData.Protect(secretBytes, optionalEntropy: null, DataProtectionScope.CurrentUser);
+    await File.WriteAllBytesAsync(filePath, encryptedBytes, cancellationToken);
+  }
+
+  /// <inheritdoc />
+  public void DeleteDpapiSecret(string target) {
+    string filePath = GetDpapiFilePath(target);
+    if (File.Exists(filePath)) {
+      File.Delete(filePath);
+    }
+  }
+
+  private static string GetDpapiFilePath(string target) {
+    string fileName = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(target))) + ".dat";
+    return Path.Combine(CredentialsDirectory, fileName);
   }
 }
