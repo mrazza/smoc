@@ -196,30 +196,7 @@ public sealed class SubsonicStreamingClient : IStreamingClient {
   }
 
   private string BuildUrl(string method, Dictionary<string, string>? parameters = null) {
-    var query = new List<string> {
-      $"u={Uri.EscapeDataString(_username)}",
-      "v=1.16.1",
-      "c=smoc",
-      "f=json"
-    };
-
-    if (_useToken) {
-      var (token, salt) = SubsonicAuthentication.GenerateToken(_password);
-      query.Add($"t={token}");
-      query.Add($"s={salt}");
-    } else {
-      query.Add($"p={Uri.EscapeDataString(_password)}");
-    }
-
-    if (parameters != null) {
-      foreach (var param in parameters) {
-        query.Add($"{param.Key}={Uri.EscapeDataString(param.Value)}");
-      }
-    }
-
-    return new UriBuilder(_uriScheme, _uriHost, _uriPort, $"rest/{method}") {
-      Query = string.Join("&", query)
-    }.ToString();
+    return SubsonicApi.BuildUri(_uriScheme, _uriHost, _uriPort, method, _username, _password, _useToken, parameters).ToString();
   }
 
   private async Task<JsonElement> GetResponseElementAsync(string method, Dictionary<string, string>? parameters = null, CancellationToken cancellationToken = default) {
@@ -227,18 +204,6 @@ public sealed class SubsonicStreamingClient : IStreamingClient {
     var json = await _httpClient.GetStringAsync(url, cancellationToken);
 
     using var doc = JsonDocument.Parse(json);
-    if (!doc.RootElement.TryGetProperty("subsonic-response", out var responseElement)) {
-      throw new Exception("Missing subsonic-response");
-    }
-
-    if (responseElement.TryGetProperty("status", out var status) && status.GetString() == "failed") {
-      if (responseElement.TryGetProperty("error", out var error)) {
-        var code = error.TryGetProperty("code", out var c) ? c.GetInt32() : 0;
-        var message = error.TryGetProperty("message", out var m) ? m.GetString() : "Unknown Subsonic error";
-        throw new Exception($"Subsonic API error {code}: {message}");
-      }
-    }
-
-    return responseElement.Clone();
+    return SubsonicApi.ValidateResponse(doc.RootElement).Clone();
   }
 }

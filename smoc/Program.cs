@@ -2,6 +2,7 @@ using System.Collections;
 using System.CommandLine;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
+using Smoc.Cli.Auth;
 using Smoc.Configuration;
 using Smoc.Services.Caching;
 using Smoc.Streaming;
@@ -20,10 +21,10 @@ namespace Smoc;
 /// initialization responsibility to the MainWindow.
 /// </summary>
 public static class Program {
-  private static readonly string _configPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".config", "smoc", "config.json");
-  private static readonly string _cookiesPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".config", "smoc", "cookies.txt");
-  private static readonly string _tokensPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".config", "smoc", "tokens.json");
-  private static readonly string _logPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".config", "smoc", "log_{Date}.txt");
+  private static readonly string _configPath = SmocPaths.DefaultConfigPath;
+  private static readonly string _cookiesPath = SmocPaths.DefaultCookiesPath;
+  private static readonly string _tokensPath = SmocPaths.DefaultTokensPath;
+  private static readonly string _logPath = SmocPaths.DefaultLogPath;
 
   /// <summary>
   /// The product name of the application.
@@ -35,6 +36,8 @@ public static class Program {
   /// </summary>
   public static async Task Main(string[] args) {
     RootCommand rootCommand = new RootCommand("Streaming Music over Console (SMoC)");
+
+    rootCommand.Subcommands.Add(AuthCommand.Create());
 
     Command generateTokensCommand = new Command("--gentokens", "Generate PO Token and Visitor Token for YouTube Music.");
     rootCommand.Subcommands.Add(generateTokensCommand);
@@ -70,6 +73,13 @@ public static class Program {
       ILogger logger = factory.CreateLogger("SMoC");
       Logging.Logger = logger;
       logger.LogInformation("SMoC starting...");
+
+      if (!string.IsNullOrEmpty(SubsonicConfig.Defaults.Password) ||
+          !string.IsNullOrEmpty(SoundCloudConfig.Defaults.AuthToken) ||
+          File.Exists(_cookiesPath)) {
+        Console.Error.WriteLine("Notice: Plaintext credentials detected in configuration or cookies. Run 'smoc auth migrate' to securely store credentials.");
+        logger.LogWarning("Plaintext credentials detected. Run 'smoc auth migrate' to securely store credentials.");
+      }
 
       application.Mouse.IsMouseDisabled = true;
       VimKeyBindings.AddNavigationKeyBindings(application.Keyboard.KeyBindings);
