@@ -60,7 +60,8 @@ public class ScreenshotDiffer {
       string golden = "";
 
       try {
-        golden = File.ReadAllText(goldenFile);
+        golden = File.ReadAllText(goldenFile).Replace("\r\n", "\n");
+        actual = actual.Replace("\r\n", "\n");
         Assert.Equal(golden, actual);
       } catch {
         _output.WriteLine("Expected:");

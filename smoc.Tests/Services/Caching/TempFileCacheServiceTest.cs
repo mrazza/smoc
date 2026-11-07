@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using System.Net.Http.Headers;
 using System.Text;
 using Smoc.Services.Caching;
@@ -26,16 +27,41 @@ public class TempFileCacheServiceTest : IDisposable {
   }
 
   private string InitDirectory(CachePersistence persistenceType) {
-    // TODO: Add support for Windows and MacOS
     _testDirectory = persistenceType switch {
       // We know from the implementation that VOLATILE uses Path.GetTempPath()/SMoC/cache/subdir
       CachePersistence.VOLATILE => Path.Combine(Path.GetTempPath(), Smoc.Program.ProductName.ToLowerInvariant(), "cache", _subDirectory),
-      // We know from the implementation that on Linux SEMIPERSISTENT uses Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)/.config/SMoC/cache/subdir
-      CachePersistence.SEMIPERSISTENT => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".cache", Smoc.Program.ProductName.ToLowerInvariant(), _subDirectory),
+      CachePersistence.SEMIPERSISTENT => GetSemiPersistentDirectory(),
       _ => throw new ArgumentException($"Cache persistence type {persistenceType} is not supported.", nameof(persistenceType))
     };
 
     return _testDirectory;
+  }
+
+  private string GetSemiPersistentDirectory() {
+    string baseCachePath;
+
+    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
+      baseCachePath = Path.Combine(
+          Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+          Smoc.Program.ProductName,
+          "Cache");
+    } else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) {
+      baseCachePath = Path.Combine(
+          Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+          "Library",
+          "Caches",
+          $"com.{Smoc.Program.ProductName.ToLower()}.cache");
+    } else {
+      string? xdgCache = Environment.GetEnvironmentVariable("XDG_CACHE_HOME");
+      baseCachePath = !string.IsNullOrEmpty(xdgCache)
+          ? Path.Combine(xdgCache, Smoc.Program.ProductName.ToLowerInvariant())
+          : Path.Combine(
+              Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+              ".cache",
+              Smoc.Program.ProductName.ToLowerInvariant());
+    }
+
+    return Path.Combine(baseCachePath, _subDirectory);
   }
 
   [Theory]
