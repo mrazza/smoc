@@ -32,22 +32,22 @@ public sealed class WindowsCredentialManagerCredentialStore : ICredentialStore {
   }
 
   /// <inheritdoc />
-  public Task<string?> GetCredentialAsync(string service, string account, CancellationToken cancellationToken = default) {
+  public async Task<string?> GetCredentialAsync(string service, string account, CancellationToken cancellationToken = default) {
     cancellationToken.ThrowIfCancellationRequested();
     ArgumentNullException.ThrowIfNull(service);
     ArgumentNullException.ThrowIfNull(account);
 
     if (!_adapter.IsSupportedPlatform) {
-      return Task.FromResult<string?>(null);
+      return null;
     }
 
     // 1. Check if a DPAPI encrypted file exists for large payloads
     string dpapiFilePath = GetDpapiFilePath(service, account);
     if (File.Exists(dpapiFilePath)) {
       try {
-        byte[] encryptedBytes = File.ReadAllBytes(dpapiFilePath);
+        byte[] encryptedBytes = await File.ReadAllBytesAsync(dpapiFilePath, cancellationToken);
         byte[] decryptedBytes = _adapter.UnprotectData(encryptedBytes);
-        return Task.FromResult<string?>(Encoding.UTF8.GetString(decryptedBytes));
+        return Encoding.UTF8.GetString(decryptedBytes);
       } catch {
         // Fall through to Credential Manager if DPAPI read fails
       }
@@ -56,14 +56,14 @@ public sealed class WindowsCredentialManagerCredentialStore : ICredentialStore {
     // 2. Query Windows Credential Manager
     string target = FormatTarget(service, account);
     if (_adapter.ReadCredential(target, out string? secret)) {
-      return Task.FromResult(secret);
+      return secret;
     }
 
-    return Task.FromResult<string?>(null);
+    return null;
   }
 
   /// <inheritdoc />
-  public Task SetCredentialAsync(string service, string account, string secret, CancellationToken cancellationToken = default) {
+  public async Task SetCredentialAsync(string service, string account, string secret, CancellationToken cancellationToken = default) {
     cancellationToken.ThrowIfCancellationRequested();
     ArgumentNullException.ThrowIfNull(service);
     ArgumentNullException.ThrowIfNull(account);
@@ -84,7 +84,7 @@ public sealed class WindowsCredentialManagerCredentialStore : ICredentialStore {
       if (!Directory.Exists(dir)) {
         Directory.CreateDirectory(dir);
       }
-      File.WriteAllBytes(dpapiFilePath, encrypted);
+      await File.WriteAllBytesAsync(dpapiFilePath, encrypted, cancellationToken);
 
       // Clean up any stale small credential in Credential Manager
       _adapter.DeleteCredential(target);
@@ -98,7 +98,7 @@ public sealed class WindowsCredentialManagerCredentialStore : ICredentialStore {
         if (!Directory.Exists(dir)) {
           Directory.CreateDirectory(dir);
         }
-        File.WriteAllBytes(dpapiFilePath, encrypted);
+        await File.WriteAllBytesAsync(dpapiFilePath, encrypted, cancellationToken);
       } else {
         // Clean up any stale DPAPI file
         if (File.Exists(dpapiFilePath)) {
@@ -110,18 +110,16 @@ public sealed class WindowsCredentialManagerCredentialStore : ICredentialStore {
         }
       }
     }
-
-    return Task.CompletedTask;
   }
 
   /// <inheritdoc />
-  public Task DeleteCredentialAsync(string service, string account, CancellationToken cancellationToken = default) {
+  public async Task DeleteCredentialAsync(string service, string account, CancellationToken cancellationToken = default) {
     cancellationToken.ThrowIfCancellationRequested();
     ArgumentNullException.ThrowIfNull(service);
     ArgumentNullException.ThrowIfNull(account);
 
     if (!_adapter.IsSupportedPlatform) {
-      return Task.CompletedTask;
+      return;
     }
 
     string target = FormatTarget(service, account);
@@ -135,14 +133,12 @@ public sealed class WindowsCredentialManagerCredentialStore : ICredentialStore {
         // Ignore file deletion errors
       }
     }
-
-    return Task.CompletedTask;
   }
 
   /// <inheritdoc />
-  public Task<bool> IsAvailableAsync(CancellationToken cancellationToken = default) {
+  public async Task<bool> IsAvailableAsync(CancellationToken cancellationToken = default) {
     cancellationToken.ThrowIfCancellationRequested();
-    return Task.FromResult(_adapter.IsSupportedPlatform);
+    return _adapter.IsSupportedPlatform;
   }
 
   private static string FormatTarget(string service, string account) => $"{service}:{account}";

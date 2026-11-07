@@ -28,7 +28,7 @@ public partial class EnvironmentCredentialStore : ICredentialStore {
   }
 
   /// <inheritdoc />
-  public Task<string?> GetCredentialAsync(string service, string account, CancellationToken cancellationToken = default) {
+  public async Task<string?> GetCredentialAsync(string service, string account, CancellationToken cancellationToken = default) {
     cancellationToken.ThrowIfCancellationRequested();
     ArgumentNullException.ThrowIfNull(service);
     ArgumentNullException.ThrowIfNull(account);
@@ -36,50 +36,47 @@ public partial class EnvironmentCredentialStore : ICredentialStore {
     foreach (string varName in GetCandidateVariableNames(service, account)) {
       string? value = _getEnv(varName);
       if (!string.IsNullOrEmpty(value)) {
-        return Task.FromResult<string?>(value);
+        return value;
       }
     }
 
-    return Task.FromResult<string?>(null);
+    return null;
   }
 
   /// <inheritdoc />
-  public Task SetCredentialAsync(string service, string account, string secret, CancellationToken cancellationToken = default) {
+  public async Task SetCredentialAsync(string service, string account, string secret, CancellationToken cancellationToken = default) {
     cancellationToken.ThrowIfCancellationRequested();
     ArgumentNullException.ThrowIfNull(service);
     ArgumentNullException.ThrowIfNull(account);
     ArgumentNullException.ThrowIfNull(secret);
 
     if (_setEnv == null) {
-      return Task.CompletedTask;
+      return;
     }
 
     string primaryVar = GetCandidateVariableNames(service, account).First();
     _setEnv(primaryVar, secret);
-    return Task.CompletedTask;
   }
 
   /// <inheritdoc />
-  public Task DeleteCredentialAsync(string service, string account, CancellationToken cancellationToken = default) {
+  public async Task DeleteCredentialAsync(string service, string account, CancellationToken cancellationToken = default) {
     cancellationToken.ThrowIfCancellationRequested();
     ArgumentNullException.ThrowIfNull(service);
     ArgumentNullException.ThrowIfNull(account);
 
     if (_setEnv == null) {
-      return Task.CompletedTask;
+      return;
     }
 
     foreach (string varName in GetCandidateVariableNames(service, account)) {
       _setEnv(varName, null);
     }
-
-    return Task.CompletedTask;
   }
 
   /// <inheritdoc />
-  public Task<bool> IsAvailableAsync(CancellationToken cancellationToken = default) {
+  public async Task<bool> IsAvailableAsync(CancellationToken cancellationToken = default) {
     cancellationToken.ThrowIfCancellationRequested();
-    return Task.FromResult(true);
+    return true;
   }
 
   /// <summary>

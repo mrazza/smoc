@@ -53,9 +53,9 @@ internal sealed class NativeMacOsKeychainAdapter : IMacOsKeychainAdapter {
 
   private static IntPtr CreateCFString(string str) => CFStringCreateWithCharacters(IntPtr.Zero, str, str.Length);
 
-  public Task<string?> GetSecretAsync(string service, string account, CancellationToken cancellationToken) {
+  public async Task<string?> GetSecretAsync(string service, string account, CancellationToken cancellationToken) {
     if (!IsSupportedPlatform) {
-      return Task.FromResult<string?>(null);
+      return null;
     }
 
     IntPtr kSecClass = CreateCFString("class");
@@ -82,13 +82,13 @@ internal sealed class NativeMacOsKeychainAdapter : IMacOsKeychainAdapter {
           IntPtr bytePtr = CFDataGetBytePtr(resultPtr);
           byte[] buffer = new byte[length];
           Marshal.Copy(bytePtr, buffer, 0, (int)length);
-          return Task.FromResult<string?>(Encoding.UTF8.GetString(buffer));
+          return Encoding.UTF8.GetString(buffer);
         } finally {
           CFRelease(resultPtr);
         }
       }
 
-      return Task.FromResult<string?>(null);
+      return null;
     } finally {
       CFRelease(query);
       CFRelease(cfService);
@@ -104,7 +104,7 @@ internal sealed class NativeMacOsKeychainAdapter : IMacOsKeychainAdapter {
     }
   }
 
-  public Task SetSecretAsync(string service, string account, string secret, CancellationToken cancellationToken) {
+  public async Task SetSecretAsync(string service, string account, string secret, CancellationToken cancellationToken) {
     if (!IsSupportedPlatform) {
       throw new PlatformNotSupportedException("macOS Keychain is only supported on macOS.");
     }
@@ -141,8 +141,6 @@ internal sealed class NativeMacOsKeychainAdapter : IMacOsKeychainAdapter {
           CFRelease(addDict);
         }
       }
-
-      return Task.CompletedTask;
     } finally {
       CFRelease(query);
       CFRelease(updateDict);
@@ -157,9 +155,9 @@ internal sealed class NativeMacOsKeychainAdapter : IMacOsKeychainAdapter {
     }
   }
 
-  public Task DeleteSecretAsync(string service, string account, CancellationToken cancellationToken) {
+  public async Task DeleteSecretAsync(string service, string account, CancellationToken cancellationToken) {
     if (!IsSupportedPlatform) {
-      return Task.CompletedTask;
+      return;
     }
 
     IntPtr kSecClass = CreateCFString("class");
@@ -176,7 +174,6 @@ internal sealed class NativeMacOsKeychainAdapter : IMacOsKeychainAdapter {
 
     try {
       SecItemDelete(query);
-      return Task.CompletedTask;
     } finally {
       CFRelease(query);
       CFRelease(cfService);

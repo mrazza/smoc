@@ -22,36 +22,36 @@ public sealed class LinuxSecretServiceCredentialStore : ICredentialStore {
   }
 
   /// <inheritdoc />
-  public Task<string?> GetCredentialAsync(string service, string account, CancellationToken cancellationToken = default) {
+  public async Task<string?> GetCredentialAsync(string service, string account, CancellationToken cancellationToken = default) {
     cancellationToken.ThrowIfCancellationRequested();
     ArgumentNullException.ThrowIfNull(service);
     ArgumentNullException.ThrowIfNull(account);
 
-    return _adapter.GetSecretAsync(service, account, cancellationToken);
+    return await _adapter.GetSecretAsync(service, account, cancellationToken);
   }
 
   /// <inheritdoc />
-  public Task SetCredentialAsync(string service, string account, string secret, CancellationToken cancellationToken = default) {
+  public async Task SetCredentialAsync(string service, string account, string secret, CancellationToken cancellationToken = default) {
     cancellationToken.ThrowIfCancellationRequested();
     ArgumentNullException.ThrowIfNull(service);
     ArgumentNullException.ThrowIfNull(account);
     ArgumentNullException.ThrowIfNull(secret);
 
-    return _adapter.SetSecretAsync(service, account, secret, cancellationToken);
+    await _adapter.SetSecretAsync(service, account, secret, cancellationToken);
   }
 
   /// <inheritdoc />
-  public Task DeleteCredentialAsync(string service, string account, CancellationToken cancellationToken = default) {
+  public async Task DeleteCredentialAsync(string service, string account, CancellationToken cancellationToken = default) {
     cancellationToken.ThrowIfCancellationRequested();
     ArgumentNullException.ThrowIfNull(service);
     ArgumentNullException.ThrowIfNull(account);
 
-    return _adapter.DeleteSecretAsync(service, account, cancellationToken);
+    await _adapter.DeleteSecretAsync(service, account, cancellationToken);
   }
 
   /// <inheritdoc />
-  public Task<bool> IsAvailableAsync(CancellationToken cancellationToken = default) {
+  public async Task<bool> IsAvailableAsync(CancellationToken cancellationToken = default) {
     cancellationToken.ThrowIfCancellationRequested();
-    return _adapter.IsAvailableAsync(cancellationToken);
+    return await _adapter.IsAvailableAsync(cancellationToken);
   }
 }
