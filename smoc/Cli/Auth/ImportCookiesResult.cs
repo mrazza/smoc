@@ -14,4 +14,16 @@ public record ImportCookiesResult(
   int CookieCount,
   bool TokensGenerated,
   bool SourceDeleted
-);
+) {
+  /// <summary>
+  /// Creates a successful cookie import result.
+  /// </summary>
+  public static ImportCookiesResult Succeeded(string message, int cookieCount, bool tokensGenerated = true, bool sourceDeleted = false) =>
+      new(true, message, cookieCount, tokensGenerated, sourceDeleted);
+
+  /// <summary>
+  /// Creates a failed cookie import result.
+  /// </summary>
+  public static ImportCookiesResult Failed(string message) =>
+      new(false, message, 0, false, false);
+}
