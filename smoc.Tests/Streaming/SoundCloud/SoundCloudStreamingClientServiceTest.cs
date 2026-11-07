@@ -1,7 +1,7 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Text.Json;
 using Smoc.Configuration;
-using Smoc.Security;
 using Smoc.Streaming.SoundCloud;
 using Smoc.Streaming.SoundCloud.Models;
 
@@ -94,62 +94,102 @@ public class SoundCloudStreamingClientServiceTest {
   }
 
   /// <summary>
-  /// Verifies that CreateAsync resolves auth token and client ID from credential store.
+  /// Verifies that when an auth token is provided, the OAuth header is attached only to api-v2.soundcloud.com requests.
   /// </summary>
   [Fact]
-  public async Task CreateAsync_ResolvesCredentialsFromStore_AndSetsAuthHeader() {
-    var store = new InMemoryCredentialStore();
-    await store.SetCredentialAsync(CredentialTargets.SoundCloud, CredentialTargets.AccountAuthToken, "oauth-token-123", TestContext.Current.CancellationToken);
-    await store.SetCredentialAsync(CredentialTargets.SoundCloud, CredentialTargets.AccountClientId, "sc-client-456", TestContext.Current.CancellationToken);
+  public async Task SearchSongsAsync_WhenAuthTokenProvided_AttachesOAuthHeaderToApiRequests() {
+    var response = new SoundCloudSearchResponse<SoundCloudTrack>([], null);
+    var json = JsonSerializer.Serialize(response);
+    AuthenticationHeaderValue? capturedAuth = null;
 
-    var client = await SoundCloudStreamingClient.CreateAsync(credentialStore: store, cancellationToken: TestContext.Current.CancellationToken);
+    var handler = new MockHandler {
+      Handler = req => {
+        capturedAuth = req.Headers.Authorization;
+        return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) {
+          Content = new StringContent(json)
+        });
+      }
+    };
 
-    Assert.NotNull(client);
-    Assert.True(client.IsAuthenticated);
+    var httpClient = new HttpClient(handler);
+    var client = SoundCloudStreamingClient.CreateForTesting(httpClient, authToken: "oauth-token-123");
 
-    var httpClientField = typeof(SoundCloudStreamingClient).GetField("_httpClient", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-    var httpClient = (HttpClient)httpClientField!.GetValue(client)!;
-    Assert.NotNull(httpClient.DefaultRequestHeaders.Authorization);
-    Assert.Equal("OAuth", httpClient.DefaultRequestHeaders.Authorization.Scheme);
-    Assert.Equal("oauth-token-123", httpClient.DefaultRequestHeaders.Authorization.Parameter);
+    await client.SearchSongsAsync("query", TestContext.Current.CancellationToken);
+
+    Assert.NotNull(capturedAuth);
+    Assert.Equal("OAuth", capturedAuth.Scheme);
+    Assert.Equal("oauth-token-123", capturedAuth.Parameter);
   }
 
   /// <summary>
-  /// Verifies that CreateAsync falls back to SoundCloudConfig when credentials are not in store.
+  /// Verifies that the OAuth token is NOT sent to external CDN or third-party stream URLs.
   /// </summary>
   [Fact]
-  public async Task CreateAsync_FallsBackToConfig_WhenNotInStore() {
-    SoundCloudConfig.Defaults.AuthToken = "fallback-token";
-    SoundCloudConfig.Defaults.ClientId = "fallback-client";
+  public async Task GetSongStreamAsync_WhenAuthTokenProvided_DoesNotAttachOAuthHeaderToCdnStreamRequest() {
+    var track = new SoundCloudTrack(1, "Track 1", 1000, null, new SoundCloudUser(10, "Artist 1", "http://avatar"), new SoundCloudMedia(
+        [
+            new SoundCloudTranscoding("https://api-v2.soundcloud.com/media/stream-meta", "mp3", new SoundCloudFormat("progressive", "audio/mpeg"))
+        ]
+    ));
+    var streamInfo = new SoundCloudStreamResponse("https://cf-media.sndcdn.com/actual-stream-url");
 
-    var store = new InMemoryCredentialStore();
-    var client = await SoundCloudStreamingClient.CreateAsync(credentialStore: store, cancellationToken: TestContext.Current.CancellationToken);
+    AuthenticationHeaderValue? apiAuth = null;
+    AuthenticationHeaderValue? cdnAuth = null;
 
-    Assert.NotNull(client);
-    Assert.True(client.IsAuthenticated);
+    var handler = new MockHandler {
+      Handler = req => {
+        var url = req.RequestUri!.ToString();
+        if (url.Contains("/tracks/1") || url.Contains("stream-meta")) {
+          apiAuth = req.Headers.Authorization;
+          var body = url.Contains("/tracks/1") ? JsonSerializer.Serialize(track) : JsonSerializer.Serialize(streamInfo);
+          return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) {
+            Content = new StringContent(body)
+          });
+        }
+        if (url.Contains("actual-stream-url")) {
+          cdnAuth = req.Headers.Authorization;
+          return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) {
+            Content = new ByteArrayContent([1, 2, 3, 4])
+          });
+        }
+        return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+      }
+    };
 
-    var httpClientField = typeof(SoundCloudStreamingClient).GetField("_httpClient", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-    var httpClient = (HttpClient)httpClientField!.GetValue(client)!;
-    Assert.Equal("OAuth", httpClient.DefaultRequestHeaders.Authorization?.Scheme);
-    Assert.Equal("fallback-token", httpClient.DefaultRequestHeaders.Authorization?.Parameter);
+    var httpClient = new HttpClient(handler);
+    var client = SoundCloudStreamingClient.CreateForTesting(httpClient, authToken: "secret-oauth-token");
+
+    var songStream = await client.GetSongStreamAsync("1", TestContext.Current.CancellationToken);
+    Assert.NotNull(songStream);
+
+    Assert.NotNull(apiAuth);
+    Assert.Equal("secret-oauth-token", apiAuth.Parameter);
+    Assert.Null(cdnAuth);
   }
 
   /// <summary>
-  /// Verifies that CreateAsync returns an unauthenticated client when no token is present.
+  /// Verifies that when no auth token is provided, requests do not contain an Authorization header.
   /// </summary>
   [Fact]
-  public async Task CreateAsync_WorksUnauthenticated_WhenNoCredentialsConfigured() {
-    SoundCloudConfig.Defaults.AuthToken = null;
-    SoundCloudConfig.Defaults.ClientId = null;
+  public async Task SearchSongsAsync_WhenNoAuthToken_DoesNotAttachAuthHeader() {
+    var response = new SoundCloudSearchResponse<SoundCloudTrack>([], null);
+    var json = JsonSerializer.Serialize(response);
+    AuthenticationHeaderValue? capturedAuth = null;
 
-    var store = new InMemoryCredentialStore();
-    var client = await SoundCloudStreamingClient.CreateAsync(credentialStore: store, cancellationToken: TestContext.Current.CancellationToken);
+    var handler = new MockHandler {
+      Handler = req => {
+        capturedAuth = req.Headers.Authorization;
+        return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) {
+          Content = new StringContent(json)
+        });
+      }
+    };
 
-    Assert.NotNull(client);
-    Assert.False(client.IsAuthenticated);
+    var httpClient = new HttpClient(handler);
+    var client = SoundCloudStreamingClient.CreateForTesting(httpClient, authToken: null);
 
-    var httpClientField = typeof(SoundCloudStreamingClient).GetField("_httpClient", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-    var httpClient = (HttpClient)httpClientField!.GetValue(client)!;
-    Assert.Null(httpClient.DefaultRequestHeaders.Authorization);
+    await client.SearchSongsAsync("query", TestContext.Current.CancellationToken);
+
+    Assert.Null(capturedAuth);
   }
 }

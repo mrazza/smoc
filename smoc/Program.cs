@@ -40,14 +40,16 @@ public static class Program {
 
     rootCommand.Subcommands.Add(AuthCommand.Create());
 
-    Command generateTokensCommand = new Command("--gentokens", "Generate PO Token and Visitor Token for YouTube Music.");
+    Command generateTokensCommand = new Command("--gentokens", "[Deprecated: use 'smoc auth import-cookies'] Generate PO Token and Visitor Token for YouTube Music.");
     rootCommand.Subcommands.Add(generateTokensCommand);
     generateTokensCommand.SetAction(async (parseResult, cancellationToken) => {
       var credentialStore = CredentialStoreFactory.CreateDefault();
       string? cookiesRaw = null;
       try {
         cookiesRaw = await credentialStore.GetCredentialAsync(CredentialTargets.YouTubeMusic, CredentialTargets.AccountCookies, cancellationToken);
-      } catch { }
+      } catch (Exception ex) {
+        Logging.Warning($"Failed to read YouTube Music cookies from credential store: {ex.Message}");
+      }
 
       List<System.Net.Cookie>? cookies = null;
       if (!string.IsNullOrWhiteSpace(cookiesRaw)) {
@@ -57,16 +59,22 @@ public static class Program {
       }
 
       if (cookies == null || cookies.Count == 0) {
-        throw new InvalidOperationException("No YouTube Music cookies found in Keyring or cookies.txt.");
+        throw new InvalidOperationException("No YouTube Music cookies found in Keyring or cookies.txt. Use 'smoc auth import-cookies <path>' to import cookies.");
       }
 
       var tokens = await YtmStreamingClient.GenerateTokensAsync(cookies);
       if (!string.IsNullOrWhiteSpace(cookiesRaw)) {
         try {
           await credentialStore.SetCredentialAsync(CredentialTargets.YouTubeMusic, CredentialTargets.AccountTokens, JsonSerializer.Serialize(tokens), cancellationToken);
-        } catch { }
+          Console.WriteLine("Successfully generated and saved YouTube Music tokens to credential store.");
+        } catch (Exception ex) {
+          Logging.Error($"Failed to save generated tokens to credential store: {ex.Message}");
+          throw;
+        }
+      } else {
+        await File.WriteAllTextAsync(_tokensPath, JsonSerializer.Serialize(tokens), cancellationToken);
+        Console.WriteLine($"Successfully generated and saved YouTube Music tokens to {_tokensPath}. Consider running 'smoc auth migrate' to securely store credentials in your OS keyring.");
       }
-      File.WriteAllText(_tokensPath, JsonSerializer.Serialize(tokens));
     });
 
     rootCommand.SetAction(async (parseResult, cancellationToken) => {
@@ -105,7 +113,8 @@ public static class Program {
 
       application.Mouse.IsMouseDisabled = true;
       VimKeyBindings.AddNavigationKeyBindings(application.Keyboard.KeyBindings);
-      IStreamingClient streamingClient = await CreateStreamingClientAsync(cancellationToken: cancellationToken);
+      var credentialStore = CredentialStoreFactory.CreateDefault();
+      IStreamingClient streamingClient = await CreateStreamingClientAsync(credentialStore, cancellationToken);
       using var window = new MainWindow(streamingClient);
       try {
         application.Run(window, (e) => {
@@ -132,10 +141,10 @@ public static class Program {
   /// <summary>
   /// Creates a streaming client based on the configured active service asynchronously.
   /// </summary>
-  /// <param name="credentialStore">Optional credential store to resolve credentials.</param>
+  /// <param name="credentialStore">Credential store to resolve credentials.</param>
   /// <param name="cancellationToken">Cancellation token.</param>
   /// <returns>An initialized <see cref="IStreamingClient"/>.</returns>
-  private static async Task<IStreamingClient> CreateStreamingClientAsync(ICredentialStore? credentialStore = null, CancellationToken cancellationToken = default) {
+  private static async Task<IStreamingClient> CreateStreamingClientAsync(ICredentialStore credentialStore, CancellationToken cancellationToken = default) {
     long? songCacheSize = SmocConfiguration.Defaults.SongCacheSizeBytes != 0 ? SmocConfiguration.Defaults.SongCacheSizeBytes : null;
     long? artCacheSize = SmocConfiguration.Defaults.AlbumCoverCacheSizeBytes != 0 ? SmocConfiguration.Defaults.AlbumCoverCacheSizeBytes : null;
     int? songCacheMaxElements = SmocConfiguration.Defaults.SongCacheMaxElements != 0 ? SmocConfiguration.Defaults.SongCacheMaxElements : null;
@@ -146,29 +155,32 @@ public static class Program {
     var songCache = new TempFileCacheService("songs", songCacheConfig);
     var artCache = new TempFileCacheService("art", artCacheConfig);
 
-    credentialStore ??= CredentialStoreFactory.CreateDefault();
-
     switch (SmocConfiguration.Defaults.ActiveService) {
       case StreamingService.Subsonic:
+        Logging.Information("Resolving Subsonic credentials...");
+        var subsonicCreds = await ServiceCredentialResolver.ResolveSubsonicAsync(credentialStore, cancellationToken);
         Logging.Information("Creating Subsonic streaming client...");
-        return await SubsonicStreamingClient.CreateAsync(songCache, artCache, credentialStore, cancellationToken);
+        return SubsonicStreamingClient.Create(songCache, artCache, subsonicCreds);
 
       case StreamingService.SoundCloud:
+        Logging.Information("Resolving SoundCloud credentials...");
+        var soundCloudCreds = await ServiceCredentialResolver.ResolveSoundCloudAsync(credentialStore, cancellationToken);
         Logging.Information("Creating SoundCloud streaming client...");
-        return await SoundCloudStreamingClient.CreateAsync(songCache, artCache, credentialStore, cancellationToken);
+        return SoundCloudStreamingClient.Create(songCache, artCache, soundCloudCreds.ClientId, soundCloudCreds.AuthToken);
 
       case StreamingService.YouTubeMusic:
-        Logging.Information("Creating YouTube Music streaming client...");
-        return await YtmStreamingClient.CreateAsync(songCache, artCache, credentialStore, _cookiesPath, _tokensPath, cancellationToken: cancellationToken);
+        Logging.Information("Resolving YouTube Music credentials...");
+        var ytmSession = await ServiceCredentialResolver.ResolveYouTubeMusicAsync(credentialStore, _cookiesPath, _tokensPath, cancellationToken: cancellationToken);
+        if (ytmSession != null) {
+          Logging.Information("Creating authenticated YouTube Music streaming client...");
+          return YtmStreamingClient.Create(ytmSession.Cookies, ytmSession.Tokens, songCache, artCache);
+        }
+
+        Logging.Information("Cookies or tokens not found. Creating unauthenticated YouTube Music client.");
+        return YtmStreamingClient.Create(songCache, artCache);
 
       default:
         throw new InvalidOperationException($"Unknown streaming service: {SmocConfiguration.Defaults.ActiveService}");
     }
   }
-
-  /// <summary>
-  /// Creates a streaming client based on the configured active service.
-  /// </summary>
-  /// <returns>An initialized <see cref="IStreamingClient"/>.</returns>
-  private static IStreamingClient CreateStreamingClient() => CreateStreamingClientAsync().GetAwaiter().GetResult();
 }
