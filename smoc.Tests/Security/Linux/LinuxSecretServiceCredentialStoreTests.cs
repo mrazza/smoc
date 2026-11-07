@@ -57,7 +57,7 @@ public class LinuxSecretServiceCredentialStoreTests {
 
   [Fact]
   public void DbusConnection_CanCreateProxiesForInternalSecretServiceContracts() {
-    var connection = new Connection(Address.Session ?? "tcp:host=localhost,port=1234");
+    using var connection = new Connection(Address.Session ?? "tcp:host=localhost,port=1234");
 
     var serviceProxy = connection.CreateProxy<SecretServiceDbusContracts.ISecretService>(
         SecretServiceDbusContracts.ServiceName, SecretServiceDbusContracts.ServicePath);
@@ -73,15 +73,15 @@ public class LinuxSecretServiceCredentialStoreTests {
   }
 
   [Fact]
-  public void ResolveSessionBusAddress_ReturnsExplicitAddress_WhenPresent() {
-    string? address = DbusSecretServiceAdapter.ResolveSessionBusAddress("unix:path=/custom/bus");
+  public void ResolveSessionBusAddress_ReturnsEnvironmentAddress_WhenPresent() {
+    string? address = DbusSecretServiceAdapter.ResolveSessionBusAddress(
+        getEnv: key => key == "DBUS_SESSION_BUS_ADDRESS" ? "unix:path=/custom/bus" : null);
     Assert.Equal("unix:path=/custom/bus", address);
   }
 
   [Fact]
-  public void ResolveSessionBusAddress_FallsBackToXdgRuntimeDir_WhenSessionAddressNullAndBusExists() {
+  public void ResolveSessionBusAddress_FallsBackToXdgRuntimeDir_WhenBusAddressUnsetAndBusExists() {
     string? address = DbusSecretServiceAdapter.ResolveSessionBusAddress(
-        sessionAddress: null,
         getEnv: key => key == "XDG_RUNTIME_DIR" ? "/run/user/1000" : null,
         pathExists: path => path == Path.Combine("/run/user/1000", "bus"));
 
@@ -89,15 +89,13 @@ public class LinuxSecretServiceCredentialStoreTests {
   }
 
   [Fact]
-  public void ResolveSessionBusAddress_ReturnsNull_WhenSessionAddressNullAndXdgUnsetOrBusMissing() {
+  public void ResolveSessionBusAddress_ReturnsNull_WhenEnvironmentUnsetOrBusMissing() {
     string? unsetXdg = DbusSecretServiceAdapter.ResolveSessionBusAddress(
-        sessionAddress: null,
         getEnv: _ => null,
         pathExists: _ => true);
     Assert.Null(unsetXdg);
 
     string? missingBus = DbusSecretServiceAdapter.ResolveSessionBusAddress(
-        sessionAddress: null,
         getEnv: key => key == "XDG_RUNTIME_DIR" ? "/run/user/1000" : null,
         pathExists: _ => false);
     Assert.Null(missingBus);

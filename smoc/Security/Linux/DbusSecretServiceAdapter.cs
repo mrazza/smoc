@@ -100,7 +100,7 @@ internal sealed class DbusSecretServiceAdapter : ISecretServiceAdapter, IDisposa
       };
 
       var (item, _) = await collectionProxy.CreateItemAsync(properties, secretStruct, replace: true);
-      if (item == new ObjectPath("/") || string.IsNullOrEmpty(item.ToString()) || item.ToString() == "/") {
+      if (item == new ObjectPath("/")) {
         throw new InvalidOperationException($"Failed to create secret item for service '{service}' and account '{account}': keyring collection is locked or rejected item creation.");
       }
     } catch {
@@ -145,19 +145,15 @@ internal sealed class DbusSecretServiceAdapter : ISecretServiceAdapter, IDisposa
   }
 
   internal static string? ResolveSessionBusAddress(
-      string? sessionAddress = null,
       Func<string, string?>? getEnv = null,
       Func<string, bool>? pathExists = null) {
-    string? address = !string.IsNullOrEmpty(sessionAddress)
-        ? sessionAddress
-        : (getEnv != null ? getEnv("DBUS_SESSION_BUS_ADDRESS") : Address.Session);
+    getEnv ??= Environment.GetEnvironmentVariable;
+    pathExists ??= Path.Exists;
 
+    string? address = getEnv("DBUS_SESSION_BUS_ADDRESS");
     if (!string.IsNullOrEmpty(address)) {
       return address;
     }
-
-    getEnv ??= Environment.GetEnvironmentVariable;
-    pathExists ??= Path.Exists;
 
     string? xdgRuntimeDir = getEnv("XDG_RUNTIME_DIR");
     if (!string.IsNullOrEmpty(xdgRuntimeDir)) {
