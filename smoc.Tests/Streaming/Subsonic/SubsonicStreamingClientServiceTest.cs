@@ -2,6 +2,7 @@ using System.Net;
 using Moq;
 using Moq.Protected;
 using Smoc.Configuration;
+using Smoc.Security;
 using Smoc.Streaming.Subsonic;
 using Smoc.Streaming;
 using SixLabors.ImageSharp;
@@ -667,11 +668,51 @@ public class SubsonicStreamingClientServiceTest {
 
   [Fact]
   public void Create_ThrowsIfPasswordNotConfigured() {
-    SubsonicConfig.Defaults.ServerHost = "example.com";
-    SubsonicConfig.Defaults.Username = "user";
-    SubsonicConfig.Defaults.Password = null;
-    
-    var ex = Assert.Throws<InvalidOperationException>(() => SubsonicStreamingClient.Create(new NoCachingCacheService(), new NoCachingCacheService()));
+    var originalHost = SubsonicConfig.Defaults.ServerHost;
+    var originalUser = SubsonicConfig.Defaults.Username;
+    var originalPass = SubsonicConfig.Defaults.Password;
+    try {
+      SubsonicConfig.Defaults.ServerHost = "example.com";
+      SubsonicConfig.Defaults.Username = "user";
+      SubsonicConfig.Defaults.Password = null;
+      
+      var ex = Assert.Throws<InvalidOperationException>(() => SubsonicStreamingClient.Create(new NoCachingCacheService(), new NoCachingCacheService()));
+      Assert.Contains("Subsonic Password not configured", ex.Message);
+    } finally {
+      SubsonicConfig.Defaults.ServerHost = originalHost;
+      SubsonicConfig.Defaults.Username = originalUser;
+      SubsonicConfig.Defaults.Password = originalPass;
+    }
+  }
+
+  [Fact]
+  public void Create_WithCredentials_CreatesClient() {
+    var creds = new SubsonicCredentials("https", "subsonic.example.com", 443, "user", "pass", true);
+    var client = SubsonicStreamingClient.Create(new NoCachingCacheService(), new NoCachingCacheService(), creds);
+    Assert.NotNull(client);
+  }
+
+  [Fact]
+  public void Create_WithCredentials_ThrowsIfHostMissing() {
+    var creds = new SubsonicCredentials("https", "", 443, "user", "pass", true);
+    var ex = Assert.Throws<InvalidOperationException>(() =>
+      SubsonicStreamingClient.Create(new NoCachingCacheService(), new NoCachingCacheService(), creds));
+    Assert.Contains("Subsonic Server Host not configured", ex.Message);
+  }
+
+  [Fact]
+  public void Create_WithCredentials_ThrowsIfUsernameMissing() {
+    var creds = new SubsonicCredentials("https", "subsonic.example.com", 443, "", "pass", true);
+    var ex = Assert.Throws<InvalidOperationException>(() =>
+      SubsonicStreamingClient.Create(new NoCachingCacheService(), new NoCachingCacheService(), creds));
+    Assert.Contains("Subsonic Username not configured", ex.Message);
+  }
+
+  [Fact]
+  public void Create_WithCredentials_ThrowsIfPasswordMissing() {
+    var creds = new SubsonicCredentials("https", "subsonic.example.com", 443, "user", "", true);
+    var ex = Assert.Throws<InvalidOperationException>(() =>
+      SubsonicStreamingClient.Create(new NoCachingCacheService(), new NoCachingCacheService(), creds));
     Assert.Contains("Subsonic Password not configured", ex.Message);
   }
 

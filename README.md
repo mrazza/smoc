@@ -222,6 +222,53 @@ The Song Context Menu provides options for playback and queue management. It app
 
 SMoC stores configuration and authentication data in `~/.config/smoc/` (on Linux).
 
+### 🔐 Credential Management & `smoc auth`
+
+SMoC provides a dedicated `smoc auth` CLI suite to manage service credentials securely using your operating system's native credential store:
+- **Linux**: Secret Service API via D-Bus (GNOME Keyring, KWallet)
+- **macOS**: Keychain Services
+- **Windows**: Windows Credential Manager and Data Protection API (DPAPI)
+
+#### Credential Precedence
+When connecting to streaming services, SMoC resolves authentication credentials in the following order:
+1. **OS Secure Keyring**: Credentials saved via `smoc auth login`, `smoc auth import-cookies`, or `smoc auth migrate`.
+2. **Environment Variables**: Ideal for headless systems, CI, or containerized environments:
+   - `SMOC_SUBSONIC_PASSWORD` (or `SMOC_SUBSONIC_<USERNAME>_PASSWORD`)
+   - `SMOC_SOUNDCLOUD_CLIENT_ID` and `SMOC_SOUNDCLOUD_AUTH_TOKEN`
+   - `SMOC_YTM_COOKIES` and `SMOC_YTM_TOKENS`
+3. **Configuration & Legacy Files**: `config.json` (`Password` / `AuthToken`) or legacy `cookies.txt` and `tokens.json`.
+
+> [!IMPORTANT]
+> If credentials exist in the OS Keyring, they take precedence over `config.json`. Editing `Password` in `config.json` will have no effect until the keyring entry is cleared using `smoc auth logout <service>`.
+
+#### Authentication CLI Commands
+- **Interactive Login**:
+  ```bash
+  smoc auth login subsonic
+  smoc auth login soundcloud
+  ```
+  Prompts interactively for credentials and securely stores secrets in the OS keyring.
+- **Inspect Status**:
+  ```bash
+  smoc auth status
+  ```
+  Displays authentication status for all supported services and indicates whether credentials are sourced from the secure Keyring or Environment.
+- **Import YouTube Music Cookies**:
+  ```bash
+  smoc auth import-cookies [path/to/cookies.txt]
+  ```
+  Imports cookies into the secure credential store and automatically generates session tokens (supersedes legacy `smoc --gentokens`).
+- **Migrate Existing Plaintext Credentials**:
+  ```bash
+  smoc auth migrate
+  ```
+  Migrates plaintext passwords from `config.json` and legacy `cookies.txt`/`tokens.json` files into the secure OS keyring and sanitizes plaintext files. Use `--keep-backup` to retain `.bak` backup copies.
+- **Logout**:
+  ```bash
+  smoc auth logout <service>   # subsonic, soundcloud, ytm, or all
+  ```
+  Removes stored credentials from the secure OS keyring.
+
 ### YouTube Music (Default)
 
 YouTube Music is the default streaming service in SMoC. Setting `ActiveService` to `YouTubeMusic` under `SmocConfiguration` is optional unless you need to switch back from another service.
@@ -233,34 +280,33 @@ Unlike other services where credentials are saved directly in `config.json`, You
 > [!NOTE]
 > You need a YouTube Music Premium subscription to play most content.
 
-To access your YouTube Music account, you need to extract your cookies from YouTube Music (these steps are copied from [YouTube.js](https://ytjs.dev/guide/authentication.html)):
-
+To access your YouTube Music account:
 1. Open [YouTube Music](https://music.youtube.com) in your browser (Incognito recommended).
 2. Open Developer Tools (`F12`) -> **Network** tab.
 3. Find a `POST` request to `music.youtube.com`.
 4. Copy the value of the `cookie` request header.
-5. Save it to `~/.config/smoc/cookies.txt`.
+5. Save it to `~/.config/smoc/cookies.txt` or import directly into the keyring:
+   ```bash
+   smoc auth import-cookies
+   ```
 
 > [!TIP]
 > It is recommended to open an incognito window or separate browser profile when getting your cookie information to avoid other browser sessions from invalidating the tokens. Once cookies are retrieved, close the session _without_ logging out.
 
-More recently, additional tokens beyond just cookies are often needed. POToken and Visitor Data are required in the `tokens.json` file in the same directory as your `cookies.txt`.
-
-> [!TIP]
-> Run `smoc --gentokens` after setting up the cookie to generate necessary PO Tokens and Visitor Data automatically.
+More recently, additional tokens beyond just cookies are often needed (Proof-of-Origin and Visitor Data). `smoc auth import-cookies` automatically generates these tokens and stores them securely. If using legacy files, `smoc --gentokens` can generate `tokens.json`.
 
 ### Subsonic
 
 To use a Subsonic-compatible service (like Navidrome, Gonic, or Airsonic):
 1. Ensure your server has the Subsonic API enabled.
 2. Set `ActiveService` to `Subsonic` under `SmocConfiguration` in `config.json`.
-3. Configure your server hostname, port, scheme, username, and password under `SubsonicConfig` in `config.json` (see below).
+3. Configure your server hostname, port, and credentials using `smoc auth login subsonic` (recommended) or under `SubsonicConfig` in `config.json` (see below).
 
 ### SoundCloud
 
 To use SoundCloud:
 1. Set `ActiveService` to `SoundCloud` under `SmocConfiguration` in `config.json`.
-2. Configure `ClientId` and `AuthToken` under `SoundCloudConfig` in `config.json` (see below).
+2. Configure credentials using `smoc auth login soundcloud` (recommended) or under `SoundCloudConfig` in `config.json` (see below).
 
 ### Config File
 Create or edit `~/.config/smoc/config.json` to customize settings.

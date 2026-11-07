@@ -37,22 +37,52 @@ public sealed class SubsonicStreamingClient : IStreamingClient {
   }
 
   /// <summary>
-  /// Creates a new instance of the <see cref="SubsonicStreamingClient"/>.
+  /// Creates a new instance of the <see cref="SubsonicStreamingClient"/> with explicit credentials.
+  /// </summary>
+  /// <param name="songCacheService">The song cache service.</param>
+  /// <param name="albumArtCacheService">The album art cache service.</param>
+  /// <param name="credentials">The connection and authentication credentials.</param>
+  /// <returns>A new <see cref="SubsonicStreamingClient"/>.</returns>
+  public static SubsonicStreamingClient Create(ICacheService songCacheService, ICacheService albumArtCacheService, SubsonicCredentials credentials) {
+    ArgumentNullException.ThrowIfNull(credentials);
+    if (string.IsNullOrWhiteSpace(credentials.Host)) {
+      throw new InvalidOperationException("Subsonic Server Host not configured");
+    }
+    if (string.IsNullOrWhiteSpace(credentials.Username)) {
+      throw new InvalidOperationException("Subsonic Username not configured");
+    }
+    if (string.IsNullOrEmpty(credentials.Password)) {
+      throw new InvalidOperationException("Subsonic Password not configured");
+    }
+
+    return new SubsonicStreamingClient(
+      credentials.Scheme,
+      credentials.Host,
+      credentials.Port,
+      credentials.Username,
+      credentials.Password,
+      credentials.UseToken,
+      songCacheService,
+      albumArtCacheService
+    );
+  }
+
+  /// <summary>
+  /// Creates a new instance of the <see cref="SubsonicStreamingClient"/> using default configuration.
   /// </summary>
   /// <param name="songCacheService">The song cache service.</param>
   /// <param name="albumArtCacheService">The album art cache service.</param>
   /// <returns>A new <see cref="SubsonicStreamingClient"/>.</returns>
   public static SubsonicStreamingClient Create(ICacheService songCacheService, ICacheService albumArtCacheService) {
-    return new SubsonicStreamingClient(
+    var credentials = new SubsonicCredentials(
       SubsonicConfig.Defaults.ServerScheme,
       SubsonicConfig.Defaults.ServerHost ?? throw new InvalidOperationException("Subsonic Server Host not configured"),
       SubsonicConfig.Defaults.ServerPort,
       SubsonicConfig.Defaults.Username ?? throw new InvalidOperationException("Subsonic Username not configured"),
       SubsonicConfig.Defaults.Password ?? throw new InvalidOperationException("Subsonic Password not configured"),
-      SubsonicConfig.Defaults.UseToken,
-      songCacheService,
-      albumArtCacheService
+      SubsonicConfig.Defaults.UseToken
     );
+    return Create(songCacheService, albumArtCacheService, credentials);
   }
 
   /// <summary>
