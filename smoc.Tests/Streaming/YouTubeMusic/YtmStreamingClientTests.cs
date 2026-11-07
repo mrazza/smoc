@@ -1,6 +1,4 @@
 using System.Net;
-using System.Text.Json;
-using Smoc.Security;
 using Smoc.Streaming.YouTubeMusic;
 using Xunit;
 
@@ -45,82 +43,5 @@ public class YtmStreamingClientTests {
     List<Cookie> cookies = YtmStreamingClient.ParseCookies(string.Empty);
 
     Assert.Empty(cookies);
-  }
-
-  [Fact]
-  public async Task CreateAsync_ResolvesCookiesAndTokensFromCredentialStore() {
-    var store = new InMemoryCredentialStore();
-    await store.SetCredentialAsync(CredentialTargets.YouTubeMusic, CredentialTargets.AccountCookies, "SID=abc123; HSID=def456;", TestContext.Current.CancellationToken);
-    var tokens = new YtmTokens("poVal", "rolloutVal", "visitorVal");
-    await store.SetCredentialAsync(CredentialTargets.YouTubeMusic, CredentialTargets.AccountTokens, JsonSerializer.Serialize(tokens), TestContext.Current.CancellationToken);
-
-    var client = await YtmStreamingClient.CreateAsync(credentialStore: store, cancellationToken: TestContext.Current.CancellationToken);
-
-    Assert.NotNull(client);
-    Assert.True(client.IsAuthenticated);
-  }
-
-  [Fact]
-  public async Task CreateAsync_GeneratesTokensAndSavesToStore_WhenTokensMissingInStore() {
-    var store = new InMemoryCredentialStore();
-    await store.SetCredentialAsync(CredentialTargets.YouTubeMusic, CredentialTargets.AccountCookies, "SID=abc123; HSID=def456;", TestContext.Current.CancellationToken);
-
-    bool tokenGeneratorCalled = false;
-    Task<YtmTokens> MockTokenGenerator(List<Cookie> cookies) {
-      tokenGeneratorCalled = true;
-      return Task.FromResult(new YtmTokens("generatedPo", "generatedRollout", "generatedVisitor"));
-    }
-
-    var client = await YtmStreamingClient.CreateAsync(credentialStore: store, tokenGenerator: MockTokenGenerator, cancellationToken: TestContext.Current.CancellationToken);
-
-    Assert.NotNull(client);
-    Assert.True(client.IsAuthenticated);
-    Assert.True(tokenGeneratorCalled);
-
-    string? savedTokensJson = await store.GetCredentialAsync(CredentialTargets.YouTubeMusic, CredentialTargets.AccountTokens, TestContext.Current.CancellationToken);
-    Assert.NotNull(savedTokensJson);
-    var savedTokens = JsonSerializer.Deserialize<YtmTokens>(savedTokensJson);
-    Assert.Equal("generatedPo", savedTokens?.PoToken);
-  }
-
-  [Fact]
-  public async Task CreateAsync_FallsBackToLegacyCookiesAndTokensFiles_WhenNotInStore() {
-    string tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
-    Directory.CreateDirectory(tempDir);
-    string cookiesFile = Path.Combine(tempDir, "cookies.txt");
-    string tokensFile = Path.Combine(tempDir, "tokens.json");
-
-    try {
-      await File.WriteAllTextAsync(cookiesFile, "SID=fileCookie123; HSID=fileCookie456;", TestContext.Current.CancellationToken);
-      var tokens = new YtmTokens("filePo", "fileRollout", "fileVisitor");
-      await File.WriteAllTextAsync(tokensFile, JsonSerializer.Serialize(tokens), TestContext.Current.CancellationToken);
-
-      var store = new InMemoryCredentialStore();
-      var client = await YtmStreamingClient.CreateAsync(
-        credentialStore: store,
-        cookiesPath: cookiesFile,
-        tokensPath: tokensFile,
-        cancellationToken: TestContext.Current.CancellationToken
-      );
-
-      Assert.NotNull(client);
-      Assert.True(client.IsAuthenticated);
-    } finally {
-      Directory.Delete(tempDir, true);
-    }
-  }
-
-  [Fact]
-  public async Task CreateAsync_ReturnsUnauthenticated_WhenNoStoreOrFileCredentials() {
-    var store = new InMemoryCredentialStore();
-    var client = await YtmStreamingClient.CreateAsync(
-      credentialStore: store,
-      cookiesPath: "/tmp/nonexistent_cookies_" + Guid.NewGuid().ToString("N"),
-      tokensPath: "/tmp/nonexistent_tokens_" + Guid.NewGuid().ToString("N"),
-      cancellationToken: TestContext.Current.CancellationToken
-    );
-
-    Assert.NotNull(client);
-    Assert.False(client.IsAuthenticated);
   }
 }
