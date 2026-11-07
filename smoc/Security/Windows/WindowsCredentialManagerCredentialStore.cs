@@ -1,11 +1,10 @@
-using System.Security.Cryptography;
 using System.Text;
 
 namespace Smoc.Security.Windows;
 
 /// <summary>
 /// An <see cref="ICredentialStore"/> that uses Windows Credential Manager (<c>advapi32.dll</c>) for credentials under 2 KB,
-/// and DPAPI (<see cref="ProtectedData"/>) encrypted files for large payloads (e.g., YouTube Music cookies).
+/// and DPAPI encrypted files in <c>%APPDATA%\smoc\credentials</c> for large payloads (e.g., YouTube Music cookies).
 /// </summary>
 public sealed class WindowsCredentialManagerCredentialStore : ICredentialStore {
   /// <summary>
@@ -19,42 +18,40 @@ public sealed class WindowsCredentialManagerCredentialStore : ICredentialStore {
   /// <summary>
   /// Initializes a new instance of <see cref="WindowsCredentialManagerCredentialStore"/> using native Windows APIs.
   /// </summary>
-  public WindowsCredentialManagerCredentialStore()
-      : this(OperatingSystem.IsWindows() ? new NativeWindowsCredentialAdapter() : new UnsupportedWindowsCredentialAdapter()) {
+  public WindowsCredentialManagerCredentialStore() {
+    if (!OperatingSystem.IsWindows()) {
+      throw new PlatformNotSupportedException("Windows Credential Manager is only supported on Windows.");
+    }
+
+    _adapter = new NativeWindowsCredentialAdapter();
   }
 
   /// <summary>
   /// Initializes a new instance of <see cref="WindowsCredentialManagerCredentialStore"/> with a custom adapter for testing.
   /// </summary>
   /// <param name="adapter">The Windows credential adapter.</param>
-  public WindowsCredentialManagerCredentialStore(IWindowsCredentialAdapter adapter) {
+  internal WindowsCredentialManagerCredentialStore(IWindowsCredentialAdapter adapter) {
     _adapter = adapter ?? throw new ArgumentNullException(nameof(adapter));
   }
 
   /// <inheritdoc />
   public async Task<string?> GetCredentialAsync(string service, string account, CancellationToken cancellationToken = default) {
-    cancellationToken.ThrowIfCancellationRequested();
     ArgumentNullException.ThrowIfNull(service);
     ArgumentNullException.ThrowIfNull(account);
+    cancellationToken.ThrowIfCancellationRequested();
 
     if (!_adapter.IsSupportedPlatform) {
       return null;
     }
 
-    // 1. Check if a DPAPI encrypted file exists for large payloads
-    string dpapiFilePath = GetDpapiFilePath(service, account);
-    if (File.Exists(dpapiFilePath)) {
-      try {
-        byte[] encryptedBytes = await File.ReadAllBytesAsync(dpapiFilePath, cancellationToken);
-        byte[] decryptedBytes = _adapter.UnprotectData(encryptedBytes);
-        return Encoding.UTF8.GetString(decryptedBytes);
-      } catch {
-        // Fall through to Credential Manager if DPAPI read fails
-      }
+    string target = FormatTarget(service, account);
+
+    // 1. Check if a DPAPI encrypted payload exists for large payloads
+    if (_adapter.HasDpapiSecret(target)) {
+      return await _adapter.ReadDpapiSecretAsync(target, cancellationToken);
     }
 
     // 2. Query Windows Credential Manager
-    string target = FormatTarget(service, account);
     if (_adapter.ReadCredential(target, out string? secret)) {
       return secret;
     }
@@ -64,27 +61,21 @@ public sealed class WindowsCredentialManagerCredentialStore : ICredentialStore {
 
   /// <inheritdoc />
   public async Task SetCredentialAsync(string service, string account, string secret, CancellationToken cancellationToken = default) {
-    cancellationToken.ThrowIfCancellationRequested();
     ArgumentNullException.ThrowIfNull(service);
     ArgumentNullException.ThrowIfNull(account);
     ArgumentNullException.ThrowIfNull(secret);
+    cancellationToken.ThrowIfCancellationRequested();
 
     if (!_adapter.IsSupportedPlatform) {
       throw new PlatformNotSupportedException("Windows Credential Manager is only supported on Windows.");
     }
 
     byte[] secretBytes = Encoding.UTF8.GetBytes(secret);
-    string dpapiFilePath = GetDpapiFilePath(service, account);
     string target = FormatTarget(service, account);
 
     if (secretBytes.Length > CredentialManagerBlobThresholdBytes) {
       // Store using DPAPI
-      byte[] encrypted = _adapter.ProtectData(secretBytes);
-      string dir = Path.GetDirectoryName(dpapiFilePath)!;
-      if (!Directory.Exists(dir)) {
-        Directory.CreateDirectory(dir);
-      }
-      await File.WriteAllBytesAsync(dpapiFilePath, encrypted, cancellationToken);
+      await _adapter.WriteDpapiSecretAsync(target, secret, cancellationToken);
 
       // Clean up any stale small credential in Credential Manager
       _adapter.DeleteCredential(target);
@@ -93,58 +84,35 @@ public sealed class WindowsCredentialManagerCredentialStore : ICredentialStore {
       bool success = _adapter.WriteCredential(target, account, secret);
       if (!success) {
         // If Credential Manager failed (e.g. system limit), fallback to DPAPI
-        byte[] encrypted = _adapter.ProtectData(secretBytes);
-        string dir = Path.GetDirectoryName(dpapiFilePath)!;
-        if (!Directory.Exists(dir)) {
-          Directory.CreateDirectory(dir);
-        }
-        await File.WriteAllBytesAsync(dpapiFilePath, encrypted, cancellationToken);
+        await _adapter.WriteDpapiSecretAsync(target, secret, cancellationToken);
       } else {
-        // Clean up any stale DPAPI file
-        if (File.Exists(dpapiFilePath)) {
-          try {
-            File.Delete(dpapiFilePath);
-          } catch {
-            // Ignore file deletion errors
-          }
-        }
+        // Clean up any stale DPAPI payload
+        _adapter.DeleteDpapiSecret(target);
       }
     }
   }
 
   /// <inheritdoc />
-  public async Task DeleteCredentialAsync(string service, string account, CancellationToken cancellationToken = default) {
-    cancellationToken.ThrowIfCancellationRequested();
+  public Task DeleteCredentialAsync(string service, string account, CancellationToken cancellationToken = default) {
     ArgumentNullException.ThrowIfNull(service);
     ArgumentNullException.ThrowIfNull(account);
+    cancellationToken.ThrowIfCancellationRequested();
 
     if (!_adapter.IsSupportedPlatform) {
-      return;
+      return Task.CompletedTask;
     }
 
     string target = FormatTarget(service, account);
     _adapter.DeleteCredential(target);
-
-    string dpapiFilePath = GetDpapiFilePath(service, account);
-    if (File.Exists(dpapiFilePath)) {
-      try {
-        File.Delete(dpapiFilePath);
-      } catch {
-        // Ignore file deletion errors
-      }
-    }
+    _adapter.DeleteDpapiSecret(target);
+    return Task.CompletedTask;
   }
 
   /// <inheritdoc />
-  public async Task<bool> IsAvailableAsync(CancellationToken cancellationToken = default) {
+  public Task<bool> IsAvailableAsync(CancellationToken cancellationToken = default) {
     cancellationToken.ThrowIfCancellationRequested();
-    return _adapter.IsSupportedPlatform;
+    return Task.FromResult(_adapter.IsSupportedPlatform);
   }
 
   private static string FormatTarget(string service, string account) => $"{service}:{account}";
-
-  private string GetDpapiFilePath(string service, string account) {
-    string fileName = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes($"{service}:{account}"))) + ".dat";
-    return Path.Combine(_adapter.CredentialsDirectory, fileName);
-  }
 }

@@ -39,10 +39,4 @@ public static class CredentialStoreFactory {
 
     throw new PlatformNotSupportedException("No native credential store supported on this operating system.");
   }
-
-  /// <summary>
-  /// Creates an in-memory credential store, useful for tests and transient execution.
-  /// </summary>
-  /// <returns>A new <see cref="InMemoryCredentialStore"/> instance.</returns>
-  public static InMemoryCredentialStore CreateInMemory() => new();
 }

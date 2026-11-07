@@ -1,20 +1,13 @@
-using System.Security.Cryptography;
-
 namespace Smoc.Security.Windows;
 
 /// <summary>
-/// Abstraction over Windows Credential Manager and DPAPI operations for unit testability across operating systems.
+/// Internal abstraction over Windows Credential Manager and DPAPI encrypted payload storage for testing.
 /// </summary>
-public interface IWindowsCredentialAdapter {
+internal interface IWindowsCredentialAdapter {
   /// <summary>
   /// Gets whether Windows Credential Manager and DPAPI are supported on the current operating system.
   /// </summary>
   bool IsSupportedPlatform { get; }
-
-  /// <summary>
-  /// Gets the directory where DPAPI encrypted blobs are stored.
-  /// </summary>
-  string CredentialsDirectory { get; }
 
   /// <summary>
   /// Reads a credential from Windows Credential Manager.
@@ -32,12 +25,22 @@ public interface IWindowsCredentialAdapter {
   bool DeleteCredential(string target);
 
   /// <summary>
-  /// Encrypts data using DPAPI (<see cref="DataProtectionScope.CurrentUser"/>).
+  /// Checks whether a DPAPI encrypted secret payload exists for the target.
   /// </summary>
-  byte[] ProtectData(byte[] userData);
+  bool HasDpapiSecret(string target);
 
   /// <summary>
-  /// Decrypts data using DPAPI (<see cref="DataProtectionScope.CurrentUser"/>).
+  /// Reads and decrypts a DPAPI encrypted secret payload.
   /// </summary>
-  byte[] UnprotectData(byte[] encryptedData);
+  Task<string?> ReadDpapiSecretAsync(string target, CancellationToken cancellationToken);
+
+  /// <summary>
+  /// Encrypts and writes a DPAPI encrypted secret payload.
+  /// </summary>
+  Task WriteDpapiSecretAsync(string target, string secret, CancellationToken cancellationToken);
+
+  /// <summary>
+  /// Deletes a DPAPI encrypted secret payload.
+  /// </summary>
+  void DeleteDpapiSecret(string target);
 }

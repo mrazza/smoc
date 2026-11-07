@@ -5,26 +5,18 @@ using Tmds.DBus;
 namespace Smoc.Security.Linux;
 
 /// <summary>
-/// Default implementation of <see cref="ISecretServiceAdapter"/> using <see cref="Connection.Session"/>.
+/// Default implementation of <see cref="ISecretServiceAdapter"/> using FreeDesktop Secret Service over D-Bus.
 /// </summary>
-internal sealed class DbusSecretServiceAdapter : ISecretServiceAdapter {
-  private readonly Lazy<Task<Connection>> _connectionLazy;
-  private readonly Lazy<Task<ObjectPath>> _sessionPathLazy;
+internal sealed class DbusSecretServiceAdapter : ISecretServiceAdapter, IDisposable {
+  private readonly SemaphoreSlim _gate = new(1, 1);
+  private Connection? _connection;
+  private ObjectPath? _sessionPath;
+  private bool _disposed;
 
+  /// <summary>
+  /// Initializes a new instance of the <see cref="DbusSecretServiceAdapter"/> class.
+  /// </summary>
   public DbusSecretServiceAdapter() {
-    _connectionLazy = new Lazy<Task<Connection>>(async () => {
-      var connection = new Connection(Address.Session);
-      await connection.ConnectAsync();
-      return connection;
-    });
-
-    _sessionPathLazy = new Lazy<Task<ObjectPath>>(async () => {
-      Connection connection = await _connectionLazy.Value;
-      var serviceProxy = connection.CreateProxy<SecretServiceDbusContracts.ISecretService>(
-          SecretServiceDbusContracts.ServiceName, SecretServiceDbusContracts.ServicePath);
-      var (_, result) = await serviceProxy.OpenSessionAsync("plain", string.Empty);
-      return result;
-    });
   }
 
   /// <inheritdoc />
@@ -34,8 +26,14 @@ internal sealed class DbusSecretServiceAdapter : ISecretServiceAdapter {
     }
 
     try {
-      Connection connection = await _connectionLazy.Value.WaitAsync(cancellationToken);
-      return await connection.IsServiceActiveAsync(SecretServiceDbusContracts.ServiceName);
+      Connection connection = await GetConnectionAsync(cancellationToken);
+      if (await connection.IsServiceActiveAsync(SecretServiceDbusContracts.ServiceName)) {
+        return true;
+      }
+
+      // If not yet active, attempt to open a session to trigger D-Bus activation (e.g. gnome-keyring / KWallet)
+      await GetSessionPathAsync(connection, cancellationToken);
+      return true;
     } catch {
       return false;
     }
@@ -43,74 +41,193 @@ internal sealed class DbusSecretServiceAdapter : ISecretServiceAdapter {
 
   /// <inheritdoc />
   public async Task<string?> GetSecretAsync(string service, string account, CancellationToken cancellationToken) {
-    Connection connection = await _connectionLazy.Value.WaitAsync(cancellationToken);
+    try {
+      Connection connection = await GetConnectionAsync(cancellationToken);
+      ObjectPath session = await GetSessionPathAsync(connection, cancellationToken);
 
-    var serviceProxy = connection.CreateProxy<SecretServiceDbusContracts.ISecretService>(
-        SecretServiceDbusContracts.ServiceName, SecretServiceDbusContracts.ServicePath);
+      var serviceProxy = connection.CreateProxy<SecretServiceDbusContracts.ISecretService>(
+          SecretServiceDbusContracts.ServiceName, SecretServiceDbusContracts.ServicePath);
 
-    ObjectPath session = await _sessionPathLazy.Value.WaitAsync(cancellationToken);
+      var attributes = CreateAttributes(service, account);
+      var (unlocked, locked) = await serviceProxy.SearchItemsAsync(attributes);
 
-    var attributes = CreateAttributes(service, account);
-    var (unlocked, locked) = await serviceProxy.SearchItemsAsync(attributes);
+      ObjectPath[] items = unlocked;
+      if (items.Length == 0 && locked.Length > 0) {
+        var (unlockedItems, _) = await serviceProxy.UnlockAsync(locked);
+        items = unlockedItems;
+      }
 
-    ObjectPath[] items = unlocked;
-    if (items.Length == 0 && locked.Length > 0) {
-      await serviceProxy.UnlockAsync(locked);
-      items = locked;
-    }
+      if (items.Length == 0) {
+        return null;
+      }
 
-    if (items.Length == 0) {
+      var secrets = await serviceProxy.GetSecretsAsync(items, session);
+      if (secrets.TryGetValue(items[0], out var secret) && secret.Value != null) {
+        return Encoding.UTF8.GetString(secret.Value);
+      }
+
       return null;
+    } catch {
+      ResetSession();
+      throw;
+    }
+  }
+
+  /// <inheritdoc />
+  public async Task SetSecretAsync(string service, string account, string secret, CancellationToken cancellationToken) {
+    try {
+      Connection connection = await GetConnectionAsync(cancellationToken);
+      ObjectPath session = await GetSessionPathAsync(connection, cancellationToken);
+
+      var serviceProxy = connection.CreateProxy<SecretServiceDbusContracts.ISecretService>(
+          SecretServiceDbusContracts.ServiceName, SecretServiceDbusContracts.ServicePath);
+      await serviceProxy.UnlockAsync([SecretServiceDbusContracts.DefaultCollectionPath]);
+
+      var collectionProxy = connection.CreateProxy<SecretServiceDbusContracts.ISecretCollection>(
+          SecretServiceDbusContracts.ServiceName, SecretServiceDbusContracts.DefaultCollectionPath);
+
+      var attributes = CreateAttributes(service, account);
+      var properties = new Dictionary<string, object> {
+        ["org.freedesktop.Secret.Item.Label"] = $"SMoC: {service} ({account})",
+        ["org.freedesktop.Secret.Item.Attributes"] = attributes
+      };
+
+      var secretStruct = new SecretServiceDbusContracts.Secret {
+        Session = session,
+        Parameters = Array.Empty<byte>(),
+        Value = Encoding.UTF8.GetBytes(secret),
+        ContentType = "text/plain; charset=utf-8"
+      };
+
+      var (item, _) = await collectionProxy.CreateItemAsync(properties, secretStruct, replace: true);
+      if (item == new ObjectPath("/") || string.IsNullOrEmpty(item.ToString()) || item.ToString() == "/") {
+        throw new InvalidOperationException($"Failed to create secret item for service '{service}' and account '{account}': keyring collection is locked or rejected item creation.");
+      }
+    } catch {
+      ResetSession();
+      throw;
+    }
+  }
+
+  /// <inheritdoc />
+  public async Task DeleteSecretAsync(string service, string account, CancellationToken cancellationToken) {
+    try {
+      Connection connection = await GetConnectionAsync(cancellationToken);
+
+      var serviceProxy = connection.CreateProxy<SecretServiceDbusContracts.ISecretService>(
+          SecretServiceDbusContracts.ServiceName, SecretServiceDbusContracts.ServicePath);
+
+      var attributes = CreateAttributes(service, account);
+      var (unlocked, locked) = await serviceProxy.SearchItemsAsync(attributes);
+
+      foreach (ObjectPath itemPath in unlocked.Concat(locked)) {
+        var itemProxy = connection.CreateProxy<SecretServiceDbusContracts.ISecretItem>(
+            SecretServiceDbusContracts.ServiceName, itemPath);
+        await itemProxy.DeleteAsync();
+      }
+    } catch {
+      ResetSession();
+      throw;
+    }
+  }
+
+  /// <inheritdoc />
+  public void Dispose() {
+    if (_disposed) {
+      return;
     }
 
-    var secrets = await serviceProxy.GetSecretsAsync(items, session);
-    if (secrets.TryGetValue(items[0], out var secret) && secret.Value != null) {
-      return Encoding.UTF8.GetString(secret.Value);
+    _disposed = true;
+    _connection?.Dispose();
+    _connection = null;
+    _sessionPath = null;
+    _gate.Dispose();
+  }
+
+  internal static string? ResolveSessionBusAddress(
+      string? sessionAddress = null,
+      Func<string, string?>? getEnv = null,
+      Func<string, bool>? pathExists = null) {
+    string? address = !string.IsNullOrEmpty(sessionAddress)
+        ? sessionAddress
+        : (getEnv != null ? getEnv("DBUS_SESSION_BUS_ADDRESS") : Address.Session);
+
+    if (!string.IsNullOrEmpty(address)) {
+      return address;
+    }
+
+    getEnv ??= Environment.GetEnvironmentVariable;
+    pathExists ??= Path.Exists;
+
+    string? xdgRuntimeDir = getEnv("XDG_RUNTIME_DIR");
+    if (!string.IsNullOrEmpty(xdgRuntimeDir)) {
+      string busPath = Path.Combine(xdgRuntimeDir, "bus");
+      if (pathExists(busPath)) {
+        return $"unix:path={busPath}";
+      }
     }
 
     return null;
   }
 
-  /// <inheritdoc />
-  public async Task SetSecretAsync(string service, string account, string secret, CancellationToken cancellationToken) {
-    Connection connection = await _connectionLazy.Value.WaitAsync(cancellationToken);
+  private async Task<Connection> GetConnectionAsync(CancellationToken cancellationToken) {
+    ObjectDisposedException.ThrowIf(_disposed, this);
 
-    var collectionProxy = connection.CreateProxy<SecretServiceDbusContracts.ISecretCollection>(
-        SecretServiceDbusContracts.ServiceName, SecretServiceDbusContracts.DefaultCollectionPath);
+    if (_connection != null) {
+      return _connection;
+    }
 
-    ObjectPath session = await _sessionPathLazy.Value.WaitAsync(cancellationToken);
+    await _gate.WaitAsync(cancellationToken);
+    try {
+      if (_connection != null) {
+        return _connection;
+      }
 
-    var attributes = CreateAttributes(service, account);
-    var properties = new Dictionary<string, object> {
-      ["org.freedesktop.Secret.Item.Label"] = $"SMoC: {service} ({account})",
-      ["org.freedesktop.Secret.Item.Attributes"] = attributes
-    };
+      string? address = ResolveSessionBusAddress();
+      if (address == null) {
+        throw new InvalidOperationException("Unable to determine D-Bus session bus address. Ensure DBUS_SESSION_BUS_ADDRESS or XDG_RUNTIME_DIR is set.");
+      }
 
-    var secretStruct = new SecretServiceDbusContracts.Secret {
-      Session = session,
-      Parameters = Array.Empty<byte>(),
-      Value = Encoding.UTF8.GetBytes(secret),
-      ContentType = "text/plain; charset=utf-8"
-    };
-
-    await collectionProxy.CreateItemAsync(properties, secretStruct, replace: true);
+      var connection = new Connection(address);
+      try {
+        await connection.ConnectAsync();
+        _connection = connection;
+        return connection;
+      } catch {
+        connection.Dispose();
+        throw;
+      }
+    } finally {
+      _gate.Release();
+    }
   }
 
-  /// <inheritdoc />
-  public async Task DeleteSecretAsync(string service, string account, CancellationToken cancellationToken) {
-    Connection connection = await _connectionLazy.Value.WaitAsync(cancellationToken);
-
-    var serviceProxy = connection.CreateProxy<SecretServiceDbusContracts.ISecretService>(
-        SecretServiceDbusContracts.ServiceName, SecretServiceDbusContracts.ServicePath);
-
-    var attributes = CreateAttributes(service, account);
-    var (unlocked, locked) = await serviceProxy.SearchItemsAsync(attributes);
-
-    foreach (ObjectPath itemPath in unlocked.Concat(locked)) {
-      var itemProxy = connection.CreateProxy<SecretServiceDbusContracts.ISecretItem>(
-          SecretServiceDbusContracts.ServiceName, itemPath);
-      await itemProxy.DeleteAsync();
+  private async Task<ObjectPath> GetSessionPathAsync(Connection connection, CancellationToken cancellationToken) {
+    if (_sessionPath != null) {
+      return _sessionPath.Value;
     }
+
+    await _gate.WaitAsync(cancellationToken);
+    try {
+      if (_sessionPath != null) {
+        return _sessionPath.Value;
+      }
+
+      var serviceProxy = connection.CreateProxy<SecretServiceDbusContracts.ISecretService>(
+          SecretServiceDbusContracts.ServiceName, SecretServiceDbusContracts.ServicePath);
+      var (_, result) = await serviceProxy.OpenSessionAsync("plain", string.Empty);
+      _sessionPath = result;
+      return result;
+    } catch {
+      _sessionPath = null;
+      throw;
+    } finally {
+      _gate.Release();
+    }
+  }
+
+  private void ResetSession() {
+    _sessionPath = null;
   }
 
   private static Dictionary<string, string> CreateAttributes(string service, string account) {

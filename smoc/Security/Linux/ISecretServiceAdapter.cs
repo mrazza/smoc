@@ -3,7 +3,7 @@ namespace Smoc.Security.Linux;
 /// <summary>
 /// Abstraction over FreeDesktop Secret Service communications for unit testability.
 /// </summary>
-public interface ISecretServiceAdapter {
+internal interface ISecretServiceAdapter {
   /// <summary>
   /// Checks whether the Secret Service daemon is available on the current session bus.
   /// </summary>

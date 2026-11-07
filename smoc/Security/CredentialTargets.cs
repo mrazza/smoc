@@ -20,16 +20,6 @@ public static class CredentialTargets {
   public const string YouTubeMusic = "smoc:youtubemusic";
 
   /// <summary>
-  /// Service identifier for Spotify credentials.
-  /// </summary>
-  public const string Spotify = "smoc:spotify";
-
-  /// <summary>
-  /// Service identifier for Tidal credentials.
-  /// </summary>
-  public const string Tidal = "smoc:tidal";
-
-  /// <summary>
   /// Account key for YouTube Music session cookies.
   /// </summary>
   public const string AccountCookies = "cookies";

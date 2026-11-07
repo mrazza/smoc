@@ -1,6 +1,7 @@
 using Moq;
 using Smoc.Security;
 using Smoc.Security.Linux;
+using Tmds.DBus;
 using Xunit;
 
 namespace smoc.Tests.Security.Linux;
@@ -47,5 +48,58 @@ public class LinuxSecretServiceCredentialStoreTests {
     bool available = await store.IsAvailableAsync(TestContext.Current.CancellationToken);
 
     Assert.True(available);
+  }
+
+  [Fact]
+  public void SecretStruct_HasSequentialLayout() {
+    Assert.True(typeof(SecretServiceDbusContracts.Secret).IsLayoutSequential);
+  }
+
+  [Fact]
+  public void DbusConnection_CanCreateProxiesForInternalSecretServiceContracts() {
+    var connection = new Connection(Address.Session ?? "tcp:host=localhost,port=1234");
+
+    var serviceProxy = connection.CreateProxy<SecretServiceDbusContracts.ISecretService>(
+        SecretServiceDbusContracts.ServiceName, SecretServiceDbusContracts.ServicePath);
+    Assert.NotNull(serviceProxy);
+
+    var collectionProxy = connection.CreateProxy<SecretServiceDbusContracts.ISecretCollection>(
+        SecretServiceDbusContracts.ServiceName, SecretServiceDbusContracts.DefaultCollectionPath);
+    Assert.NotNull(collectionProxy);
+
+    var itemProxy = connection.CreateProxy<SecretServiceDbusContracts.ISecretItem>(
+        SecretServiceDbusContracts.ServiceName, new ObjectPath("/org/freedesktop/secrets/item/test"));
+    Assert.NotNull(itemProxy);
+  }
+
+  [Fact]
+  public void ResolveSessionBusAddress_ReturnsExplicitAddress_WhenPresent() {
+    string? address = DbusSecretServiceAdapter.ResolveSessionBusAddress("unix:path=/custom/bus");
+    Assert.Equal("unix:path=/custom/bus", address);
+  }
+
+  [Fact]
+  public void ResolveSessionBusAddress_FallsBackToXdgRuntimeDir_WhenSessionAddressNullAndBusExists() {
+    string? address = DbusSecretServiceAdapter.ResolveSessionBusAddress(
+        sessionAddress: null,
+        getEnv: key => key == "XDG_RUNTIME_DIR" ? "/run/user/1000" : null,
+        pathExists: path => path == Path.Combine("/run/user/1000", "bus"));
+
+    Assert.Equal($"unix:path={Path.Combine("/run/user/1000", "bus")}", address);
+  }
+
+  [Fact]
+  public void ResolveSessionBusAddress_ReturnsNull_WhenSessionAddressNullAndXdgUnsetOrBusMissing() {
+    string? unsetXdg = DbusSecretServiceAdapter.ResolveSessionBusAddress(
+        sessionAddress: null,
+        getEnv: _ => null,
+        pathExists: _ => true);
+    Assert.Null(unsetXdg);
+
+    string? missingBus = DbusSecretServiceAdapter.ResolveSessionBusAddress(
+        sessionAddress: null,
+        getEnv: key => key == "XDG_RUNTIME_DIR" ? "/run/user/1000" : null,
+        pathExists: _ => false);
+    Assert.Null(missingBus);
   }
 }
