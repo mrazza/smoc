@@ -1,7 +1,9 @@
 using System.Net;
+using System.Text.Json;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using Smoc.Configuration;
+using Smoc.Security;
 using Smoc.Services;
 using Smoc.Services.Caching;
 using Terminal.Gui.App;
@@ -308,6 +310,11 @@ public sealed class YtmStreamingClient : IStreamingClient {
   }
 
   /// <summary>
+  /// Gets a value indicating whether this client is authenticated with cookies and tokens.
+  /// </summary>
+  public bool IsAuthenticated => _authedYtmClient != null;
+
+  /// <summary>
   /// Creates an authenticated YouTube Music client.
   /// </summary>
   /// <param name="cookies">The user's cookies.</param>
@@ -327,5 +334,117 @@ public sealed class YtmStreamingClient : IStreamingClient {
   /// <returns>An initialized client.</returns>
   public static YtmStreamingClient Create(ICacheService? songCacheService = null, ICacheService? albumArtCacheService = null) {
     return new YtmStreamingClient(songCacheService: songCacheService, albumArtCacheService: albumArtCacheService);
+  }
+
+  /// <summary>
+  /// Creates a <see cref="YtmStreamingClient"/> asynchronously, resolving session cookies and tokens
+  /// from the provided <see cref="ICredentialStore"/> with fallback to legacy cookies.txt and tokens.json files.
+  /// If credentials cannot be found, returns an unauthenticated client.
+  /// </summary>
+  /// <param name="songCacheService">Optional cache service for songs.</param>
+  /// <param name="albumArtCacheService">Optional cache service for album covers.</param>
+  /// <param name="credentialStore">Optional credential store; if null, the default OS store is used.</param>
+  /// <param name="cookiesPath">Optional path to cookies.txt fallback; if null, the default path is used.</param>
+  /// <param name="tokensPath">Optional path to tokens.json fallback; if null, the default path is used.</param>
+  /// <param name="tokenGenerator">Optional token generator function for automatic token generation when tokens are missing; defaults to <see cref="GenerateTokensAsync"/>.</param>
+  /// <param name="cancellationToken">Cancellation token.</param>
+  /// <returns>An initialized <see cref="YtmStreamingClient"/>.</returns>
+  public static async Task<YtmStreamingClient> CreateAsync(
+    ICacheService? songCacheService = null,
+    ICacheService? albumArtCacheService = null,
+    ICredentialStore? credentialStore = null,
+    string? cookiesPath = null,
+    string? tokensPath = null,
+    Func<List<Cookie>, Task<YtmTokens>>? tokenGenerator = null,
+    CancellationToken cancellationToken = default
+  ) {
+    credentialStore ??= CredentialStoreFactory.CreateDefault();
+
+    // 1. Attempt resolution from ICredentialStore
+    string? cookiesRaw = null;
+    string? tokensRaw = null;
+
+    try {
+      cookiesRaw = await credentialStore.GetCredentialAsync(CredentialTargets.YouTubeMusic, CredentialTargets.AccountCookies, cancellationToken);
+    } catch {
+      // Fallback
+    }
+
+    try {
+      tokensRaw = await credentialStore.GetCredentialAsync(CredentialTargets.YouTubeMusic, CredentialTargets.AccountTokens, cancellationToken);
+    } catch {
+      // Fallback
+    }
+
+    if (!string.IsNullOrWhiteSpace(cookiesRaw)) {
+      List<Cookie> cookies = ParseCookies(cookiesRaw);
+      if (cookies.Count > 0) {
+        YtmTokens? tokens = null;
+        if (!string.IsNullOrWhiteSpace(tokensRaw)) {
+          try {
+            tokens = JsonSerializer.Deserialize<YtmTokens>(tokensRaw);
+          } catch {
+            // Invalid tokens payload in store, will attempt regeneration
+          }
+        }
+
+        if (tokens == null) {
+          try {
+            tokenGenerator ??= GenerateTokensAsync;
+            tokens = await tokenGenerator(cookies);
+            try {
+              await credentialStore.SetCredentialAsync(CredentialTargets.YouTubeMusic, CredentialTargets.AccountTokens, JsonSerializer.Serialize(tokens), cancellationToken);
+            } catch {
+              // Non-blocking if store write fails
+            }
+          } catch {
+            // Token generation failed
+          }
+        }
+
+        if (tokens != null) {
+          return Create(cookies, tokens, songCacheService, albumArtCacheService);
+        }
+      }
+    }
+
+    // 2. Fallback to legacy plaintext files
+    string defaultCookiesPath = cookiesPath ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".config", "smoc", "cookies.txt");
+    string defaultTokensPath = tokensPath ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".config", "smoc", "tokens.json");
+
+    if (File.Exists(defaultCookiesPath)) {
+      try {
+        List<Cookie> cookies = GetCookiesFromFile(defaultCookiesPath);
+        if (cookies.Count > 0) {
+          YtmTokens? tokens = null;
+          if (File.Exists(defaultTokensPath)) {
+            try {
+              string fileTokenContent = await File.ReadAllTextAsync(defaultTokensPath, cancellationToken);
+              tokens = JsonSerializer.Deserialize<YtmTokens>(fileTokenContent);
+            } catch {
+              // Fall through to token generation
+            }
+          }
+
+          if (tokens == null) {
+            try {
+              tokenGenerator ??= GenerateTokensAsync;
+              tokens = await tokenGenerator(cookies);
+            } catch {
+              // Token generation failed
+            }
+          }
+
+          if (tokens != null) {
+            return Create(cookies, tokens, songCacheService, albumArtCacheService);
+          }
+        }
+      } catch {
+        // Fall back to unauthenticated client
+      }
+    }
+
+    // 3. Fallback to unauthenticated client
+    return Create(songCacheService, albumArtCacheService);
   }
 }
