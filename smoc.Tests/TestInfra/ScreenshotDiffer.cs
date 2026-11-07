@@ -60,6 +60,7 @@ public class ScreenshotDiffer {
       string golden = "";
 
       try {
+        // Normalize line endings to Linux line endings (\n) so tests pass consistently across platforms (e.g. Windows CRLF vs. Linux/macOS LF).
         golden = File.ReadAllText(goldenFile).Replace("\r\n", "\n");
         actual = actual.Replace("\r\n", "\n");
         Assert.Equal(golden, actual);
