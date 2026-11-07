@@ -9,39 +9,37 @@ public sealed class InMemoryCredentialStore : ICredentialStore {
   private readonly ConcurrentDictionary<(string Service, string Account), string> _store = new();
 
   /// <inheritdoc />
-  public Task<string?> GetCredentialAsync(string service, string account, CancellationToken cancellationToken = default) {
+  public async Task<string?> GetCredentialAsync(string service, string account, CancellationToken cancellationToken = default) {
     cancellationToken.ThrowIfCancellationRequested();
     ArgumentNullException.ThrowIfNull(service);
     ArgumentNullException.ThrowIfNull(account);
 
     _store.TryGetValue((service, account), out string? secret);
-    return Task.FromResult(secret);
+    return secret;
   }
 
   /// <inheritdoc />
-  public Task SetCredentialAsync(string service, string account, string secret, CancellationToken cancellationToken = default) {
+  public async Task SetCredentialAsync(string service, string account, string secret, CancellationToken cancellationToken = default) {
     cancellationToken.ThrowIfCancellationRequested();
     ArgumentNullException.ThrowIfNull(service);
     ArgumentNullException.ThrowIfNull(account);
     ArgumentNullException.ThrowIfNull(secret);
 
     _store[(service, account)] = secret;
-    return Task.CompletedTask;
   }
 
   /// <inheritdoc />
-  public Task DeleteCredentialAsync(string service, string account, CancellationToken cancellationToken = default) {
+  public async Task DeleteCredentialAsync(string service, string account, CancellationToken cancellationToken = default) {
     cancellationToken.ThrowIfCancellationRequested();
     ArgumentNullException.ThrowIfNull(service);
     ArgumentNullException.ThrowIfNull(account);
 
     _store.TryRemove((service, account), out _);
-    return Task.CompletedTask;
   }
 
   /// <inheritdoc />
-  public Task<bool> IsAvailableAsync(CancellationToken cancellationToken = default) {
+  public async Task<bool> IsAvailableAsync(CancellationToken cancellationToken = default) {
     cancellationToken.ThrowIfCancellationRequested();
-    return Task.FromResult(true);
+    return true;
   }
 }
