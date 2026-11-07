@@ -15,8 +15,7 @@ public interface IAuthService {
   /// <param name="useToken">Whether to use token-based authentication.</param>
   /// <param name="verifyConnection">Whether to verify connection to the Subsonic server before saving.</param>
   /// <param name="cancellationToken">Cancellation token for the asynchronous operation.</param>
-  /// <returns><c>true</c> if credentials were saved successfully; otherwise <c>false</c>.</returns>
-  Task<bool> LoginSubsonicAsync(
+  Task LoginSubsonicAsync(
     string host,
     int port,
     string scheme,
@@ -33,8 +32,7 @@ public interface IAuthService {
   /// <param name="clientId">The SoundCloud client ID.</param>
   /// <param name="authToken">The SoundCloud OAuth authentication token.</param>
   /// <param name="cancellationToken">Cancellation token for the asynchronous operation.</param>
-  /// <returns><c>true</c> if credentials were saved successfully; otherwise <c>false</c>.</returns>
-  Task<bool> LoginSoundCloudAsync(
+  Task LoginSoundCloudAsync(
     string clientId,
     string authToken,
     CancellationToken cancellationToken = default
@@ -63,7 +61,7 @@ public interface IAuthService {
   /// <summary>
   /// Logs out of the specified service by deleting its credentials from the credential store.
   /// </summary>
-  /// <param name="serviceName">The name of the service to log out of (subsonic, soundcloud, youtubemusic, or all).</param>
+  /// <param name="serviceName">The name of the service to log out of (subsonic, soundcloud, youtube, or all).</param>
   /// <param name="cancellationToken">Cancellation token for the asynchronous operation.</param>
   /// <returns><c>true</c> if credentials were removed; otherwise <c>false</c>.</returns>
   Task<bool> LogoutAsync(string serviceName, CancellationToken cancellationToken = default);

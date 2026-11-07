@@ -12,13 +12,8 @@ namespace Smoc.Cli.Auth;
 /// Provides streaming service authentication management, credential migration, and status reporting.
 /// </summary>
 public class AuthService : IAuthService {
-  internal static readonly string DefaultConfigDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".config", "smoc");
-  internal static readonly string DefaultConfigPath = Path.Combine(DefaultConfigDir, "config.json");
-  internal static readonly string DefaultCookiesPath = Path.Combine(DefaultConfigDir, "cookies.txt");
-  internal static readonly string DefaultTokensPath = Path.Combine(DefaultConfigDir, "tokens.json");
-
   private readonly ICredentialStore _credentialStore;
-  private readonly string _configPath;
+  private readonly ConfigFileWriter _configWriter;
   private readonly string _cookiesPath;
   private readonly string _tokensPath;
   private readonly Func<List<Cookie>, Task<YtmTokens>> _tokenGenerator;
@@ -29,11 +24,11 @@ public class AuthService : IAuthService {
   /// </summary>
   public AuthService() : this(
     CredentialStoreFactory.CreateDefault(),
-    DefaultConfigPath,
-    DefaultCookiesPath,
-    DefaultTokensPath,
+    SmocPaths.DefaultConfigPath,
+    SmocPaths.DefaultCookiesPath,
+    SmocPaths.DefaultTokensPath,
     YtmStreamingClient.GenerateTokensAsync,
-    new HttpClient()
+    new HttpClient { Timeout = TimeSpan.FromSeconds(10) }
   ) { }
 
   /// <summary>
@@ -54,15 +49,15 @@ public class AuthService : IAuthService {
     HttpClient? httpClient = null
   ) {
     _credentialStore = credentialStore ?? throw new ArgumentNullException(nameof(credentialStore));
-    _configPath = configPath ?? throw new ArgumentNullException(nameof(configPath));
+    _configWriter = new ConfigFileWriter(configPath ?? throw new ArgumentNullException(nameof(configPath)));
     _cookiesPath = cookiesPath ?? throw new ArgumentNullException(nameof(cookiesPath));
     _tokensPath = tokensPath ?? throw new ArgumentNullException(nameof(tokensPath));
     _tokenGenerator = tokenGenerator ?? YtmStreamingClient.GenerateTokensAsync;
-    _httpClient = httpClient ?? new HttpClient();
+    _httpClient = httpClient ?? new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
   }
 
   /// <inheritdoc />
-  public async Task<bool> LoginSubsonicAsync(
+  public async Task LoginSubsonicAsync(
     string host,
     int port,
     string scheme,
@@ -82,7 +77,7 @@ public class AuthService : IAuthService {
 
     await _credentialStore.SetCredentialAsync(CredentialTargets.Subsonic, username, password, cancellationToken);
 
-    await UpdateConfigFileAsync(rootNode => {
+    await _configWriter.UpdateAsync(rootNode => {
       JsonObject subsonicNode = GetOrAddObject(rootNode, nameof(SubsonicConfig));
       subsonicNode[nameof(SubsonicConfig.ServerHost)] = host;
       subsonicNode[nameof(SubsonicConfig.ServerPort)] = port;
@@ -90,13 +85,11 @@ public class AuthService : IAuthService {
       subsonicNode[nameof(SubsonicConfig.Username)] = username;
       subsonicNode[nameof(SubsonicConfig.UseToken)] = useToken;
       subsonicNode.Remove(nameof(SubsonicConfig.Password));
-    }, cancellationToken);
-
-    return true;
+    }, backupOriginal: true, cancellationToken);
   }
 
   /// <inheritdoc />
-  public async Task<bool> LoginSoundCloudAsync(
+  public async Task LoginSoundCloudAsync(
     string clientId,
     string authToken,
     CancellationToken cancellationToken = default
@@ -109,15 +102,13 @@ public class AuthService : IAuthService {
       await _credentialStore.SetCredentialAsync(CredentialTargets.SoundCloud, CredentialTargets.AccountClientId, clientId, cancellationToken);
     }
 
-    await UpdateConfigFileAsync(rootNode => {
+    await _configWriter.UpdateAsync(rootNode => {
       JsonObject soundCloudNode = GetOrAddObject(rootNode, nameof(SoundCloudConfig));
       if (!string.IsNullOrWhiteSpace(clientId)) {
         soundCloudNode[nameof(SoundCloudConfig.ClientId)] = clientId;
       }
       soundCloudNode.Remove(nameof(SoundCloudConfig.AuthToken));
-    }, cancellationToken);
-
-    return true;
+    }, backupOriginal: true, cancellationToken);
   }
 
   /// <inheritdoc />
@@ -126,108 +117,67 @@ public class AuthService : IAuthService {
     bool deleteSource = false,
     CancellationToken cancellationToken = default
   ) {
-    string targetPath = string.IsNullOrWhiteSpace(cookieFilePath) ? _cookiesPath : cookieFilePath;
-    if (!File.Exists(targetPath)) {
-      return new ImportCookiesResult(false, $"Cookies file not found: {targetPath}", 0, false, false);
+    string resolvedPath = string.IsNullOrWhiteSpace(cookieFilePath) ? _cookiesPath : cookieFilePath;
+    if (!File.Exists(resolvedPath)) {
+      return ImportCookiesResult.Failed($"Cookies file not found at '{resolvedPath}'.");
     }
 
-    string cookieContent = await File.ReadAllTextAsync(targetPath, cancellationToken);
-    if (string.IsNullOrWhiteSpace(cookieContent)) {
-      return new ImportCookiesResult(false, "Cookies file is empty.", 0, false, false);
-    }
-
-    List<Cookie> parsedCookies = YtmStreamingClient.ParseCookies(cookieContent);
-    if (parsedCookies.Count == 0) {
-      return new ImportCookiesResult(false, "No valid cookies found in file.", 0, false, false);
-    }
-
-    await _credentialStore.SetCredentialAsync(CredentialTargets.YouTubeMusic, CredentialTargets.AccountCookies, cookieContent.Trim(), cancellationToken);
-
-    bool tokensGenerated = false;
     try {
-      YtmTokens tokens = await _tokenGenerator(parsedCookies);
-      string serializedTokens = JsonSerializer.Serialize(tokens);
-      await _credentialStore.SetCredentialAsync(CredentialTargets.YouTubeMusic, CredentialTargets.AccountTokens, serializedTokens, cancellationToken);
-      tokensGenerated = true;
-    } catch (Exception ex) {
-      return new ImportCookiesResult(false, $"Cookies stored, but token generation failed: {ex.Message}", parsedCookies.Count, false, false);
-    }
-
-    bool sourceDeleted = false;
-    if (deleteSource) {
-      try {
-        File.Delete(targetPath);
-        sourceDeleted = true;
-      } catch {
-        // Ignored; deleteSource failure does not invalidate successful import
+      string content = await File.ReadAllTextAsync(resolvedPath, cancellationToken);
+      if (string.IsNullOrWhiteSpace(content)) {
+        return ImportCookiesResult.Failed($"Cookies file at '{resolvedPath}' is empty.");
       }
-    }
 
-    return new ImportCookiesResult(true, "Cookies and tokens stored securely.", parsedCookies.Count, tokensGenerated, sourceDeleted);
+      List<Cookie> cookies = YtmStreamingClient.ParseCookies(content);
+      if (cookies.Count == 0) {
+        return ImportCookiesResult.Failed($"No valid cookies could be parsed from '{resolvedPath}'.");
+      }
+
+      await _credentialStore.SetCredentialAsync(
+          CredentialTargets.YouTubeMusic, CredentialTargets.AccountCookies, content.Trim(), cancellationToken);
+
+      YtmTokens tokens = await _tokenGenerator(cookies);
+      string serializedTokens = JsonSerializer.Serialize(tokens);
+      await _credentialStore.SetCredentialAsync(
+          CredentialTargets.YouTubeMusic, CredentialTargets.AccountTokens, serializedTokens, cancellationToken);
+
+      if (deleteSource) {
+        try {
+          File.Delete(resolvedPath);
+        } catch (Exception ex) {
+          return ImportCookiesResult.Succeeded(
+              $"Successfully imported {cookies.Count} cookies and generated visitor/PO tokens, but failed to delete source file: {ex.Message}",
+              cookies.Count,
+              tokensGenerated: true,
+              sourceDeleted: false);
+        }
+      }
+
+      return ImportCookiesResult.Succeeded(
+          $"Successfully imported {cookies.Count} cookies and generated visitor/PO tokens.",
+          cookies.Count,
+          tokensGenerated: true,
+          sourceDeleted: deleteSource);
+    } catch (Exception ex) {
+      return ImportCookiesResult.Failed($"Failed to import cookies: {ex.Message}");
+    }
   }
 
   /// <inheritdoc />
   public async Task<IReadOnlyList<ServiceAuthStatus>> GetStatusAsync(CancellationToken cancellationToken = default) {
-    JsonNode? rootNode = await LoadConfigNodeAsync(cancellationToken);
+    JsonObject? rootNode = null;
+    string? configError = null;
+    try {
+      rootNode = await _configWriter.LoadAsync(cancellationToken);
+    } catch (Exception ex) {
+      configError = ex.Message;
+    }
+
     return [
-      await GetSubsonicStatusAsync(rootNode, cancellationToken),
+      await GetSubsonicStatusAsync(rootNode, configError, cancellationToken),
       await GetYouTubeMusicStatusAsync(cancellationToken),
-      await GetSoundCloudStatusAsync(rootNode, cancellationToken)
+      await GetSoundCloudStatusAsync(rootNode, configError, cancellationToken)
     ];
-  }
-
-  private async Task<ServiceAuthStatus> GetSubsonicStatusAsync(JsonNode? rootNode, CancellationToken cancellationToken) {
-    JsonObject? subsonicNode = rootNode?[nameof(SubsonicConfig)] as JsonObject;
-    string? host = subsonicNode?[nameof(SubsonicConfig.ServerHost)]?.GetValue<string>();
-    string? username = subsonicNode?[nameof(SubsonicConfig.Username)]?.GetValue<string>();
-    string? plaintextSubsonicPassword = subsonicNode?[nameof(SubsonicConfig.Password)]?.GetValue<string>();
-
-    if (!string.IsNullOrEmpty(username)) {
-      string? keyringPassword = await TryGetCredentialAsync(CredentialTargets.Subsonic, username, cancellationToken);
-      if (!string.IsNullOrEmpty(keyringPassword)) {
-        return new ServiceAuthStatus("Subsonic", "Authenticated", "Keyring", $"{username} @ {host ?? "unspecified"}");
-      }
-      if (!string.IsNullOrEmpty(plaintextSubsonicPassword)) {
-        return new ServiceAuthStatus("Subsonic", "Configured (Insecure)", "Plaintext Config", $"{username} @ {host ?? "unspecified"} (Run 'smoc auth migrate')");
-      }
-      return new ServiceAuthStatus("Subsonic", "Missing Credentials", "None", $"{username} @ {host ?? "unspecified"} (Password missing)");
-    }
-
-    return new ServiceAuthStatus("Subsonic", "Not Configured", "None", "No username/host configured in config.json");
-  }
-
-  private async Task<ServiceAuthStatus> GetYouTubeMusicStatusAsync(CancellationToken cancellationToken) {
-    string? ytmCookies = await TryGetCredentialAsync(CredentialTargets.YouTubeMusic, CredentialTargets.AccountCookies, cancellationToken);
-    string? ytmTokens = await TryGetCredentialAsync(CredentialTargets.YouTubeMusic, CredentialTargets.AccountTokens, cancellationToken);
-
-    if (!string.IsNullOrEmpty(ytmCookies)) {
-      if (!string.IsNullOrEmpty(ytmTokens)) {
-        return new ServiceAuthStatus("YouTube Music", "Authenticated", "Keyring", "Cookies stored (Tokens valid)");
-      }
-      return new ServiceAuthStatus("YouTube Music", "Cookies Stored", "Keyring", "Cookies stored (Tokens missing; run 'smoc auth import-cookies')");
-    }
-    if (File.Exists(_cookiesPath)) {
-      return new ServiceAuthStatus("YouTube Music", "Configured (Insecure)", "Plaintext File", "Plaintext cookies.txt found (Run 'smoc auth migrate')");
-    }
-    return new ServiceAuthStatus("YouTube Music", "Not Configured", "None", "No cookies stored");
-  }
-
-  private async Task<ServiceAuthStatus> GetSoundCloudStatusAsync(JsonNode? rootNode, CancellationToken cancellationToken) {
-    JsonObject? soundCloudNode = rootNode?[nameof(SoundCloudConfig)] as JsonObject;
-    string? configClientId = soundCloudNode?[nameof(SoundCloudConfig.ClientId)]?.GetValue<string>();
-    string? configAuthToken = soundCloudNode?[nameof(SoundCloudConfig.AuthToken)]?.GetValue<string>();
-
-    string? scToken = await TryGetCredentialAsync(CredentialTargets.SoundCloud, CredentialTargets.AccountAuthToken, cancellationToken);
-    string? scClientId = await TryGetCredentialAsync(CredentialTargets.SoundCloud, CredentialTargets.AccountClientId, cancellationToken);
-    string effectiveClientId = scClientId ?? configClientId ?? "default";
-
-    if (!string.IsNullOrEmpty(scToken)) {
-      return new ServiceAuthStatus("SoundCloud", "Configured", "Keyring", $"Token stored (ClientId: {effectiveClientId})");
-    }
-    if (!string.IsNullOrEmpty(configAuthToken)) {
-      return new ServiceAuthStatus("SoundCloud", "Configured (Insecure)", "Plaintext Config", $"Plaintext AuthToken in config.json (Run 'smoc auth migrate')");
-    }
-    return new ServiceAuthStatus("SoundCloud", "Not Configured", "None", "No token configured");
   }
 
   /// <inheritdoc />
@@ -235,27 +185,53 @@ public class AuthService : IAuthService {
     ArgumentException.ThrowIfNullOrWhiteSpace(serviceName);
 
     string normalized = serviceName.Trim().ToLowerInvariant();
+    if (normalized is not ("subsonic" or "soundcloud" or "youtube" or "youtubemusic" or "ytm" or "all")) {
+      throw new ArgumentException($"Unknown service '{serviceName}'. Supported services are: subsonic, soundcloud, youtube, all.", nameof(serviceName));
+    }
+
     bool anyRemoved = false;
 
     if (normalized is "subsonic" or "all") {
-      JsonNode? rootNode = await LoadConfigNodeAsync(cancellationToken);
+      JsonObject? rootNode = null;
+      try {
+        rootNode = await _configWriter.LoadAsync(cancellationToken);
+      } catch {
+        // Best effort config load
+      }
       string? username = rootNode?[nameof(SubsonicConfig)]?[nameof(SubsonicConfig.Username)]?.GetValue<string>();
       if (!string.IsNullOrEmpty(username)) {
-        await _credentialStore.DeleteCredentialAsync(CredentialTargets.Subsonic, username, cancellationToken);
-        anyRemoved = true;
+        string? existing = await TryGetRawCredentialAsync(CredentialTargets.Subsonic, username, cancellationToken);
+        if (existing != null) {
+          await _credentialStore.DeleteCredentialAsync(CredentialTargets.Subsonic, username, cancellationToken);
+          anyRemoved = true;
+        }
       }
     }
 
     if (normalized is "youtubemusic" or "youtube" or "ytm" or "all") {
-      await _credentialStore.DeleteCredentialAsync(CredentialTargets.YouTubeMusic, CredentialTargets.AccountCookies, cancellationToken);
-      await _credentialStore.DeleteCredentialAsync(CredentialTargets.YouTubeMusic, CredentialTargets.AccountTokens, cancellationToken);
-      anyRemoved = true;
+      string? cookies = await TryGetRawCredentialAsync(CredentialTargets.YouTubeMusic, CredentialTargets.AccountCookies, cancellationToken);
+      if (cookies != null) {
+        await _credentialStore.DeleteCredentialAsync(CredentialTargets.YouTubeMusic, CredentialTargets.AccountCookies, cancellationToken);
+        anyRemoved = true;
+      }
+      string? tokens = await TryGetRawCredentialAsync(CredentialTargets.YouTubeMusic, CredentialTargets.AccountTokens, cancellationToken);
+      if (tokens != null) {
+        await _credentialStore.DeleteCredentialAsync(CredentialTargets.YouTubeMusic, CredentialTargets.AccountTokens, cancellationToken);
+        anyRemoved = true;
+      }
     }
 
     if (normalized is "soundcloud" or "all") {
-      await _credentialStore.DeleteCredentialAsync(CredentialTargets.SoundCloud, CredentialTargets.AccountAuthToken, cancellationToken);
-      await _credentialStore.DeleteCredentialAsync(CredentialTargets.SoundCloud, CredentialTargets.AccountClientId, cancellationToken);
-      anyRemoved = true;
+      string? token = await TryGetRawCredentialAsync(CredentialTargets.SoundCloud, CredentialTargets.AccountAuthToken, cancellationToken);
+      if (token != null) {
+        await _credentialStore.DeleteCredentialAsync(CredentialTargets.SoundCloud, CredentialTargets.AccountAuthToken, cancellationToken);
+        anyRemoved = true;
+      }
+      string? clientId = await TryGetRawCredentialAsync(CredentialTargets.SoundCloud, CredentialTargets.AccountClientId, cancellationToken);
+      if (clientId != null) {
+        await _credentialStore.DeleteCredentialAsync(CredentialTargets.SoundCloud, CredentialTargets.AccountClientId, cancellationToken);
+        anyRemoved = true;
+      }
     }
 
     return anyRemoved;
@@ -267,16 +243,24 @@ public class AuthService : IAuthService {
     List<string> cleanedFiles = [];
     List<string> errors = [];
 
-    JsonNode? rootNode = await LoadConfigNodeAsync(cancellationToken);
-    bool subsonicModified = await MigrateSubsonicAsync(rootNode, migratedItems, errors, cancellationToken);
-    bool soundCloudModified = await MigrateSoundCloudAsync(rootNode, migratedItems, errors, cancellationToken);
+    JsonObject? rootNode = null;
+    try {
+      rootNode = await _configWriter.LoadAsync(cancellationToken);
+    } catch (Exception ex) {
+      errors.Add($"Failed to read config.json: {ex.Message}");
+    }
 
-    if ((subsonicModified || soundCloudModified) && rootNode != null) {
-      try {
-        await WriteConfigNodeAsync(rootNode, cancellationToken);
-        cleanedFiles.Add(_configPath);
-      } catch (Exception ex) {
-        errors.Add($"Failed to sanitize config.json: {ex.Message}");
+    if (rootNode != null) {
+      bool subsonicModified = await MigrateSubsonicAsync(rootNode, migratedItems, errors, cancellationToken);
+      bool soundCloudModified = await MigrateSoundCloudAsync(rootNode, migratedItems, errors, cancellationToken);
+
+      if (subsonicModified || soundCloudModified) {
+        try {
+          await _configWriter.SaveAsync(rootNode, backupOriginal: false, cancellationToken);
+          cleanedFiles.Add(_configWriter.ConfigPath);
+        } catch (Exception ex) {
+          errors.Add($"Failed to sanitize config.json: {ex.Message}");
+        }
       }
     }
 
@@ -286,12 +270,12 @@ public class AuthService : IAuthService {
   }
 
   private async Task<bool> MigrateSubsonicAsync(
-    JsonNode? rootNode,
+    JsonObject rootNode,
     List<string> migratedItems,
     List<string> errors,
     CancellationToken cancellationToken
   ) {
-    if (rootNode?[nameof(SubsonicConfig)] is not JsonObject subsonicNode) {
+    if (rootNode[nameof(SubsonicConfig)] is not JsonObject subsonicNode) {
       return false;
     }
 
@@ -314,12 +298,12 @@ public class AuthService : IAuthService {
   }
 
   private async Task<bool> MigrateSoundCloudAsync(
-    JsonNode? rootNode,
+    JsonObject rootNode,
     List<string> migratedItems,
     List<string> errors,
     CancellationToken cancellationToken
   ) {
-    if (rootNode?[nameof(SoundCloudConfig)] is not JsonObject soundCloudNode) {
+    if (rootNode[nameof(SoundCloudConfig)] is not JsonObject soundCloudNode) {
       return false;
     }
 
@@ -408,42 +392,48 @@ public class AuthService : IAuthService {
     bool useToken,
     CancellationToken cancellationToken
   ) {
-    List<string> queryParams = [
-      $"u={Uri.EscapeDataString(username)}",
-      "v=1.16.1",
-      "c=smoc",
-      "f=json"
-    ];
+    Uri uri = SubsonicApi.BuildUri(scheme, host, port, "ping.view", username, password, useToken);
 
-    if (useToken) {
-      var (token, salt) = SubsonicAuthentication.GenerateToken(password);
-      queryParams.Add($"t={token}");
-      queryParams.Add($"s={salt}");
-    } else {
-      queryParams.Add($"p={Uri.EscapeDataString(password)}");
-    }
-
-    UriBuilder builder = new(scheme, host, port, "rest/ping.view") {
-      Query = string.Join("&", queryParams)
-    };
-
-    HttpResponseMessage response = await _httpClient.GetAsync(builder.Uri, cancellationToken);
+    using HttpResponseMessage response = await _httpClient.GetAsync(uri, cancellationToken);
     response.EnsureSuccessStatusCode();
 
     string responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
     using JsonDocument doc = JsonDocument.Parse(responseBody);
-    if (doc.RootElement.TryGetProperty("subsonic-response", out JsonElement respElement)) {
-      if (respElement.TryGetProperty("status", out JsonElement status) && status.GetString() == "failed") {
-        string errorMsg = "Unknown Subsonic error";
-        if (respElement.TryGetProperty("error", out JsonElement error) && error.TryGetProperty("message", out JsonElement msg)) {
-          errorMsg = msg.GetString() ?? errorMsg;
+    SubsonicApi.ValidateResponse(doc.RootElement);
+  }
+
+  private sealed record CredentialLookup(string? Value, string Storage, string? Error);
+
+  private async Task<CredentialLookup> InspectCredentialAsync(string service, string account, CancellationToken cancellationToken) {
+    if (_credentialStore is CompositeCredentialStore composite) {
+      string? firstError = null;
+      foreach (ICredentialStore store in composite.Stores) {
+        try {
+          string? value = await store.GetCredentialAsync(service, account, cancellationToken);
+          if (value != null) {
+            string storage = store is EnvironmentCredentialStore ? "Environment" : "Keyring";
+            return new CredentialLookup(value, storage, null);
+          }
+        } catch (Exception ex) {
+          firstError ??= ex.Message;
         }
-        throw new InvalidOperationException($"Subsonic server returned error: {errorMsg}");
       }
+      return new CredentialLookup(null, "None", firstError);
+    }
+
+    try {
+      string? value = await _credentialStore.GetCredentialAsync(service, account, cancellationToken);
+      if (value != null) {
+        string storage = _credentialStore is EnvironmentCredentialStore ? "Environment" : "Keyring";
+        return new CredentialLookup(value, storage, null);
+      }
+      return new CredentialLookup(null, "None", null);
+    } catch (Exception ex) {
+      return new CredentialLookup(null, "None", ex.Message);
     }
   }
 
-  private async Task<string?> TryGetCredentialAsync(string service, string account, CancellationToken cancellationToken) {
+  private async Task<string?> TryGetRawCredentialAsync(string service, string account, CancellationToken cancellationToken) {
     try {
       return await _credentialStore.GetCredentialAsync(service, account, cancellationToken);
     } catch {
@@ -451,39 +441,74 @@ public class AuthService : IAuthService {
     }
   }
 
-  private async Task<JsonNode?> LoadConfigNodeAsync(CancellationToken cancellationToken) {
-    if (!File.Exists(_configPath)) {
-      return null;
+  private async Task<ServiceAuthStatus> GetSubsonicStatusAsync(JsonObject? rootNode, string? configError, CancellationToken cancellationToken) {
+    if (configError != null) {
+      return new ServiceAuthStatus("Subsonic", "Error", "None", $"Config error: {configError}");
     }
 
-    string content = await File.ReadAllTextAsync(_configPath, cancellationToken);
-    if (string.IsNullOrWhiteSpace(content)) {
-      return new JsonObject();
+    JsonObject? subsonicNode = rootNode?[nameof(SubsonicConfig)] as JsonObject;
+    string? host = subsonicNode?[nameof(SubsonicConfig.ServerHost)]?.GetValue<string>();
+    string? username = subsonicNode?[nameof(SubsonicConfig.Username)]?.GetValue<string>();
+    string? plaintextSubsonicPassword = subsonicNode?[nameof(SubsonicConfig.Password)]?.GetValue<string>();
+
+    if (!string.IsNullOrEmpty(username)) {
+      CredentialLookup lookup = await InspectCredentialAsync(CredentialTargets.Subsonic, username, cancellationToken);
+      if (lookup.Error != null) {
+        return new ServiceAuthStatus("Subsonic", "Error", "None", $"Keyring error: {lookup.Error}");
+      }
+      if (!string.IsNullOrEmpty(lookup.Value)) {
+        return new ServiceAuthStatus("Subsonic", "Authenticated", lookup.Storage, $"{username} @ {host ?? "unspecified"}");
+      }
+      if (!string.IsNullOrEmpty(plaintextSubsonicPassword)) {
+        return new ServiceAuthStatus("Subsonic", "Configured (Insecure)", "Plaintext Config", $"{username} @ {host ?? "unspecified"} (Run 'smoc auth migrate')");
+      }
+      return new ServiceAuthStatus("Subsonic", "Missing Credentials", "None", $"{username} @ {host ?? "unspecified"} (Password missing)");
     }
 
-    try {
-      return JsonNode.Parse(content);
-    } catch {
-      return new JsonObject();
-    }
+    return new ServiceAuthStatus("Subsonic", "Not Configured", "None", "No username/host configured in config.json");
   }
 
-  private async Task WriteConfigNodeAsync(JsonNode node, CancellationToken cancellationToken) {
-    string? dir = Path.GetDirectoryName(_configPath);
-    if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir)) {
-      Directory.CreateDirectory(dir);
+  private async Task<ServiceAuthStatus> GetYouTubeMusicStatusAsync(CancellationToken cancellationToken) {
+    CredentialLookup cookieLookup = await InspectCredentialAsync(CredentialTargets.YouTubeMusic, CredentialTargets.AccountCookies, cancellationToken);
+    CredentialLookup tokenLookup = await InspectCredentialAsync(CredentialTargets.YouTubeMusic, CredentialTargets.AccountTokens, cancellationToken);
+
+    if (cookieLookup.Error != null) {
+      return new ServiceAuthStatus("YouTube Music", "Error", "None", $"Keyring error: {cookieLookup.Error}");
     }
 
-    JsonSerializerOptions options = new() { WriteIndented = true };
-    string serialized = node.ToJsonString(options);
-    await File.WriteAllTextAsync(_configPath, serialized, cancellationToken);
+    if (!string.IsNullOrEmpty(cookieLookup.Value)) {
+      string tokenDetail = !string.IsNullOrEmpty(tokenLookup.Value) ? "Tokens present" : "Tokens missing; run 'smoc auth import-cookies'";
+      string status = !string.IsNullOrEmpty(tokenLookup.Value) ? "Authenticated" : "Cookies Stored";
+      return new ServiceAuthStatus("YouTube Music", status, cookieLookup.Storage, $"Cookies stored ({tokenDetail})");
+    }
+
+    if (File.Exists(_cookiesPath)) {
+      return new ServiceAuthStatus("YouTube Music", "Configured (Insecure)", "Plaintext File", "Plaintext cookies.txt found (Run 'smoc auth migrate')");
+    }
+
+    return new ServiceAuthStatus("YouTube Music", "Not Configured", "None", "No cookies stored");
   }
 
-  private async Task UpdateConfigFileAsync(Action<JsonObject> updater, CancellationToken cancellationToken) {
-    JsonNode? rootNode = await LoadConfigNodeAsync(cancellationToken);
-    JsonObject jsonObject = rootNode as JsonObject ?? new JsonObject();
-    updater(jsonObject);
-    await WriteConfigNodeAsync(jsonObject, cancellationToken);
+  private async Task<ServiceAuthStatus> GetSoundCloudStatusAsync(JsonObject? rootNode, string? configError, CancellationToken cancellationToken) {
+    if (configError != null) {
+      return new ServiceAuthStatus("SoundCloud", "Error", "None", $"Config error: {configError}");
+    }
+
+    JsonObject? soundCloudNode = rootNode?[nameof(SoundCloudConfig)] as JsonObject;
+    string? plaintextAuthToken = soundCloudNode?[nameof(SoundCloudConfig.AuthToken)]?.GetValue<string>();
+
+    CredentialLookup lookup = await InspectCredentialAsync(CredentialTargets.SoundCloud, CredentialTargets.AccountAuthToken, cancellationToken);
+    if (lookup.Error != null) {
+      return new ServiceAuthStatus("SoundCloud", "Error", "None", $"Keyring error: {lookup.Error}");
+    }
+    if (!string.IsNullOrEmpty(lookup.Value)) {
+      return new ServiceAuthStatus("SoundCloud", "Authenticated", lookup.Storage, "OAuth token stored");
+    }
+    if (!string.IsNullOrEmpty(plaintextAuthToken)) {
+      return new ServiceAuthStatus("SoundCloud", "Configured (Insecure)", "Plaintext Config", "Plaintext AuthToken found (Run 'smoc auth migrate')");
+    }
+
+    return new ServiceAuthStatus("SoundCloud", "Not Configured", "None", "No credentials stored");
   }
 
   private static JsonObject GetOrAddObject(JsonObject parent, string propertyName) {

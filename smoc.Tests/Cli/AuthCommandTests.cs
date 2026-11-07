@@ -60,7 +60,7 @@ public class AuthCommandTests : IDisposable {
     int exitCode = await root.Parse("auth login subsonic --host sub.example.com --port 443 --scheme https -u testuser --password secret123 --no-verify").InvokeAsync(cancellationToken: TestContext.Current.CancellationToken);
 
     Assert.Equal(0, exitCode);
-    Assert.Contains("Success! Saved server settings to config.json and password to OS Keyring.", _console.Output);
+    Assert.Contains("Success! Saved server settings to config.json and password to secure credential store.", _console.Output);
     Assert.Equal("secret123", await _store.GetCredentialAsync(CredentialTargets.Subsonic, "testuser", TestContext.Current.CancellationToken));
   }
 
@@ -76,7 +76,7 @@ public class AuthCommandTests : IDisposable {
     int exitCode = await root.Parse("auth login subsonic --no-verify").InvokeAsync(cancellationToken: TestContext.Current.CancellationToken);
 
     Assert.Equal(0, exitCode);
-    Assert.Contains("Success! Saved server settings to config.json and password to OS Keyring.", _console.Output);
+    Assert.Contains("Success! Saved server settings to config.json and password to secure credential store.", _console.Output);
     Assert.Equal("interpass", await _store.GetCredentialAsync(CredentialTargets.Subsonic, "interuser", TestContext.Current.CancellationToken));
   }
 
@@ -87,7 +87,7 @@ public class AuthCommandTests : IDisposable {
     int exitCode = await root.Parse("auth login soundcloud --client-id sc-id-123 --token sc-token-456").InvokeAsync(cancellationToken: TestContext.Current.CancellationToken);
 
     Assert.Equal(0, exitCode);
-    Assert.Contains("Success! Saved SoundCloud credentials to OS Keyring.", _console.Output);
+    Assert.Contains("Success! Saved SoundCloud credentials to secure credential store.", _console.Output);
     Assert.Equal("sc-token-456", await _store.GetCredentialAsync(CredentialTargets.SoundCloud, CredentialTargets.AccountAuthToken, TestContext.Current.CancellationToken));
   }
 
@@ -134,10 +134,32 @@ public class AuthCommandTests : IDisposable {
     await File.WriteAllTextAsync(_cookiesPath, "COOKIE=val;", TestContext.Current.CancellationToken);
     RootCommand root = new() { _authCommand };
 
-    int exitCode = await root.Parse("auth migrate --no-backup").InvokeAsync(cancellationToken: TestContext.Current.CancellationToken);
+    int exitCode = await root.Parse("auth migrate").InvokeAsync(cancellationToken: TestContext.Current.CancellationToken);
 
     Assert.Equal(0, exitCode);
-    Assert.Contains("Successfully migrated credentials to OS Keyring:", _console.Output);
+    Assert.Contains("Successfully migrated credentials to secure credential store:", _console.Output);
     Assert.False(File.Exists(_cookiesPath));
+  }
+
+  [Fact]
+  public async Task AuthMigrate_OutputsErrorsWhenMigrationFailsWithZeroMigratedItems() {
+    RootCommand root = new() { _authCommand };
+
+    // Point to a malformed config.json to trigger migration errors
+    await File.WriteAllTextAsync(_configPath, "{ not valid json", TestContext.Current.CancellationToken);
+
+    int exitCode = await root.Parse("auth migrate").InvokeAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+    Assert.Equal(1, exitCode);
+    Assert.Contains("Warnings/Errors during migration:", _console.Output);
+  }
+
+  [Fact]
+  public async Task AuthLogout_FailsWithExitCode1_WhenUnknownService() {
+    RootCommand root = new() { _authCommand };
+
+    int exitCode = await root.Parse("auth logout unknown_service").InvokeAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+    Assert.NotEqual(0, exitCode);
   }
 }
