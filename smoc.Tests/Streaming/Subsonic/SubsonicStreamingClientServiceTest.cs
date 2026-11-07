@@ -668,78 +668,52 @@ public class SubsonicStreamingClientServiceTest {
 
   [Fact]
   public void Create_ThrowsIfPasswordNotConfigured() {
-    SubsonicConfig.Defaults.ServerHost = "example.com";
-    SubsonicConfig.Defaults.Username = "user";
-    SubsonicConfig.Defaults.Password = null;
-    
-    var ex = Assert.Throws<InvalidOperationException>(() => SubsonicStreamingClient.Create(new NoCachingCacheService(), new NoCachingCacheService()));
-    Assert.Contains("Subsonic Password not configured", ex.Message);
+    var originalHost = SubsonicConfig.Defaults.ServerHost;
+    var originalUser = SubsonicConfig.Defaults.Username;
+    var originalPass = SubsonicConfig.Defaults.Password;
+    try {
+      SubsonicConfig.Defaults.ServerHost = "example.com";
+      SubsonicConfig.Defaults.Username = "user";
+      SubsonicConfig.Defaults.Password = null;
+      
+      var ex = Assert.Throws<InvalidOperationException>(() => SubsonicStreamingClient.Create(new NoCachingCacheService(), new NoCachingCacheService()));
+      Assert.Contains("Subsonic Password not configured", ex.Message);
+    } finally {
+      SubsonicConfig.Defaults.ServerHost = originalHost;
+      SubsonicConfig.Defaults.Username = originalUser;
+      SubsonicConfig.Defaults.Password = originalPass;
+    }
   }
 
   [Fact]
-  public async Task CreateAsync_ResolvesPasswordFromCredentialStore() {
-    SubsonicConfig.Defaults.ServerHost = "subsonic.example.com";
-    SubsonicConfig.Defaults.Username = "subsonicUser";
-    SubsonicConfig.Defaults.Password = null;
-
-    var store = new InMemoryCredentialStore();
-    await store.SetCredentialAsync(CredentialTargets.Subsonic, "subsonicUser", "keyringPassword", TestContext.Current.CancellationToken);
-
-    var client = await SubsonicStreamingClient.CreateAsync(new NoCachingCacheService(), new NoCachingCacheService(), store, TestContext.Current.CancellationToken);
+  public void Create_WithCredentials_CreatesClient() {
+    var creds = new SubsonicCredentials("https", "subsonic.example.com", 443, "user", "pass", true);
+    var client = SubsonicStreamingClient.Create(new NoCachingCacheService(), new NoCachingCacheService(), creds);
     Assert.NotNull(client);
-    Assert.True(client.IsAuthenticated);
   }
 
   [Fact]
-  public async Task CreateAsync_FallsBackToConfig_WhenCredentialStoreHasNoPassword() {
-    SubsonicConfig.Defaults.ServerHost = "subsonic.example.com";
-    SubsonicConfig.Defaults.Username = "subsonicUser";
-    SubsonicConfig.Defaults.Password = "configPassword";
-
-    var store = new InMemoryCredentialStore();
-
-    var client = await SubsonicStreamingClient.CreateAsync(new NoCachingCacheService(), new NoCachingCacheService(), store, TestContext.Current.CancellationToken);
-    Assert.NotNull(client);
-    Assert.True(client.IsAuthenticated);
-  }
-
-  [Fact]
-  public async Task CreateAsync_ThrowsIfPasswordNotConfiguredAnywhere() {
-    SubsonicConfig.Defaults.ServerHost = "subsonic.example.com";
-    SubsonicConfig.Defaults.Username = "subsonicUser";
-    SubsonicConfig.Defaults.Password = null;
-
-    var store = new InMemoryCredentialStore();
-
-    var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
-      SubsonicStreamingClient.CreateAsync(new NoCachingCacheService(), new NoCachingCacheService(), store, TestContext.Current.CancellationToken));
-    Assert.Contains("Subsonic Password not configured", ex.Message);
-  }
-
-  [Fact]
-  public async Task CreateAsync_ThrowsIfHostNotConfigured() {
-    SubsonicConfig.Defaults.ServerHost = null;
-    SubsonicConfig.Defaults.Username = "subsonicUser";
-    SubsonicConfig.Defaults.Password = "pass";
-
-    var store = new InMemoryCredentialStore();
-
-    var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
-      SubsonicStreamingClient.CreateAsync(new NoCachingCacheService(), new NoCachingCacheService(), store, TestContext.Current.CancellationToken));
+  public void Create_WithCredentials_ThrowsIfHostMissing() {
+    var creds = new SubsonicCredentials("https", "", 443, "user", "pass", true);
+    var ex = Assert.Throws<InvalidOperationException>(() =>
+      SubsonicStreamingClient.Create(new NoCachingCacheService(), new NoCachingCacheService(), creds));
     Assert.Contains("Subsonic Server Host not configured", ex.Message);
   }
 
   [Fact]
-  public async Task CreateAsync_ThrowsIfUsernameNotConfigured() {
-    SubsonicConfig.Defaults.ServerHost = "subsonic.example.com";
-    SubsonicConfig.Defaults.Username = null;
-    SubsonicConfig.Defaults.Password = "pass";
-
-    var store = new InMemoryCredentialStore();
-
-    var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
-      SubsonicStreamingClient.CreateAsync(new NoCachingCacheService(), new NoCachingCacheService(), store, TestContext.Current.CancellationToken));
+  public void Create_WithCredentials_ThrowsIfUsernameMissing() {
+    var creds = new SubsonicCredentials("https", "subsonic.example.com", 443, "", "pass", true);
+    var ex = Assert.Throws<InvalidOperationException>(() =>
+      SubsonicStreamingClient.Create(new NoCachingCacheService(), new NoCachingCacheService(), creds));
     Assert.Contains("Subsonic Username not configured", ex.Message);
+  }
+
+  [Fact]
+  public void Create_WithCredentials_ThrowsIfPasswordMissing() {
+    var creds = new SubsonicCredentials("https", "subsonic.example.com", 443, "user", "", true);
+    var ex = Assert.Throws<InvalidOperationException>(() =>
+      SubsonicStreamingClient.Create(new NoCachingCacheService(), new NoCachingCacheService(), creds));
+    Assert.Contains("Subsonic Password not configured", ex.Message);
   }
 
   [Fact]
