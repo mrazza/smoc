@@ -8,29 +8,47 @@ namespace Smoc.Security.Linux;
 /// Default implementation of <see cref="ISecretServiceAdapter"/> using <see cref="Connection.Session"/>.
 /// </summary>
 internal sealed class DbusSecretServiceAdapter : ISecretServiceAdapter {
-  private Connection? _connection;
-  private ObjectPath? _sessionPath;
+  private readonly Lazy<Task<Connection>> _connectionLazy;
+  private readonly Lazy<Task<ObjectPath>> _sessionPathLazy;
 
+  public DbusSecretServiceAdapter() {
+    _connectionLazy = new Lazy<Task<Connection>>(async () => {
+      var connection = new Connection(Address.Session);
+      await connection.ConnectAsync();
+      return connection;
+    });
+
+    _sessionPathLazy = new Lazy<Task<ObjectPath>>(async () => {
+      Connection connection = await _connectionLazy.Value;
+      var serviceProxy = connection.CreateProxy<SecretServiceDbusContracts.ISecretService>(
+          SecretServiceDbusContracts.ServiceName, SecretServiceDbusContracts.ServicePath);
+      var (_, result) = await serviceProxy.OpenSessionAsync("plain", string.Empty);
+      return result;
+    });
+  }
+
+  /// <inheritdoc />
   public async Task<bool> IsAvailableAsync(CancellationToken cancellationToken) {
     if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) {
       return false;
     }
 
     try {
-      Connection connection = await GetConnectionAsync(cancellationToken);
+      Connection connection = await _connectionLazy.Value.WaitAsync(cancellationToken);
       return await connection.IsServiceActiveAsync(SecretServiceDbusContracts.ServiceName);
     } catch {
       return false;
     }
   }
 
+  /// <inheritdoc />
   public async Task<string?> GetSecretAsync(string service, string account, CancellationToken cancellationToken) {
-    Connection connection = await GetConnectionAsync(cancellationToken);
+    Connection connection = await _connectionLazy.Value.WaitAsync(cancellationToken);
 
     var serviceProxy = connection.CreateProxy<SecretServiceDbusContracts.ISecretService>(
         SecretServiceDbusContracts.ServiceName, SecretServiceDbusContracts.ServicePath);
 
-    ObjectPath session = await GetSessionPathAsync(connection, serviceProxy);
+    ObjectPath session = await _sessionPathLazy.Value.WaitAsync(cancellationToken);
 
     var attributes = CreateAttributes(service, account);
     var (unlocked, locked) = await serviceProxy.SearchItemsAsync(attributes);
@@ -53,16 +71,14 @@ internal sealed class DbusSecretServiceAdapter : ISecretServiceAdapter {
     return null;
   }
 
+  /// <inheritdoc />
   public async Task SetSecretAsync(string service, string account, string secret, CancellationToken cancellationToken) {
-    Connection connection = await GetConnectionAsync(cancellationToken);
-
-    var serviceProxy = connection.CreateProxy<SecretServiceDbusContracts.ISecretService>(
-        SecretServiceDbusContracts.ServiceName, SecretServiceDbusContracts.ServicePath);
-
-    ObjectPath session = await GetSessionPathAsync(connection, serviceProxy);
+    Connection connection = await _connectionLazy.Value.WaitAsync(cancellationToken);
 
     var collectionProxy = connection.CreateProxy<SecretServiceDbusContracts.ISecretCollection>(
         SecretServiceDbusContracts.ServiceName, SecretServiceDbusContracts.DefaultCollectionPath);
+
+    ObjectPath session = await _sessionPathLazy.Value.WaitAsync(cancellationToken);
 
     var attributes = CreateAttributes(service, account);
     var properties = new Dictionary<string, object> {
@@ -80,8 +96,9 @@ internal sealed class DbusSecretServiceAdapter : ISecretServiceAdapter {
     await collectionProxy.CreateItemAsync(properties, secretStruct, replace: true);
   }
 
+  /// <inheritdoc />
   public async Task DeleteSecretAsync(string service, string account, CancellationToken cancellationToken) {
-    Connection connection = await GetConnectionAsync(cancellationToken);
+    Connection connection = await _connectionLazy.Value.WaitAsync(cancellationToken);
 
     var serviceProxy = connection.CreateProxy<SecretServiceDbusContracts.ISecretService>(
         SecretServiceDbusContracts.ServiceName, SecretServiceDbusContracts.ServicePath);
@@ -94,27 +111,6 @@ internal sealed class DbusSecretServiceAdapter : ISecretServiceAdapter {
           SecretServiceDbusContracts.ServiceName, itemPath);
       await itemProxy.DeleteAsync();
     }
-  }
-
-  private async Task<Connection> GetConnectionAsync(CancellationToken cancellationToken) {
-    if (_connection != null) {
-      return _connection;
-    }
-
-    var connection = new Connection(Address.Session);
-    await connection.ConnectAsync();
-    _connection = connection;
-    return _connection;
-  }
-
-  private async Task<ObjectPath> GetSessionPathAsync(Connection connection, SecretServiceDbusContracts.ISecretService serviceProxy) {
-    if (_sessionPath.HasValue) {
-      return _sessionPath.Value;
-    }
-
-    var (_, result) = await serviceProxy.OpenSessionAsync("plain", string.Empty);
-    _sessionPath = result;
-    return _sessionPath.Value;
   }
 
   private static Dictionary<string, string> CreateAttributes(string service, string account) {
