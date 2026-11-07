@@ -2,6 +2,7 @@ using System.Text.Json;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using Smoc.Configuration;
+using Smoc.Security;
 using Smoc.Services;
 using Smoc.Services.Caching;
 using Smoc.Streaming.Subsonic.Util;
@@ -24,6 +25,11 @@ public sealed class SubsonicStreamingClient : IStreamingClient {
   private readonly string _password;
   private readonly bool _useToken;
 
+  /// <summary>
+  /// Gets a value indicating whether this client has a configured password.
+  /// </summary>
+  public bool IsAuthenticated => !string.IsNullOrEmpty(_password);
+
   private SubsonicStreamingClient(string uriScheme, string uriHost, int uriPort, string username, string password, bool useToken, ICacheService songCacheService, ICacheService albumArtCacheService) {
     _uriHost = uriHost;
     _uriScheme = uriScheme;
@@ -34,6 +40,53 @@ public sealed class SubsonicStreamingClient : IStreamingClient {
     _songCacheService = songCacheService;
     _albumArtCacheService = albumArtCacheService;
     _httpClient = new HttpClient();
+  }
+
+  /// <summary>
+  /// Creates a new instance of the <see cref="SubsonicStreamingClient"/> asynchronously,
+  /// resolving credentials from the provided <see cref="ICredentialStore"/> with fallback to configuration.
+  /// </summary>
+  /// <param name="songCacheService">The song cache service.</param>
+  /// <param name="albumArtCacheService">The album art cache service.</param>
+  /// <param name="credentialStore">Optional credential store to resolve passwords; if null, the default OS store is used.</param>
+  /// <param name="cancellationToken">Cancellation token.</param>
+  /// <returns>A new <see cref="SubsonicStreamingClient"/>.</returns>
+  public static async Task<SubsonicStreamingClient> CreateAsync(
+    ICacheService songCacheService,
+    ICacheService albumArtCacheService,
+    ICredentialStore? credentialStore = null,
+    CancellationToken cancellationToken = default
+  ) {
+    string scheme = SubsonicConfig.Defaults.ServerScheme;
+    string host = SubsonicConfig.Defaults.ServerHost ?? throw new InvalidOperationException("Subsonic Server Host not configured");
+    int port = SubsonicConfig.Defaults.ServerPort;
+    string username = SubsonicConfig.Defaults.Username ?? throw new InvalidOperationException("Subsonic Username not configured");
+    bool useToken = SubsonicConfig.Defaults.UseToken;
+
+    credentialStore ??= CredentialStoreFactory.CreateDefault();
+    string? password = null;
+    try {
+      password = await credentialStore.GetCredentialAsync(CredentialTargets.Subsonic, username, cancellationToken);
+    } catch {
+      // Fallback to configuration if credential store lookup throws
+    }
+
+    password ??= SubsonicConfig.Defaults.Password;
+
+    if (string.IsNullOrEmpty(password)) {
+      throw new InvalidOperationException("Subsonic Password not configured");
+    }
+
+    return new SubsonicStreamingClient(
+      scheme,
+      host,
+      port,
+      username,
+      password,
+      useToken,
+      songCacheService,
+      albumArtCacheService
+    );
   }
 
   /// <summary>

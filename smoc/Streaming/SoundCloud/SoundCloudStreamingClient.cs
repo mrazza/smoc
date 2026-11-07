@@ -1,8 +1,10 @@
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Terminal.Gui.App;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using Smoc.Configuration;
+using Smoc.Security;
 using Smoc.Services;
 using Smoc.Services.Caching;
 using Smoc.Streaming.SoundCloud.Models;
@@ -20,13 +22,23 @@ public sealed class SoundCloudStreamingClient : IStreamingClient {
   private readonly ICacheService _songCacheService;
   private readonly ICacheService _albumArtCacheService;
   private string? _clientId;
+  private readonly string? _authToken;
 
-  private SoundCloudStreamingClient(ICacheService? songCacheService = null, ICacheService? albumArtCacheService = null) {
+  /// <summary>
+  /// Gets a value indicating whether this client is authenticated with an auth token.
+  /// </summary>
+  public bool IsAuthenticated => !string.IsNullOrWhiteSpace(_authToken);
+
+  private SoundCloudStreamingClient(ICacheService? songCacheService = null, ICacheService? albumArtCacheService = null, string? clientId = null, string? authToken = null) {
     _httpClient = new HttpClient();
     _httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
     _songCacheService = songCacheService ?? new NoCachingCacheService();
     _albumArtCacheService = albumArtCacheService ?? new NoCachingCacheService();
-    _clientId = SoundCloudConfig.Defaults.ClientId;
+    _clientId = clientId ?? SoundCloudConfig.Defaults.ClientId;
+    _authToken = authToken ?? SoundCloudConfig.Defaults.AuthToken;
+    if (!string.IsNullOrWhiteSpace(_authToken)) {
+      _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("OAuth", _authToken);
+    }
   }
 
   /// <summary>
@@ -36,13 +48,52 @@ public sealed class SoundCloudStreamingClient : IStreamingClient {
   /// <param name="songCacheService">The song cache service.</param>
   /// <param name="albumArtCacheService">The album art cache service.</param>
   /// <param name="clientId">The SoundCloud client ID.</param>
+  /// <param name="authToken">Optional SoundCloud auth token.</param>
   /// <returns>A new instance of <see cref="SoundCloudStreamingClient"/>.</returns>
-  public static SoundCloudStreamingClient CreateForTesting(HttpClient httpClient, ICacheService? songCacheService = null, ICacheService? albumArtCacheService = null, string? clientId = "test-client-id") {
-    var client = new SoundCloudStreamingClient(songCacheService, albumArtCacheService);
+  public static SoundCloudStreamingClient CreateForTesting(HttpClient httpClient, ICacheService? songCacheService = null, ICacheService? albumArtCacheService = null, string? clientId = "test-client-id", string? authToken = null) {
+    var client = new SoundCloudStreamingClient(songCacheService, albumArtCacheService, clientId, authToken);
     var httpClientField = typeof(SoundCloudStreamingClient).GetField("_httpClient", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
     httpClientField?.SetValue(client, httpClient);
     client._clientId = clientId;
     return client;
+  }
+
+  /// <summary>
+  /// Creates a new instance of <see cref="SoundCloudStreamingClient"/> asynchronously,
+  /// resolving credentials from the provided <see cref="ICredentialStore"/> with fallback to configuration.
+  /// </summary>
+  /// <param name="songCacheService">The song cache service.</param>
+  /// <param name="albumArtCacheService">The album art cache service.</param>
+  /// <param name="credentialStore">Optional credential store; if null, the default OS store is used.</param>
+  /// <param name="cancellationToken">Cancellation token.</param>
+  /// <returns>A new <see cref="SoundCloudStreamingClient"/> instance.</returns>
+  public static async Task<SoundCloudStreamingClient> CreateAsync(
+    ICacheService? songCacheService = null,
+    ICacheService? albumArtCacheService = null,
+    ICredentialStore? credentialStore = null,
+    CancellationToken cancellationToken = default
+  ) {
+    credentialStore ??= CredentialStoreFactory.CreateDefault();
+
+    string? authToken = null;
+    string? clientId = null;
+
+    try {
+      authToken = await credentialStore.GetCredentialAsync(CredentialTargets.SoundCloud, CredentialTargets.AccountAuthToken, cancellationToken);
+    } catch {
+      // Fallback
+    }
+
+    try {
+      clientId = await credentialStore.GetCredentialAsync(CredentialTargets.SoundCloud, CredentialTargets.AccountClientId, cancellationToken);
+    } catch {
+      // Fallback
+    }
+
+    authToken ??= SoundCloudConfig.Defaults.AuthToken;
+    clientId ??= SoundCloudConfig.Defaults.ClientId;
+
+    return new SoundCloudStreamingClient(songCacheService, albumArtCacheService, clientId, authToken);
   }
 
   /// <summary>

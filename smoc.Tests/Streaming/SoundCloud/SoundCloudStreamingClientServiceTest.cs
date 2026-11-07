@@ -1,5 +1,7 @@
 using System.Net;
 using System.Text.Json;
+using Smoc.Configuration;
+using Smoc.Security;
 using Smoc.Streaming.SoundCloud;
 using Smoc.Streaming.SoundCloud.Models;
 
@@ -89,5 +91,65 @@ public class SoundCloudStreamingClientServiceTest {
     var read = await songStream.Stream.ReadAsync(buffer, TestContext.Current.CancellationToken);
     Assert.Equal(4, read);
     Assert.Equal([1, 2, 3, 4], buffer);
+  }
+
+  /// <summary>
+  /// Verifies that CreateAsync resolves auth token and client ID from credential store.
+  /// </summary>
+  [Fact]
+  public async Task CreateAsync_ResolvesCredentialsFromStore_AndSetsAuthHeader() {
+    var store = new InMemoryCredentialStore();
+    await store.SetCredentialAsync(CredentialTargets.SoundCloud, CredentialTargets.AccountAuthToken, "oauth-token-123", TestContext.Current.CancellationToken);
+    await store.SetCredentialAsync(CredentialTargets.SoundCloud, CredentialTargets.AccountClientId, "sc-client-456", TestContext.Current.CancellationToken);
+
+    var client = await SoundCloudStreamingClient.CreateAsync(credentialStore: store, cancellationToken: TestContext.Current.CancellationToken);
+
+    Assert.NotNull(client);
+    Assert.True(client.IsAuthenticated);
+
+    var httpClientField = typeof(SoundCloudStreamingClient).GetField("_httpClient", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+    var httpClient = (HttpClient)httpClientField!.GetValue(client)!;
+    Assert.NotNull(httpClient.DefaultRequestHeaders.Authorization);
+    Assert.Equal("OAuth", httpClient.DefaultRequestHeaders.Authorization.Scheme);
+    Assert.Equal("oauth-token-123", httpClient.DefaultRequestHeaders.Authorization.Parameter);
+  }
+
+  /// <summary>
+  /// Verifies that CreateAsync falls back to SoundCloudConfig when credentials are not in store.
+  /// </summary>
+  [Fact]
+  public async Task CreateAsync_FallsBackToConfig_WhenNotInStore() {
+    SoundCloudConfig.Defaults.AuthToken = "fallback-token";
+    SoundCloudConfig.Defaults.ClientId = "fallback-client";
+
+    var store = new InMemoryCredentialStore();
+    var client = await SoundCloudStreamingClient.CreateAsync(credentialStore: store, cancellationToken: TestContext.Current.CancellationToken);
+
+    Assert.NotNull(client);
+    Assert.True(client.IsAuthenticated);
+
+    var httpClientField = typeof(SoundCloudStreamingClient).GetField("_httpClient", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+    var httpClient = (HttpClient)httpClientField!.GetValue(client)!;
+    Assert.Equal("OAuth", httpClient.DefaultRequestHeaders.Authorization?.Scheme);
+    Assert.Equal("fallback-token", httpClient.DefaultRequestHeaders.Authorization?.Parameter);
+  }
+
+  /// <summary>
+  /// Verifies that CreateAsync returns an unauthenticated client when no token is present.
+  /// </summary>
+  [Fact]
+  public async Task CreateAsync_WorksUnauthenticated_WhenNoCredentialsConfigured() {
+    SoundCloudConfig.Defaults.AuthToken = null;
+    SoundCloudConfig.Defaults.ClientId = null;
+
+    var store = new InMemoryCredentialStore();
+    var client = await SoundCloudStreamingClient.CreateAsync(credentialStore: store, cancellationToken: TestContext.Current.CancellationToken);
+
+    Assert.NotNull(client);
+    Assert.False(client.IsAuthenticated);
+
+    var httpClientField = typeof(SoundCloudStreamingClient).GetField("_httpClient", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+    var httpClient = (HttpClient)httpClientField!.GetValue(client)!;
+    Assert.Null(httpClient.DefaultRequestHeaders.Authorization);
   }
 }
