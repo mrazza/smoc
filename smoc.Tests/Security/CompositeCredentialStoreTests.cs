@@ -90,4 +90,24 @@ public class CompositeCredentialStoreTests {
     Assert.Null(await primary.GetCredentialAsync("svc", "acct", TestContext.Current.CancellationToken));
     Assert.Null(await fallback.GetCredentialAsync("svc", "acct", TestContext.Current.CancellationToken));
   }
+
+  [Fact]
+  public async Task Composite_SetAsync_ThrowsWhenNoStoreSucceeds() {
+    var unavailableMock = new Mock<ICredentialStore>();
+    unavailableMock.Setup(s => s.IsAvailableAsync(It.IsAny<CancellationToken>())).ReturnsAsync(false);
+
+    var composite = new CompositeCredentialStore(unavailableMock.Object);
+    await Assert.ThrowsAsync<InvalidOperationException>(() =>
+        composite.SetCredentialAsync("svc", "acct", "val", TestContext.Current.CancellationToken));
+  }
+
+  [Fact]
+  public async Task Composite_DeleteAsync_ThrowsWhenNoStoreSucceeds() {
+    var unavailableMock = new Mock<ICredentialStore>();
+    unavailableMock.Setup(s => s.IsAvailableAsync(It.IsAny<CancellationToken>())).ReturnsAsync(false);
+
+    var composite = new CompositeCredentialStore(unavailableMock.Object);
+    await Assert.ThrowsAsync<InvalidOperationException>(() =>
+        composite.DeleteCredentialAsync("svc", "acct", TestContext.Current.CancellationToken));
+  }
 }

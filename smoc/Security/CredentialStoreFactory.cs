@@ -37,7 +37,7 @@ public static class CredentialStoreFactory {
       return new WindowsCredentialManagerCredentialStore();
     }
 
-    return new InMemoryCredentialStore();
+    throw new PlatformNotSupportedException("No native credential store supported on this operating system.");
   }
 
   /// <summary>

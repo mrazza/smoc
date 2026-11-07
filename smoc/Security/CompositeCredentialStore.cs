@@ -4,8 +4,6 @@ namespace Smoc.Security;
 /// A credential store that delegates operations across multiple underlying stores in priority order.
 /// </summary>
 public sealed class CompositeCredentialStore : ICredentialStore {
-  private readonly IReadOnlyList<ICredentialStore> _stores;
-
   /// <summary>
   /// Initializes a new instance of <see cref="CompositeCredentialStore"/> with the provided stores in order of precedence.
   /// </summary>
@@ -24,20 +22,20 @@ public sealed class CompositeCredentialStore : ICredentialStore {
       throw new ArgumentException("At least one credential store must be provided.", nameof(stores));
     }
 
-    _stores = stores;
+    Stores = stores;
   }
 
   /// <summary>
   /// Gets the stores contained in this composite store.
   /// </summary>
-  public IReadOnlyList<ICredentialStore> Stores => _stores;
+  public IReadOnlyList<ICredentialStore> Stores { get; private set; }
 
   /// <inheritdoc />
   public async Task<string?> GetCredentialAsync(string service, string account, CancellationToken cancellationToken = default) {
     ArgumentNullException.ThrowIfNull(service);
     ArgumentNullException.ThrowIfNull(account);
 
-    foreach (ICredentialStore store in _stores) {
+    foreach (ICredentialStore store in Stores) {
       cancellationToken.ThrowIfCancellationRequested();
       try {
         if (await store.IsAvailableAsync(cancellationToken)) {
@@ -62,7 +60,7 @@ public sealed class CompositeCredentialStore : ICredentialStore {
     ArgumentNullException.ThrowIfNull(account);
     ArgumentNullException.ThrowIfNull(secret);
 
-    foreach (ICredentialStore store in _stores) {
+    foreach (ICredentialStore store in Stores) {
       cancellationToken.ThrowIfCancellationRequested();
       try {
         if (await store.IsAvailableAsync(cancellationToken)) {
@@ -75,6 +73,8 @@ public sealed class CompositeCredentialStore : ICredentialStore {
         // Try next store if primary failed
       }
     }
+
+    throw new InvalidOperationException($"Failed to save credential for service '{service}' and account '{account}': no available credential store succeeded.");
   }
 
   /// <inheritdoc />
@@ -82,11 +82,13 @@ public sealed class CompositeCredentialStore : ICredentialStore {
     ArgumentNullException.ThrowIfNull(service);
     ArgumentNullException.ThrowIfNull(account);
 
-    foreach (ICredentialStore store in _stores) {
+    bool deleted = false;
+    foreach (ICredentialStore store in Stores) {
       cancellationToken.ThrowIfCancellationRequested();
       try {
         if (await store.IsAvailableAsync(cancellationToken)) {
           await store.DeleteCredentialAsync(service, account, cancellationToken);
+          deleted = true;
         }
       } catch (OperationCanceledException) {
         throw;
@@ -94,11 +96,15 @@ public sealed class CompositeCredentialStore : ICredentialStore {
         // Continue deleting from remaining stores
       }
     }
+
+    if (!deleted) {
+      throw new InvalidOperationException($"Failed to delete credential for service '{service}' and account '{account}': no available credential store succeeded.");
+    }
   }
 
   /// <inheritdoc />
   public async Task<bool> IsAvailableAsync(CancellationToken cancellationToken = default) {
-    foreach (ICredentialStore store in _stores) {
+    foreach (ICredentialStore store in Stores) {
       cancellationToken.ThrowIfCancellationRequested();
       try {
         if (await store.IsAvailableAsync(cancellationToken)) {
