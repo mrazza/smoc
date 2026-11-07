@@ -1,4 +1,5 @@
 using System.CommandLine;
+using Smoc.Configuration;
 
 namespace Smoc.Cli.Auth;
 
@@ -26,6 +27,7 @@ public static class AuthCommand {
 
     authRoot.SetAction(async (parseResult, cancellationToken) => {
       await ExecuteStatusAsync(service, io, cancellationToken);
+      return 0;
     });
 
     return authRoot;
@@ -33,23 +35,28 @@ public static class AuthCommand {
 
   private static Command CreateLoginCommand(IAuthService authService, IConsoleIO io) {
     Argument<string> serviceArg = new("service") {
-      Description = "Streaming service to log in to (subsonic, soundcloud)."
+      Description = "Streaming service to authenticate with ('subsonic', 'soundcloud')."
     };
+    serviceArg.AcceptOnlyFromAmong("subsonic", "soundcloud");
 
-    Option<string?> hostOption = new("--host", "-h") {
-      Description = "Subsonic server host."
+    Option<string?> hostOption = new("--host") {
+      Description = "Subsonic server host or IP address."
     };
     Option<int?> portOption = new("--port", "-p") {
-      Description = "Subsonic server port."
+      Description = "Subsonic server port (defaults to 80 for http, 443 for https)."
     };
     Option<string?> schemeOption = new("--scheme") {
-      Description = "Subsonic server scheme (http or https)."
+      Description = "Subsonic server scheme ('http' or 'https')."
     };
     Option<string?> usernameOption = new("--username", "-u") {
       Description = "Subsonic username."
     };
     Option<string?> passwordOption = new("--password") {
-      Description = "Subsonic password (if omitted, prompted interactively)."
+      Description = "Subsonic password (omit to prompt interactively; passing via argv may expose secrets in shell history)."
+    };
+    Option<bool> useTokenOption = new("--use-token") {
+      Description = "Whether to use MD5 token/salt authentication for Subsonic (default: true).",
+      DefaultValueFactory = _ => true
     };
     Option<bool> noVerifyOption = new("--no-verify") {
       Description = "Skip verifying the Subsonic connection before saving."
@@ -59,16 +66,17 @@ public static class AuthCommand {
       Description = "SoundCloud Client ID."
     };
     Option<string?> tokenOption = new("--token", "-t") {
-      Description = "SoundCloud OAuth authentication token (if omitted, prompted interactively)."
+      Description = "SoundCloud OAuth authentication token (omit to prompt interactively; passing via argv may expose secrets in shell history)."
     };
 
-    Command loginCmd = new("login", "Authenticate with a streaming service and save credentials to OS keyring.");
+    Command loginCmd = new("login", "Authenticate with a streaming service and save credentials securely.");
     loginCmd.Arguments.Add(serviceArg);
     loginCmd.Options.Add(hostOption);
     loginCmd.Options.Add(portOption);
     loginCmd.Options.Add(schemeOption);
     loginCmd.Options.Add(usernameOption);
     loginCmd.Options.Add(passwordOption);
+    loginCmd.Options.Add(useTokenOption);
     loginCmd.Options.Add(noVerifyOption);
     loginCmd.Options.Add(clientIdOption);
     loginCmd.Options.Add(tokenOption);
@@ -77,86 +85,100 @@ public static class AuthCommand {
       string service = parseResult.GetValue(serviceArg)?.Trim().ToLowerInvariant() ?? string.Empty;
 
       switch (service) {
-        case "subsonic":
-          await ExecuteSubsonicLoginAsync(authService, io, parseResult, hostOption, portOption, schemeOption, usernameOption, passwordOption, noVerifyOption, cancellationToken);
-          break;
+        case "subsonic": {
+          SubsonicLoginArgs args = new(
+              parseResult.GetValue(hostOption),
+              parseResult.GetValue(portOption),
+              parseResult.GetValue(schemeOption),
+              parseResult.GetValue(usernameOption),
+              parseResult.GetValue(passwordOption),
+              parseResult.GetValue(useTokenOption),
+              parseResult.GetValue(noVerifyOption));
+          return await ExecuteSubsonicLoginAsync(authService, io, args, cancellationToken);
+        }
 
         case "soundcloud":
-          await ExecuteSoundCloudLoginAsync(authService, io, parseResult, clientIdOption, tokenOption, cancellationToken);
-          break;
+          return await ExecuteSoundCloudLoginAsync(authService, io, parseResult.GetValue(clientIdOption), parseResult.GetValue(tokenOption), cancellationToken);
 
         default:
           io.WriteLine($"Unknown service '{service}'. Supported services: subsonic, soundcloud.");
-          break;
+          return 1;
       }
     });
 
     return loginCmd;
   }
 
-  private static async Task ExecuteSubsonicLoginAsync(
+  private sealed record SubsonicLoginArgs(
+    string? Host,
+    int? Port,
+    string? Scheme,
+    string? Username,
+    string? Password,
+    bool UseToken,
+    bool NoVerify
+  );
+
+  private static async Task<int> ExecuteSubsonicLoginAsync(
     IAuthService authService,
     IConsoleIO io,
-    ParseResult parseResult,
-    Option<string?> hostOption,
-    Option<int?> portOption,
-    Option<string?> schemeOption,
-    Option<string?> usernameOption,
-    Option<string?> passwordOption,
-    Option<bool> noVerifyOption,
+    SubsonicLoginArgs args,
     CancellationToken cancellationToken
   ) {
-    if (!TryGetOrPromptRequired(io, parseResult.GetValue(hostOption), "Server Host: ", "Error: Server host is required.", out string host)) {
-      return;
+    if (!TryGetOrPromptRequired(io, args.Host, "Server Host: ", "Error: Server host is required.", out string host)) {
+      return 1;
     }
 
-    int port = GetOrPromptPort(io, parseResult.GetValue(portOption), 443);
+    string? scheme = args.Scheme?.Trim().ToLowerInvariant();
+    int defaultPort = scheme == "https" ? 443 : SubsonicConfig.Defaults.ServerPort;
+    int port = GetOrPromptPort(io, args.Port, defaultPort);
 
-    string? scheme = parseResult.GetValue(schemeOption);
     if (string.IsNullOrWhiteSpace(scheme)) {
       scheme = port == 443 ? "https" : "http";
     }
 
-    if (!TryGetOrPromptRequired(io, parseResult.GetValue(usernameOption), "Username: ", "Error: Username is required.", out string username)) {
-      return;
+    if (!TryGetOrPromptRequired(io, args.Username, "Username: ", "Error: Username is required.", out string username)) {
+      return 1;
     }
 
-    if (!TryGetOrPromptRequired(io, parseResult.GetValue(passwordOption), "Password: ", "Error: Password is required.", out string password, isSecret: true)) {
-      return;
+    if (!TryGetOrPromptRequired(io, args.Password, "Password: ", "Error: Password is required.", out string password, isSecret: true)) {
+      return 1;
     }
 
-    bool noVerify = parseResult.GetValue(noVerifyOption);
-    if (!noVerify) {
+    if (!args.NoVerify) {
       io.WriteLine("Connecting and verifying credentials...");
     }
 
     try {
-      await authService.LoginSubsonicAsync(host, port, scheme, username, password, useToken: true, verifyConnection: !noVerify, cancellationToken);
-      io.WriteLine("Success! Saved server settings to config.json and password to OS Keyring.");
+      await authService.LoginSubsonicAsync(host, port, scheme, username, password, args.UseToken, verifyConnection: !args.NoVerify, cancellationToken);
+      io.WriteLine("Success! Saved server settings to config.json and password to secure credential store.");
+      return 0;
     } catch (Exception ex) {
       io.WriteLine($"Error: {ex.Message}");
+      return 1;
     }
   }
 
-  private static async Task ExecuteSoundCloudLoginAsync(
+  private static async Task<int> ExecuteSoundCloudLoginAsync(
     IAuthService authService,
     IConsoleIO io,
-    ParseResult parseResult,
-    Option<string?> clientIdOption,
-    Option<string?> tokenOption,
+    string? clientIdInput,
+    string? tokenInput,
     CancellationToken cancellationToken
   ) {
-    string? clientId = GetOrPromptOptional(io, parseResult.GetValue(clientIdOption), "Client ID: ");
+    string? clientId = GetOrPromptOptional(io, clientIdInput, "Client ID: ");
 
-    if (!TryGetOrPromptRequired(io, parseResult.GetValue(tokenOption), "OAuth Auth Token: ", "Error: Authentication token is required.", out string token, isSecret: true)) {
-      return;
+    if (!TryGetOrPromptRequired(io, tokenInput, "OAuth Auth Token: ", "Error: Authentication token is required.", out string token, isSecret: true)) {
+      return 1;
     }
 
     try {
       await authService.LoginSoundCloudAsync(clientId ?? string.Empty, token, cancellationToken);
-      io.WriteLine("Success! Saved SoundCloud credentials to OS Keyring.");
+      io.WriteLine("Success! Saved SoundCloud credentials to secure credential store.");
+      return 0;
     } catch (Exception ex) {
       io.WriteLine($"Error: {ex.Message}");
+      return 1;
     }
   }
 
@@ -201,7 +223,7 @@ public static class AuthCommand {
     return string.IsNullOrWhiteSpace(input) ? null : input;
   }
 
-  private static int GetOrPromptPort(IConsoleIO io, int? currentPort, int defaultPort = 443) {
+  private static int GetOrPromptPort(IConsoleIO io, int? currentPort, int defaultPort = 80) {
     if (currentPort.HasValue) {
       return currentPort.Value;
     }
@@ -221,13 +243,13 @@ public static class AuthCommand {
       Description = "Delete the plaintext cookies file after successful import."
     };
 
-    Command importCmd = new("import-cookies", "Import YouTube Music cookies into OS Keyring and generate session tokens.");
+    Command importCmd = new("import-cookies", "Import YouTube Music cookies into secure credential store and generate session tokens.");
     importCmd.Arguments.Add(pathArg);
     importCmd.Options.Add(deleteOption);
 
     importCmd.SetAction(async (parseResult, cancellationToken) => {
       string? path = parseResult.GetValue(pathArg);
-      string displayPath = string.IsNullOrWhiteSpace(path) ? AuthService.DefaultCookiesPath : path;
+      string displayPath = string.IsNullOrWhiteSpace(path) ? SmocPaths.DefaultCookiesPath : path;
 
       bool deleteSource = parseResult.GetValue(deleteOption);
       if (!deleteSource && !io.IsInputRedirected) {
@@ -243,9 +265,11 @@ public static class AuthCommand {
         if (result.SourceDeleted) {
           io.WriteLine("Plaintext cookies file deleted.");
         }
-      } else {
-        io.WriteLine($"Import failed: {result.Message}");
+        return 0;
       }
+
+      io.WriteLine($"Import failed: {result.Message}");
+      return 1;
     });
 
     return importCmd;
@@ -256,6 +280,7 @@ public static class AuthCommand {
 
     statusCmd.SetAction(async (parseResult, cancellationToken) => {
       await ExecuteStatusAsync(authService, io, cancellationToken);
+      return 0;
     });
 
     return statusCmd;
@@ -274,24 +299,32 @@ public static class AuthCommand {
 
   private static Command CreateLogoutCommand(IAuthService authService, IConsoleIO io) {
     Argument<string> serviceArg = new("service") {
-      Description = "Service to log out of (subsonic, soundcloud, youtubemusic, or all)."
+      Description = "Service to log out of ('subsonic', 'soundcloud', 'youtube'/'ytm', or 'all').",
+      Arity = ArgumentArity.ZeroOrOne
     };
+    serviceArg.AcceptOnlyFromAmong("subsonic", "soundcloud", "youtube", "youtubemusic", "ytm", "all");
 
-    Command logoutCmd = new("logout", "Remove credentials from OS Keyring for a streaming service.");
+    Command logoutCmd = new("logout", "Remove credentials from secure storage for a streaming service.");
     logoutCmd.Arguments.Add(serviceArg);
 
     logoutCmd.SetAction(async (parseResult, cancellationToken) => {
       string service = parseResult.GetValue(serviceArg)?.Trim() ?? string.Empty;
       if (string.IsNullOrWhiteSpace(service)) {
-        io.WriteLine("Error: Service argument is required.");
-        return;
+        io.WriteLine("Error: Service argument is required. Supported services: subsonic, soundcloud, youtube, all.");
+        return 1;
       }
 
-      bool removed = await authService.LogoutAsync(service, cancellationToken);
-      if (removed) {
-        io.WriteLine($"Logged out of {service}. Credentials removed from OS Keyring.");
-      } else {
-        io.WriteLine($"No credentials found to remove for {service}.");
+      try {
+        bool removed = await authService.LogoutAsync(service, cancellationToken);
+        if (removed) {
+          io.WriteLine($"Logged out of {service}. Credentials removed from credential store.");
+        } else {
+          io.WriteLine($"No credentials found to remove for {service}.");
+        }
+        return 0;
+      } catch (ArgumentException ex) {
+        io.WriteLine($"Error: {ex.Message}");
+        return 1;
       }
     });
 
@@ -299,27 +332,37 @@ public static class AuthCommand {
   }
 
   private static Command CreateMigrateCommand(IAuthService authService, IConsoleIO io) {
-    Option<bool> noBackupOption = new("--no-backup") {
-      Description = "Delete plaintext files directly instead of renaming to .bak."
+    Option<bool> keepBackupOption = new("--keep-backup") {
+      Description = "Keep plaintext backup files (.bak) on disk instead of deleting them."
     };
 
-    Command migrateCmd = new("migrate", "Migrate plaintext passwords, tokens, and cookies to OS Keyring.");
-    migrateCmd.Options.Add(noBackupOption);
+    Command migrateCmd = new("migrate", "Migrate plaintext passwords, tokens, and cookies to secure credential store.");
+    migrateCmd.Options.Add(keepBackupOption);
 
     migrateCmd.SetAction(async (parseResult, cancellationToken) => {
-      bool backup = !parseResult.GetValue(noBackupOption);
+      bool keepBackup = parseResult.GetValue(keepBackupOption);
 
       io.WriteLine("Scanning for plaintext credentials to migrate...");
-      MigrationResult result = await authService.MigrateAsync(backup, cancellationToken);
+      MigrationResult result = await authService.MigrateAsync(backupPlaintextFiles: keepBackup, cancellationToken);
 
       if (result.MigratedItems.Count == 0 && result.CleanedFiles.Count == 0) {
+        if (result.Errors.Count > 0) {
+          WriteSection(io, "Warnings/Errors during migration:", "!", result.Errors);
+          return 1;
+        }
         io.WriteLine("No plaintext credentials found. All services are already using secure storage or unconfigured.");
-        return;
+        return 0;
       }
 
-      WriteSection(io, "Successfully migrated credentials to OS Keyring:", "-", result.MigratedItems);
+      WriteSection(io, "Successfully migrated credentials to secure credential store:", "-", result.MigratedItems);
       WriteSection(io, "Sanitized plaintext files:", "-", result.CleanedFiles);
       WriteSection(io, "Warnings/Errors during migration:", "!", result.Errors);
+
+      if (keepBackup && result.CleanedFiles.Count > 0) {
+        io.WriteLine("Warning: Plaintext backup files (.bak) were retained on disk. Remove them once you have verified authentication.");
+      }
+
+      return result.Errors.Count == 0 ? 0 : 1;
     });
 
     return migrateCmd;

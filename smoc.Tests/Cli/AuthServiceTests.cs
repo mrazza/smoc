@@ -43,9 +43,8 @@ public class AuthServiceTests : IDisposable {
   public async Task LoginSubsonicAsync_SavesCredentialsAndSanitizesConfig() {
     var service = CreateService();
 
-    bool result = await service.LoginSubsonicAsync("subsonic.example.com", 443, "https", "razza", "secretpass", useToken: true, verifyConnection: false, TestContext.Current.CancellationToken);
+    await service.LoginSubsonicAsync("subsonic.example.com", 443, "https", "razza", "secretpass", useToken: true, verifyConnection: false, TestContext.Current.CancellationToken);
 
-    Assert.True(result);
     string? storedPass = await _store.GetCredentialAsync(CredentialTargets.Subsonic, "razza", TestContext.Current.CancellationToken);
     Assert.Equal("secretpass", storedPass);
 
@@ -70,9 +69,8 @@ public class AuthServiceTests : IDisposable {
   public async Task LoginSoundCloudAsync_SavesCredentialsAndConfig() {
     var service = CreateService();
 
-    bool result = await service.LoginSoundCloudAsync("my-client-id", "my-auth-token", TestContext.Current.CancellationToken);
+    await service.LoginSoundCloudAsync("my-client-id", "my-auth-token", TestContext.Current.CancellationToken);
 
-    Assert.True(result);
     string? storedToken = await _store.GetCredentialAsync(CredentialTargets.SoundCloud, CredentialTargets.AccountAuthToken, TestContext.Current.CancellationToken);
     string? storedClientId = await _store.GetCredentialAsync(CredentialTargets.SoundCloud, CredentialTargets.AccountClientId, TestContext.Current.CancellationToken);
     Assert.Equal("my-auth-token", storedToken);
@@ -183,6 +181,12 @@ public class AuthServiceTests : IDisposable {
     Assert.True(loggedOutAll);
     Assert.Null(await _store.GetCredentialAsync(CredentialTargets.Subsonic, "razza", TestContext.Current.CancellationToken));
     Assert.Null(await _store.GetCredentialAsync(CredentialTargets.SoundCloud, CredentialTargets.AccountAuthToken, TestContext.Current.CancellationToken));
+  }
+
+  [Fact]
+  public async Task LogoutAsync_ThrowsOnUnknownService() {
+    var service = CreateService();
+    await Assert.ThrowsAsync<ArgumentException>(() => service.LogoutAsync("unknown_svc", TestContext.Current.CancellationToken));
   }
 
   [Fact]
