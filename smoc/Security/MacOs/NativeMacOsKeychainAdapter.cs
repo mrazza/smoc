@@ -51,8 +51,6 @@ internal sealed class NativeMacOsKeychainAdapter : IMacOsKeychainAdapter {
   [DllImport(SecurityFramework)]
   private static extern IntPtr SecClassCopyMatching();
 
-  private static IntPtr CreateCFString(string str) => CFStringCreateWithCharacters(IntPtr.Zero, str, str.Length);
-
   public async Task<string?> GetSecretAsync(string service, string account, CancellationToken cancellationToken) {
     if (!IsSupportedPlatform) {
       return null;
@@ -184,4 +182,6 @@ internal sealed class NativeMacOsKeychainAdapter : IMacOsKeychainAdapter {
       CFRelease(kSecAttrAccount);
     }
   }
+
+  private static IntPtr CreateCFString(string str) => CFStringCreateWithCharacters(IntPtr.Zero, str, str.Length);
 }

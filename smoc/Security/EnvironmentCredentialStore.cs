@@ -82,7 +82,7 @@ public partial class EnvironmentCredentialStore : ICredentialStore {
   /// <summary>
   /// Yields potential environment variable names in priority order for the given service and account.
   /// </summary>
-  public static IEnumerable<string> GetCandidateVariableNames(string service, string account) {
+  private static IEnumerable<string> GetCandidateVariableNames(string service, string account) {
     if (string.Equals(service, CredentialTargets.Subsonic, StringComparison.OrdinalIgnoreCase)) {
       yield return $"SMOC_SUBSONIC_{Sanitize(account)}_PASSWORD";
       yield return "SMOC_SUBSONIC_PASSWORD";
