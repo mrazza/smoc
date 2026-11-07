@@ -2,6 +2,7 @@ using System.Collections;
 using System.CommandLine;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
+using Smoc.Cli.Auth;
 using Smoc.Configuration;
 using Smoc.Services.Caching;
 using Smoc.Streaming;
@@ -35,6 +36,8 @@ public static class Program {
   /// </summary>
   public static async Task Main(string[] args) {
     RootCommand rootCommand = new RootCommand("Streaming Music over Console (SMoC)");
+
+    rootCommand.Subcommands.Add(AuthCommand.Create());
 
     Command generateTokensCommand = new Command("--gentokens", "Generate PO Token and Visitor Token for YouTube Music.");
     rootCommand.Subcommands.Add(generateTokensCommand);
@@ -70,6 +73,12 @@ public static class Program {
       ILogger logger = factory.CreateLogger("SMoC");
       Logging.Logger = logger;
       logger.LogInformation("SMoC starting...");
+
+      if (!string.IsNullOrEmpty(SubsonicConfig.Defaults.Password) ||
+          !string.IsNullOrEmpty(SoundCloudConfig.Defaults.AuthToken) ||
+          File.Exists(_cookiesPath)) {
+        logger.LogInformation("Plaintext credentials detected. Run 'smoc auth migrate' to securely store credentials in your OS Keyring.");
+      }
 
       application.Mouse.IsMouseDisabled = true;
       VimKeyBindings.AddNavigationKeyBindings(application.Keyboard.KeyBindings);
