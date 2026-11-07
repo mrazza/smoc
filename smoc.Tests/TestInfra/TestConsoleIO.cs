@@ -1,7 +1,7 @@
 using System.Text;
 using Smoc.Cli;
 
-namespace smoc.Tests.Cli;
+namespace smoc.Tests.TestInfra;
 
 /// <summary>
 /// In-memory implementation of <see cref="IConsoleIO"/> for unit testing.

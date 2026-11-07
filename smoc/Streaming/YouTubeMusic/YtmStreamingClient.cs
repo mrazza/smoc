@@ -259,18 +259,26 @@ public sealed class YtmStreamingClient : IStreamingClient {
   }
 
   /// <summary>
-  /// Parses cookies from the specified cookie file.
+  /// Parses cookies from the specified cookie string.
   /// </summary>
-  /// <param name="file">The path to the cookie file.</param>
+  /// <param name="cookieString">The raw cookie string.</param>
   /// <returns>A list of parsed cookies.</returns>
-  public static List<Cookie> GetCookiesFromFile(string file) {
-    string cookieString = File.ReadAllText(file);
+  public static List<Cookie> ParseCookies(string cookieString) {
     return cookieString
       .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
       .Select(x => x.Split('=', 2))
       .Where(parts => parts.Length == 2)
       .Select(parts => new Cookie(parts[0].Trim(), parts[1].Trim(), "/", ".youtube.com"))
       .ToList();
+  }
+
+  /// <summary>
+  /// Parses cookies from the specified cookie file.
+  /// </summary>
+  /// <param name="file">The path to the cookie file.</param>
+  /// <returns>A list of parsed cookies.</returns>
+  public static List<Cookie> GetCookiesFromFile(string file) {
+    return ParseCookies(File.ReadAllText(file));
   }
 
   /// <summary>

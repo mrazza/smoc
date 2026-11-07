@@ -43,12 +43,12 @@ public interface IAuthService {
   /// <summary>
   /// Imports YouTube Music cookies from a file into the credential store and generates session tokens.
   /// </summary>
-  /// <param name="cookieFilePath">Path to the cookies file.</param>
+  /// <param name="cookieFilePath">Optional path to the cookies file (defaults to configured cookies path if null or whitespace).</param>
   /// <param name="deleteSource">Whether to delete the plaintext cookies file after successful import.</param>
   /// <param name="cancellationToken">Cancellation token for the asynchronous operation.</param>
-  /// <returnsAn <see cref="ImportCookiesResult"/> containing the outcome details.</returns>
+  /// <returns>An <see cref="ImportCookiesResult"/> containing the outcome details.</returns>
   Task<ImportCookiesResult> ImportCookiesAsync(
-    string cookieFilePath,
+    string? cookieFilePath = null,
     bool deleteSource = false,
     CancellationToken cancellationToken = default
   );
