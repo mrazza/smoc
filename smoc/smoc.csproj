@@ -6,7 +6,6 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <WarningsAsErrors>Nullable</WarningsAsErrors>
-    <RuntimeIdentifier>linux-x64</RuntimeIdentifier>
 
     <Version>0.5.4</Version>
     <Authors>Matt Razza</Authors>
