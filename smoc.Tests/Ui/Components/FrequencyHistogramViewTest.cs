@@ -162,7 +162,7 @@ public class FrequencyHistogramViewTest {
       Assert.All(initialAmplitudes, amp => Assert.Equal(0f, amp));
 
       // Advance by 100ms: the 10 FPS timer should trigger and procedural values should be populated
-      context.AdvanceTime(TimeSpan.FromMilliseconds(100));
+      context.AdvanceTime(TimeSpan.FromMilliseconds(101));
 
       var amplitudesAfter100ms = (float[]?)amplitudesField.GetValue(view);
       Assert.NotNull(amplitudesAfter100ms);

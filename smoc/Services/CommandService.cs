@@ -1,3 +1,7 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
 namespace Smoc.Services;
 
 /// <summary>
@@ -12,6 +16,15 @@ public sealed class CommandService {
   public delegate void CommandHandler(string command, string args);
 
   private readonly Dictionary<string, CommandHandler> _commands = new();
+  private readonly Dictionary<string, CompletionHandler> _completers = new();
+
+  /// <summary>
+  /// Delegate for handling command completion.
+  /// </summary>
+  /// <param name="command">The command name.</param>
+  /// <param name="args">The arguments part of the command string.</param>
+  /// <returns>A list of possible completions.</returns>
+  public delegate IEnumerable<string> CompletionHandler(string command, string args);
 
   /// <summary>
   /// Registers a new command handler.
@@ -31,6 +44,7 @@ public sealed class CommandService {
   /// Unregisters a command handler.
   /// </summary>
   /// <param name="command">The command name to unregister.</param>
+  /// <exception cref="ArgumentException">Thrown if the command is not registered.</exception>
   public void UnregisterCommand(string command) {
     if (!_commands.Remove(command)) {
       throw new ArgumentException("Command not registered");
@@ -43,19 +57,6 @@ public sealed class CommandService {
   /// <returns>A collection of registered command names.</returns>
   public IReadOnlyCollection<string> GetRegisteredCommands() {
     return _commands.Keys.OrderBy(k => k, StringComparer.Ordinal).ToList();
-  }
-
-  /// <summary>
-  /// Gets command name completions that match the given prefix.
-  /// </summary>
-  /// <param name="prefix">The command prefix to search for.</param>
-  /// <returns>A list of matching command names sorted alphabetically.</returns>
-  public IReadOnlyList<string> GetCompletions(string prefix) {
-    prefix ??= string.Empty;
-    return _commands.Keys
-        .Where(k => k.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-        .OrderBy(k => k, StringComparer.Ordinal)
-        .ToList();
   }
 
   /// <summary>
@@ -76,6 +77,51 @@ public sealed class CommandService {
       return true;
     }
     return false;
+  }
+
+  /// <summary>
+  /// Registers a new completion handler.
+  /// </summary>
+  /// <param name="command">The command name.</param>
+  /// <param name="handler">The handler to callback when completions are requested.</param>
+  public void RegisterCompleter(string command, CompletionHandler handler) {
+    _completers[command] = handler;
+  }
+
+  /// <summary>
+  /// Unregisters a completion handler.
+  /// </summary>
+  /// <param name="command">The command name.</param>
+  public void UnregisterCompleter(string command) {
+    _completers.Remove(command);
+  }
+
+  /// <summary>
+  /// Gets completions for a given command line or prefix.
+  /// </summary>
+  /// <param name="command">The full command line string or command prefix.</param>
+  /// <returns>A list of possible completions.</returns>
+  public IReadOnlyList<string> GetCompletions(string? command) {
+    command ??= string.Empty;
+    var argCutoff = command.IndexOf('/');
+    var commandName = command;
+    if (argCutoff > 0) {
+      commandName = command[..argCutoff];
+    }
+    var args = argCutoff > 0 ? command[(argCutoff + 1)..] : string.Empty;
+
+    if (argCutoff >= 0 && _completers.TryGetValue(commandName, out var handler)) {
+      return handler(commandName, args).ToList();
+    }
+
+    if (argCutoff <= 0) {
+      return _commands.Keys
+          .Where(c => c.StartsWith(commandName, StringComparison.OrdinalIgnoreCase))
+          .OrderBy(k => k, StringComparer.Ordinal)
+          .ToList();
+    }
+
+    return [];
   }
 
   /// <summary>

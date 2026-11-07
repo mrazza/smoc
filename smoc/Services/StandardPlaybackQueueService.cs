@@ -12,7 +12,7 @@ namespace Smoc.Services;
 /// Service managing the playback queue, current song playback lifecycle, preloading, and audio state.
 /// </summary>
 public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
-  private readonly IAudioService _audioService;
+  private IAudioService _audioService;
   private readonly IMainWindow _mainWindow;
   private readonly IStreamingClient _streamingClient;
 
@@ -529,6 +529,33 @@ public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
   public void SeekForward(TimeSpan duration) {
     var targetPosition = CurrentTime + duration;
     SeekTo(targetPosition > Duration ? Duration : targetPosition);
+  }
+
+  /// <inheritdoc/>
+  public async Task SetAudioServiceAsync(IAudioService audioService) {
+    var wasPlaying = PlaybackState == PlaybackState.Playing;
+    var wasPaused = PlaybackState == PlaybackState.Paused;
+    var currentTime = CurrentTime;
+    var previousVolume = _audioService.Volume;
+
+    Stop();
+    _playbackService.Replace(null!);
+    _preloadedPlaybackService.Replace(null!);
+    _preloadingSong = null;
+    _preloadingTask = null;
+
+    var oldAudioService = _audioService;
+    _audioService = audioService;
+    _audioService.Volume = previousVolume;
+    oldAudioService?.Dispose();
+
+    if (_playbackQueue.Count > 0 && (wasPlaying || wasPaused)) {
+      await Play();
+      SeekTo(currentTime);
+      if (wasPaused) {
+        Pause();
+      }
+    }
   }
 
   /// <inheritdoc/>

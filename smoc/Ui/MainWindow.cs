@@ -1,12 +1,15 @@
+using Terminal.Gui.App;
+using Sharpcaster.Models;
 using System.Reflection;
 using Smoc.Configuration;
 using Smoc.Services;
 using Smoc.Services.Audio;
 using Smoc.Services.Audio.SoundFlow;
+using Smoc.Services.Audio.Cast;
+using Smoc.Services.Cast;
 using Smoc.Services.Streaming;
 using Smoc.Streaming;
 using Smoc.Ui.Models;
-using Terminal.Gui.App;
 using Terminal.Gui.Input;
 using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
@@ -36,6 +39,9 @@ public sealed class MainWindow : Runnable, IMainWindow {
   private readonly IPlaybackQueueService _playbackQueueService;
   private readonly CommandService _commandService;
   private readonly IPlaybackTrackingService _playbackTrackingService;
+  private readonly ICastDiscoveryService _castDiscoveryService;
+  private readonly IStreamingProxyService _streamingProxyService;
+  private readonly CancellationTokenSource _disposeCts = new();
   private readonly ISessionStateService _sessionStateService;
   private readonly EventHandler _processExitHandler;
   private readonly ConsoleCancelEventHandler _cancelKeyPressHandler;
@@ -67,6 +73,19 @@ public sealed class MainWindow : Runnable, IMainWindow {
       streamingClient,
       TimeSpan.FromSeconds(ListenHistoryConfig.Defaults.MinimumPositionSeconds),
       ListenHistoryConfig.Defaults.MinimumFraction);
+
+    _castDiscoveryService = new CastDiscoveryService();
+    _streamingProxyService = new StreamingProxyService();
+    _ = Task.Run(async () => {
+      try {
+        await _castDiscoveryService.StartDiscoveryAsync(_disposeCts.Token);
+      } catch (OperationCanceledException) {
+        // Normal cancellation
+      } catch (Exception ex) {
+        Logging.Error($"Initial Cast discovery error: {ex.Message}");
+      }
+    });
+
     if (ListenHistoryConfig.Defaults.Enabled) {
       _playbackQueueService.PositionChanged += (_, position) => {
         if (_playbackQueueService.CurrentSong is { } song) {
@@ -99,6 +118,67 @@ public sealed class MainWindow : Runnable, IMainWindow {
     });
     _commandService.RegisterCommand("devices", OnDevicesCommand);
     _commandService.RegisterCommand("device", OnDeviceCommand);
+
+    _commandService.RegisterCompleter("output", (_, args) => {
+      var devices = new List<string> { "local", "refresh" };
+      devices.AddRange(_castDiscoveryService.DiscoveredDevices
+        .Select(d => d.Name)
+        .Where(name => !string.IsNullOrWhiteSpace(name))!);
+      return devices.Where(d => d.StartsWith(args, StringComparison.OrdinalIgnoreCase));
+    });
+
+    _commandService.RegisterCommand("output", async (_, args) => {
+      try {
+        var parts = CommandService.GetArgs(args);
+        if (parts.Length == 0) {
+          await _castDiscoveryService.EnsureInitialDiscoveryCompletedAsync(_disposeCts.Token);
+          var devices = new List<string> { "local" };
+          devices.AddRange(_castDiscoveryService.DiscoveredDevices
+            .Select(d => d.Name)
+            .Where(name => !string.IsNullOrWhiteSpace(name))!);
+          _commandLine.DisplayError($"Available outputs: {string.Join(", ", devices)}");
+          return;
+        }
+
+        var target = parts[0];
+        if (target.Equals("refresh", StringComparison.OrdinalIgnoreCase)) {
+          _commandLine.DisplayError("Scanning for Cast devices...");
+          await _castDiscoveryService.ScanAsync(cancellationToken: _disposeCts.Token);
+          var refreshedDevices = new List<string> { "local" };
+          refreshedDevices.AddRange(_castDiscoveryService.DiscoveredDevices
+            .Select(d => d.Name)
+            .Where(name => !string.IsNullOrWhiteSpace(name))!);
+          _commandLine.DisplayError($"Available outputs: {string.Join(", ", refreshedDevices)}");
+          return;
+        }
+
+        if (target.Equals("local", StringComparison.OrdinalIgnoreCase)) {
+          await _playbackQueueService.SetAudioServiceAsync(new SoundFlowAudioService());
+          _commandLine.DisplayError("Switched to local output");
+        } else {
+          await _castDiscoveryService.EnsureInitialDiscoveryCompletedAsync(_disposeCts.Token);
+
+          var device = FindDevice(target);
+          if (device == null) {
+            _commandLine.DisplayError($"Scanning for '{target}'...");
+            await _castDiscoveryService.ScanAsync(TimeSpan.FromSeconds(2), _disposeCts.Token);
+            device = FindDevice(target);
+          }
+
+          if (device == null) {
+            _commandLine.DisplayError($"Device not found: {target}");
+            return;
+          }
+
+          var castService = new CastAudioService(device, _streamingProxyService);
+          await castService.ConnectAsync();
+          await _playbackQueueService.SetAudioServiceAsync(castService);
+          _commandLine.DisplayError($"Switched to {device.Name}");
+        }
+      } catch (Exception ex) {
+        _commandLine.DisplayError($"Output switch error: {ex.Message}");
+      }
+    });
 
     AddCommand(Command.HotKey, OnCommandLineHotKey);
     foreach (var key in CommandHotKeys) {
@@ -169,15 +249,34 @@ public sealed class MainWindow : Runnable, IMainWindow {
     }
   }
 
+  private ChromecastReceiver? FindDevice(string target) {
+    var devices = _castDiscoveryService.DiscoveredDevices;
+    var exactMatch = devices.FirstOrDefault(d =>
+      (!string.IsNullOrEmpty(d.Name) && d.Name.Equals(target, StringComparison.OrdinalIgnoreCase)) ||
+      (d.DeviceUri != null && d.DeviceUri.Host.Equals(target, StringComparison.OrdinalIgnoreCase)));
+    if (exactMatch != null) {
+      return exactMatch;
+    }
+
+    return devices.FirstOrDefault(d =>
+      !string.IsNullOrEmpty(d.Name) && d.Name.Contains(target, StringComparison.OrdinalIgnoreCase));
+  }
+
   protected override void Dispose(bool disposing) {
     if (disposing && !_disposed) {
       AppDomain.CurrentDomain.ProcessExit -= _processExitHandler;
       Console.CancelKeyPress -= _cancelKeyPressHandler;
       SaveSessionState();
       _disposed = true;
+      _disposeCts.Cancel();
+      _disposeCts.Dispose();
       _commandService.UnregisterCommand("q");
       _commandService.UnregisterCommand("devices");
       _commandService.UnregisterCommand("device");
+      _commandService.UnregisterCommand("output");
+      _commandService.UnregisterCompleter("output");
+      _castDiscoveryService.Dispose();
+      _streamingProxyService.Dispose();
       _playbackQueueService.Dispose();
     }
     base.Dispose(disposing);

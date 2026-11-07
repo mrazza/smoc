@@ -28,7 +28,8 @@ A terminal-based music player (TUI) for streaming services, currently supporting
 ## 🌟 Features
 
 - **TUI Interface**: Built with [Terminal.Gui](https://github.com/gui-cs/Terminal.Gui) for a rich console experience.
-- **Cross-Platform Audio**: Powered by [SoundFlow](https://github.com/LSXPrime/SoundFlow).
+- **Cross-Platform Audio**: Local playback powered by [SoundFlow](https://github.com/LSXPrime/SoundFlow).
+- **Google Cast Support**: Stream audio directly to Chromecast devices, Nest smart speakers, and Cast-enabled receivers on your local network using on-demand mDNS discovery and a built-in local streaming proxy.
 - **YouTube Music Integration**: Powered by [YouTubeMusicAPI](https://github.com/IcySnex/YouTubeMusicAPI). Search, stream, and manage your library.
 - **Subsonic API Integration**: Streaming client for any Subsonic-compatible server. For instance, [Navidrome](https://www.navidrome.org/), [Airsonic Advanced](https://github.com/airsonic-advanced/airsonic-advanced), [Gonic](https://github.com/sentriz/gonic), or [Madsonic](https://www.madsonic.org/).
 - **SoundCloud Integration**: Search and stream tracks, artists, and playlists from SoundCloud.
@@ -60,7 +61,7 @@ While most basic functionality is available and SMoC is totally usable, there's 
   - [x] Start Over
   - [ ] Repeat Track
   - [x] Volume (0–200% with Loudness Normalization)
-  - [x] Playback Device Selection
+  - [x] Playback Device Selection (Local & Google Cast)
   - [x] Gapless Playback (Next-Track Preloading)
   - [x] Session State Persistence
 - [ ] Queue
@@ -180,11 +181,24 @@ SMoC operates with a Vim-style command bar. Press `:` to enter command mode (sup
 | `:np`                    | View **Now Playing** screen                                           |
 | `:np-vis`                | Toggle real-time frequency visualizer in Now Playing                  |
 | `:np-vis-fps/<1-60>`     | Set real-time frequency visualizer refresh rate in FPS                |
+| `:output`                | List available audio output targets (local & Cast devices)            |
+| `:output/<device>`       | Switch output to a Cast device (name/IP), or `:output/local`          |
+| `:output/refresh`        | Perform an active on-demand mDNS scan for Cast devices                |
 | `:v/<0-200>`             | Set volume percentage (0–200%, e.g., `:v/80` or `:v/150`)             |
 | `:devices`               | List available audio playback devices (`*` marks the active device)   |
 | `:device/<name-or-idx>`  | Switch active audio output device by name, substring, or index        |
 | `/<query>`               | Incrementally filter the active table view (`Enter` keeps, `Esc` clears) |
 | `:q`                     | **Quit** application (automatically saves session state)              |
+
+### Audio Outputs & Casting
+
+SMoC supports switching audio output on the fly without interrupting your listening session:
+
+* **List outputs:** Enter `:output` to view all available local and networked Cast devices.
+* **Cast to a device:** Type `:output/Living Room` (or `:output/192.168.1.50`). Playback immediately transfers to the Chromecast device and resumes at the current track and position.
+* **Return to local audio:** Enter `:output/local` to switch back to local sound card playback.
+* **Rescan network:** If a device was recently powered on, enter `:output/refresh` to force an active mDNS probe.
+* **Tab-completion:** Typing `:output/` and pressing `Tab` automatically completes matching device names, `local`, and `refresh`.
 
 ### Playback Controls
 

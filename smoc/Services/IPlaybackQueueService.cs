@@ -1,4 +1,5 @@
 using Smoc.Streaming;
+using Smoc.Services.Audio;
 
 namespace Smoc.Services;
 
@@ -157,6 +158,12 @@ public interface IPlaybackQueueService : IDisposable {
   /// Seeks backward by a specified duration in the current track.
   /// </summary>
   void SeekBackward(TimeSpan duration);
+
+  /// <summary>
+  /// Sets the audio service to use for playback.
+  /// </summary>
+  /// <param name="audioService">The audio service to use.</param>
+  Task SetAudioServiceAsync(IAudioService audioService);
 
   /// <summary>
   /// Restores a previously saved playback session state without auto-starting playback.

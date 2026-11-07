@@ -1,4 +1,7 @@
+using System;
+using System.Linq;
 using Smoc.Services;
+using Smoc.Services.Util;
 using Smoc.Ui.Components;
 using Smoc.Ui.Models;
 using Terminal.Gui.App;
@@ -54,6 +57,11 @@ public sealed class CommandLine : View {
   /// Occurs when the filter is accepted in '/' mode.
   /// </summary>
   public event EventHandler<string>? FilterAccepted;
+
+  /// <summary>
+  /// Gets the current text entered in the command line text field.
+  /// </summary>
+  public string CommandText => _commandTextField.Text;
 
   /// <summary>
   /// Occurs when the command input is cancelled (e.g. via Esc).
@@ -250,10 +258,6 @@ public sealed class CommandLine : View {
 
     if (_tabCompletions == null) {
       var input = _commandTextField.Text.TrimStart(':');
-      if (input.Contains('/')) {
-        return true;
-      }
-
       _tabCompletions = CommandService.GetCompletions(input).ToList();
       if (_tabCompletions.Count == 0) {
         return true;
@@ -268,7 +272,13 @@ public sealed class CommandLine : View {
       }
     }
 
-    _commandTextField.Text = $":{_tabCompletions[_tabCompletionIndex]}";
+    var text = _commandTextField.Text.TrimStart(':');
+    var slashIndex = text.IndexOf('/');
+    if (slashIndex >= 0) {
+      _commandTextField.Text = $":{text[..(slashIndex + 1)]}{_tabCompletions[_tabCompletionIndex]}";
+    } else {
+      _commandTextField.Text = $":{_tabCompletions[_tabCompletionIndex]}";
+    }
     _commandTextField.InsertionPoint = _commandTextField.Text.Length;
     return true;
   }
