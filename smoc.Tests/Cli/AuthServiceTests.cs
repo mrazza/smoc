@@ -118,6 +118,20 @@ public class AuthServiceTests : IDisposable {
   }
 
   [Fact]
+  public async Task ImportCookiesAsync_DefaultsToConfiguredCookiesPath_WhenPathOmittedOrWhitespace() {
+    var service = CreateService();
+    string testCookies = "SID=defaultpath123; HSID=defaultpath456;";
+    await File.WriteAllTextAsync(_cookiesPath, testCookies, TestContext.Current.CancellationToken);
+
+    var result = await service.ImportCookiesAsync(null, deleteSource: false, TestContext.Current.CancellationToken);
+
+    Assert.True(result.Success);
+    Assert.Equal(2, result.CookieCount);
+    string? storedCookies = await _store.GetCredentialAsync(CredentialTargets.YouTubeMusic, CredentialTargets.AccountCookies, TestContext.Current.CancellationToken);
+    Assert.Equal(testCookies, storedCookies);
+  }
+
+  [Fact]
   public async Task GetStatusAsync_ReturnsStatusAcrossServices() {
     var service = CreateService();
     await _store.SetCredentialAsync(CredentialTargets.Subsonic, "razza", "secretpass", TestContext.Current.CancellationToken);

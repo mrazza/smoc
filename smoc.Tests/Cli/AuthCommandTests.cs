@@ -1,6 +1,7 @@
 using System.CommandLine;
 using Smoc.Cli.Auth;
 using Smoc.Security;
+using smoc.Tests.TestInfra;
 using Xunit;
 
 namespace smoc.Tests.Cli;
@@ -101,6 +102,19 @@ public class AuthCommandTests : IDisposable {
     Assert.Contains("Success:", _console.Output);
     Assert.Contains("Plaintext cookies file deleted.", _console.Output);
     Assert.Equal("TEST_COOKIE=123;", await _store.GetCredentialAsync(CredentialTargets.YouTubeMusic, CredentialTargets.AccountCookies, TestContext.Current.CancellationToken));
+  }
+
+  [Fact]
+  public async Task AuthImportCookies_DefaultPath_Succeeds() {
+    await File.WriteAllTextAsync(_cookiesPath, "TEST_COOKIE=default_path;", TestContext.Current.CancellationToken);
+    RootCommand root = new() { _authCommand };
+
+    int exitCode = await root.Parse("auth import-cookies --delete-source").InvokeAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+    Assert.Equal(0, exitCode);
+    Assert.Contains("Importing cookies from", _console.Output);
+    Assert.Contains("Success:", _console.Output);
+    Assert.Equal("TEST_COOKIE=default_path;", await _store.GetCredentialAsync(CredentialTargets.YouTubeMusic, CredentialTargets.AccountCookies, TestContext.Current.CancellationToken));
   }
 
   [Fact]
