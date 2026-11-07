@@ -110,4 +110,52 @@ public class CompositeCredentialStoreTests {
     await Assert.ThrowsAsync<InvalidOperationException>(() =>
         composite.DeleteCredentialAsync("svc", "acct", TestContext.Current.CancellationToken));
   }
+
+  [Fact]
+  public async Task Composite_GetAsync_ThrowsWhenAllStoresThrowException() {
+    var failingStore1 = new Mock<ICredentialStore>();
+    failingStore1.Setup(s => s.IsAvailableAsync(It.IsAny<CancellationToken>())).ReturnsAsync(true);
+    failingStore1.Setup(s => s.GetCredentialAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                 .ThrowsAsync(new InvalidOperationException("Store 1 failed"));
+
+    var failingStore2 = new Mock<ICredentialStore>();
+    failingStore2.Setup(s => s.IsAvailableAsync(It.IsAny<CancellationToken>())).ReturnsAsync(true);
+    failingStore2.Setup(s => s.GetCredentialAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                 .ThrowsAsync(new InvalidOperationException("Store 2 failed"));
+
+    var composite = new CompositeCredentialStore(failingStore1.Object, failingStore2.Object);
+    await Assert.ThrowsAsync<AggregateException>(() =>
+        composite.GetCredentialAsync("svc", "acct", TestContext.Current.CancellationToken));
+  }
+
+  [Fact]
+  public async Task Composite_GetAsync_ReturnsNullWhenOneStoreSucceedsWithNullEvenIfAnotherStoreThrows() {
+    var failingStore = new Mock<ICredentialStore>();
+    failingStore.Setup(s => s.IsAvailableAsync(It.IsAny<CancellationToken>())).ReturnsAsync(true);
+    failingStore.Setup(s => s.GetCredentialAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ThrowsAsync(new InvalidOperationException("Store 1 failed"));
+
+    var emptyStore = new InMemoryCredentialStore(); // Returns null for unset credentials
+
+    var composite = new CompositeCredentialStore(failingStore.Object, emptyStore);
+    string? result = await composite.GetCredentialAsync("svc", "acct", TestContext.Current.CancellationToken);
+
+    Assert.Null(result);
+  }
+
+  [Fact]
+  public async Task Composite_GetAsync_ReturnsValueWhenOneStoreSucceedsEvenIfFirstStoreThrows() {
+    var failingStore = new Mock<ICredentialStore>();
+    failingStore.Setup(s => s.IsAvailableAsync(It.IsAny<CancellationToken>())).ReturnsAsync(true);
+    failingStore.Setup(s => s.GetCredentialAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .ThrowsAsync(new InvalidOperationException("Store 1 failed"));
+
+    var populatedStore = new InMemoryCredentialStore();
+    await populatedStore.SetCredentialAsync("svc", "acct", "secret_value", TestContext.Current.CancellationToken);
+
+    var composite = new CompositeCredentialStore(failingStore.Object, populatedStore);
+    string? result = await composite.GetCredentialAsync("svc", "acct", TestContext.Current.CancellationToken);
+
+    Assert.Equal("secret_value", result);
+  }
 }

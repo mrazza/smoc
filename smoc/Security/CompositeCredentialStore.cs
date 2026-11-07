@@ -35,20 +35,32 @@ public sealed class CompositeCredentialStore : ICredentialStore {
     ArgumentNullException.ThrowIfNull(service);
     ArgumentNullException.ThrowIfNull(account);
 
+    bool storeQueried = false;
+    List<Exception>? exceptions = null;
+
     foreach (ICredentialStore store in Stores) {
       cancellationToken.ThrowIfCancellationRequested();
       try {
         if (await store.IsAvailableAsync(cancellationToken)) {
           string? credential = await store.GetCredentialAsync(service, account, cancellationToken);
+          storeQueried = true;
           if (!string.IsNullOrEmpty(credential)) {
             return credential;
           }
         }
       } catch (OperationCanceledException) {
         throw;
-      } catch {
-        // Fall through to next available store
+      } catch (Exception ex) {
+        (exceptions ??= new List<Exception>()).Add(ex);
       }
+    }
+
+    if (!storeQueried && exceptions != null && exceptions.Count > 0) {
+      if (exceptions.Count == 1) {
+        throw new InvalidOperationException($"Failed to retrieve credential for service '{service}' and account '{account}'.", exceptions[0]);
+      }
+
+      throw new AggregateException($"Failed to retrieve credential for service '{service}' and account '{account}': all attempted credential stores failed.", exceptions);
     }
 
     return null;
@@ -60,6 +72,8 @@ public sealed class CompositeCredentialStore : ICredentialStore {
     ArgumentNullException.ThrowIfNull(account);
     ArgumentNullException.ThrowIfNull(secret);
 
+    List<Exception>? exceptions = null;
+
     foreach (ICredentialStore store in Stores) {
       cancellationToken.ThrowIfCancellationRequested();
       try {
@@ -69,9 +83,17 @@ public sealed class CompositeCredentialStore : ICredentialStore {
         }
       } catch (OperationCanceledException) {
         throw;
-      } catch {
-        // Try next store if primary failed
+      } catch (Exception ex) {
+        (exceptions ??= new List<Exception>()).Add(ex);
       }
+    }
+
+    if (exceptions != null && exceptions.Count > 0) {
+      if (exceptions.Count == 1) {
+        throw new InvalidOperationException($"Failed to save credential for service '{service}' and account '{account}'.", exceptions[0]);
+      }
+
+      throw new AggregateException($"Failed to save credential for service '{service}' and account '{account}': all attempted credential stores failed.", exceptions);
     }
 
     throw new InvalidOperationException($"Failed to save credential for service '{service}' and account '{account}': no available credential store succeeded.");
@@ -83,6 +105,8 @@ public sealed class CompositeCredentialStore : ICredentialStore {
     ArgumentNullException.ThrowIfNull(account);
 
     bool deleted = false;
+    List<Exception>? exceptions = null;
+
     foreach (ICredentialStore store in Stores) {
       cancellationToken.ThrowIfCancellationRequested();
       try {
@@ -92,12 +116,20 @@ public sealed class CompositeCredentialStore : ICredentialStore {
         }
       } catch (OperationCanceledException) {
         throw;
-      } catch {
-        // Continue deleting from remaining stores
+      } catch (Exception ex) {
+        (exceptions ??= new List<Exception>()).Add(ex);
       }
     }
 
     if (!deleted) {
+      if (exceptions != null && exceptions.Count > 0) {
+        if (exceptions.Count == 1) {
+          throw new InvalidOperationException($"Failed to delete credential for service '{service}' and account '{account}'.", exceptions[0]);
+        }
+
+        throw new AggregateException($"Failed to delete credential for service '{service}' and account '{account}': all attempted credential stores failed.", exceptions);
+      }
+
       throw new InvalidOperationException($"Failed to delete credential for service '{service}' and account '{account}': no available credential store succeeded.");
     }
   }

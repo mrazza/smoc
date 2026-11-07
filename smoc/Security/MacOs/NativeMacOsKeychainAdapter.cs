@@ -10,6 +10,7 @@ internal sealed class NativeMacOsKeychainAdapter : IMacOsKeychainAdapter {
   private const string SecurityFramework = "/System/Library/Frameworks/Security.framework/Security";
   private const string CoreFoundationFramework = "/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation";
 
+  /// <inheritdoc />
   public bool IsSupportedPlatform => RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
 
   [DllImport(SecurityFramework)]
@@ -51,6 +52,7 @@ internal sealed class NativeMacOsKeychainAdapter : IMacOsKeychainAdapter {
   [DllImport(SecurityFramework)]
   private static extern IntPtr SecClassCopyMatching();
 
+  /// <inheritdoc />
   public async Task<string?> GetSecretAsync(string service, string account, CancellationToken cancellationToken) {
     if (!IsSupportedPlatform) {
       return null;
@@ -102,6 +104,7 @@ internal sealed class NativeMacOsKeychainAdapter : IMacOsKeychainAdapter {
     }
   }
 
+  /// <inheritdoc />
   public async Task SetSecretAsync(string service, string account, string secret, CancellationToken cancellationToken) {
     if (!IsSupportedPlatform) {
       throw new PlatformNotSupportedException("macOS Keychain is only supported on macOS.");
@@ -153,6 +156,7 @@ internal sealed class NativeMacOsKeychainAdapter : IMacOsKeychainAdapter {
     }
   }
 
+  /// <inheritdoc />
   public async Task DeleteSecretAsync(string service, string account, CancellationToken cancellationToken) {
     if (!IsSupportedPlatform) {
       return;

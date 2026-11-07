@@ -41,13 +41,16 @@ internal sealed class NativeWindowsCredentialAdapter : IWindowsCredentialAdapter
   [DllImport("advapi32.dll", EntryPoint = "CredFree", SetLastError = true)]
   private static extern void CredFree(IntPtr buffer);
 
+  /// <inheritdoc />
   public bool IsSupportedPlatform => RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
 
+  /// <inheritdoc />
   public string CredentialsDirectory => Path.Combine(
       Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
       "smoc",
       "credentials");
 
+  /// <inheritdoc />
   public bool ReadCredential(string target, out string? secret) {
     secret = null;
     if (!IsSupportedPlatform) {
@@ -71,6 +74,7 @@ internal sealed class NativeWindowsCredentialAdapter : IWindowsCredentialAdapter
     return false;
   }
 
+  /// <inheritdoc />
   public bool WriteCredential(string target, string userName, string secret) {
     if (!IsSupportedPlatform) {
       return false;
@@ -95,6 +99,7 @@ internal sealed class NativeWindowsCredentialAdapter : IWindowsCredentialAdapter
     }
   }
 
+  /// <inheritdoc />
   public bool DeleteCredential(string target) {
     if (!IsSupportedPlatform) {
       return false;
@@ -103,10 +108,12 @@ internal sealed class NativeWindowsCredentialAdapter : IWindowsCredentialAdapter
     return CredDelete(target, CRED_TYPE_GENERIC, 0);
   }
 
+  /// <inheritdoc />
   public byte[] ProtectData(byte[] userData) {
     return ProtectedData.Protect(userData, optionalEntropy: null, DataProtectionScope.CurrentUser);
   }
 
+  /// <inheritdoc />
   public byte[] UnprotectData(byte[] encryptedData) {
     return ProtectedData.Unprotect(encryptedData, optionalEntropy: null, DataProtectionScope.CurrentUser);
   }
