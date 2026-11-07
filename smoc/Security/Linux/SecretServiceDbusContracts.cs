@@ -1,8 +1,5 @@
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Tmds.DBus;
-
-[assembly: InternalsVisibleTo(Tmds.DBus.Connection.DynamicAssemblyName)]
 
 namespace Smoc.Security.Linux;
 
