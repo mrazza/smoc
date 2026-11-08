@@ -14,6 +14,10 @@ using Xunit.Sdk;
 
 namespace smoc.Tests.Ui;
 
+/// <summary>
+/// Unit tests for <see cref="ArtistView"/>.
+/// </summary>
+[Collection("SmocConfigurationTests")]
 public class ArtistViewTest {
   private readonly Mock<IStreamingClient> _mockStreamingClient;
   private readonly Mock<IPlaybackQueueService> _mockPlaybackQueue;

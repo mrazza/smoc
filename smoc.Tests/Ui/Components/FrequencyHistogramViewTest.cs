@@ -12,6 +12,7 @@ using Terminal.Gui.Time;
 /// <summary>
 /// Unit tests for <see cref="FrequencyHistogramView"/> verifying rendering, mapping, and state changes.
 /// </summary>
+[Collection("SmocConfigurationTests")]
 public class FrequencyHistogramViewTest {
   private readonly Mock<IPlaybackQueueService> _mockPlaybackQueue;
   private readonly ScreenshotDiffer _screenshotDiffer;
@@ -31,19 +32,19 @@ public class FrequencyHistogramViewTest {
 
   private AppTestHelper NewVisualizerContext(int width = 40, int height = 10, int? startEpochOffsetMs = null) {
     var context = NewContext(width, height);
-    if (startEpochOffsetMs.HasValue) {
-      (context.TimeProvider as VirtualTimeProvider)?.SetTime(DateTime.UnixEpoch.AddMilliseconds(startEpochOffsetMs.Value));
-    }
     var view = NewVisualizer(context.TimeProvider);
     view.Visible = false; // Start invisible so that OnVisibleChanged fires when context is active
     view.Width = Terminal.Gui.ViewBase.Dim.Fill();
     view.Height = Terminal.Gui.ViewBase.Dim.Fill();
     context.AddAndLayout(view);
     
-    // Set visible inside the running main loop so the timer successfully registers with App
+    // Set simulated time and visibility inside the running main loop so the timer registers at the expected timestamp
     context.Then((_) => {
+      if (startEpochOffsetMs.HasValue) {
+        (context.TimeProvider as VirtualTimeProvider)?.SetTime(DateTime.UnixEpoch.AddMilliseconds(startEpochOffsetMs.Value));
+      }
       view.Visible = true;
-      context.App!.TopRunnableView!.Layout();
+      context.App!.LayoutAndDraw(true);
     });
     return context;
   }
@@ -140,8 +141,6 @@ public class FrequencyHistogramViewTest {
 
       // Create a visualizer context inline
       using var context = NewContext(40, 10);
-      (context.TimeProvider as VirtualTimeProvider)?.SetTime(DateTime.UnixEpoch.AddMilliseconds(1000.0));
-
       var view = NewVisualizer(context.TimeProvider);
       view.Visible = false;
       view.Width = Terminal.Gui.ViewBase.Dim.Fill();
@@ -149,23 +148,34 @@ public class FrequencyHistogramViewTest {
       context.AddAndLayout(view);
 
       context.Then((_) => {
+        (context.TimeProvider as VirtualTimeProvider)?.SetTime(DateTime.UnixEpoch.AddMilliseconds(1000.0));
         view.Visible = true;
-        context.App!.TopRunnableView!.Layout();
+        context.App!.LayoutAndDraw(true);
       });
 
       var amplitudesField = typeof(FrequencyHistogramView).GetField("_amplitudes", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
       Assert.NotNull(amplitudesField);
 
+      float[] GetAmplitudesSnapshot() {
+        float[]? snapshot = null;
+        context.Then((_) => {
+          var current = (float[]?)amplitudesField.GetValue(view);
+          Assert.NotNull(current);
+          snapshot = (float[])current.Clone();
+        });
+        Assert.NotNull(snapshot);
+        return snapshot;
+      }
+
       // Initially, amplitudes are uninitialized/all zero
-      var initialAmplitudes = (float[]?)amplitudesField.GetValue(view);
-      Assert.NotNull(initialAmplitudes);
+      var initialAmplitudes = GetAmplitudesSnapshot();
+      Assert.NotEmpty(initialAmplitudes);
       Assert.All(initialAmplitudes, amp => Assert.Equal(0f, amp));
 
       // Advance by 100ms: the 10 FPS timer should trigger and procedural values should be populated
       context.AdvanceTime(TimeSpan.FromMilliseconds(100));
 
-      var amplitudesAfter100ms = (float[]?)amplitudesField.GetValue(view);
-      Assert.NotNull(amplitudesAfter100ms);
+      var amplitudesAfter100ms = GetAmplitudesSnapshot();
       Assert.Contains(amplitudesAfter100ms, amp => amp > 0f);
 
       // Now change the configuration FPS dynamically to 2 FPS (500ms interval)
@@ -176,22 +186,20 @@ public class FrequencyHistogramViewTest {
       context.AdvanceTime(TimeSpan.FromMilliseconds(101));
 
       // Copy the amplitudes to compare later
-      var amplitudesAfter200ms = (float[]?)amplitudesField.GetValue(view);
-      Assert.NotNull(amplitudesAfter200ms);
-      var copyAmplitudes = (float[])amplitudesAfter200ms.Clone();
+      var copyAmplitudes = GetAmplitudesSnapshot();
 
       // Since the new 2 FPS timer has a 500ms interval starting at t = 200ms,
       // advancing by another 100ms (to t = 300ms) should NOT trigger any update.
       context.AdvanceTime(TimeSpan.FromMilliseconds(100));
 
-      var amplitudesAfter300ms = (float[]?)amplitudesField.GetValue(view);
+      var amplitudesAfter300ms = GetAmplitudesSnapshot();
       Assert.Equal(copyAmplitudes, amplitudesAfter300ms);
 
       // Advancing by another 400ms (to t = 700ms, which is 500ms after the recreation at t = 200ms)
       // should trigger the new 2 FPS timer.
       context.AdvanceTime(TimeSpan.FromMilliseconds(400));
 
-      var amplitudesAfter700ms = (float[]?)amplitudesField.GetValue(view);
+      var amplitudesAfter700ms = GetAmplitudesSnapshot();
       // Frequencies should have moved/updated from the wave procedural generator
       Assert.NotEqual(copyAmplitudes, amplitudesAfter700ms);
     } finally {

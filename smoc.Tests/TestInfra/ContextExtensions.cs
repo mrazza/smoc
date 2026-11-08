@@ -31,8 +31,10 @@ public static class ContextExtensions {
   /// <param name="timeSpan">The time to advance.</param>
   /// <returns>The test context.</returns>
   public static AppTestHelper AdvanceTime(this AppTestHelper context, TimeSpan timeSpan) {
-    (context.TimeProvider as VirtualTimeProvider)?.Advance(timeSpan);
-    return context.WaitIteration();
+    return context.WaitIteration(app => {
+      (context.TimeProvider as VirtualTimeProvider)?.Advance(timeSpan);
+      app.TimedEvents?.RunTimers();
+    }).WaitIteration();
   }
 
   /// <summary>
