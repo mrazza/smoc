@@ -5,11 +5,6 @@ namespace Smoc.Security.Windows;
 /// </summary>
 internal interface IWindowsCredentialAdapter {
   /// <summary>
-  /// Gets whether Windows Credential Manager and DPAPI are supported on the current operating system.
-  /// </summary>
-  bool IsSupportedPlatform { get; }
-
-  /// <summary>
   /// Reads a credential from Windows Credential Manager.
   /// </summary>
   bool ReadCredential(string target, out string? secret);
@@ -23,11 +18,6 @@ internal interface IWindowsCredentialAdapter {
   /// Deletes a credential from Windows Credential Manager.
   /// </summary>
   bool DeleteCredential(string target);
-
-  /// <summary>
-  /// Checks whether a DPAPI encrypted secret payload exists for the target.
-  /// </summary>
-  bool HasDpapiSecret(string target);
 
   /// <summary>
   /// Reads and decrypts a DPAPI encrypted secret payload.

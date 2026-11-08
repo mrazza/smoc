@@ -18,6 +18,7 @@ public sealed class WindowsCredentialManagerCredentialStore : ICredentialStore {
   /// <summary>
   /// Initializes a new instance of <see cref="WindowsCredentialManagerCredentialStore"/> using native Windows APIs.
   /// </summary>
+  /// <exception cref="PlatformNotSupportedException">Thrown when not running on Windows.</exception>
   public WindowsCredentialManagerCredentialStore() {
     if (!OperatingSystem.IsWindows()) {
       throw new PlatformNotSupportedException("Windows Credential Manager is only supported on Windows.");
@@ -40,15 +41,12 @@ public sealed class WindowsCredentialManagerCredentialStore : ICredentialStore {
     ArgumentNullException.ThrowIfNull(account);
     cancellationToken.ThrowIfCancellationRequested();
 
-    if (!_adapter.IsSupportedPlatform) {
-      return null;
-    }
-
     string target = FormatTarget(service, account);
 
     // 1. Check if a DPAPI encrypted payload exists for large payloads
-    if (_adapter.HasDpapiSecret(target)) {
-      return await _adapter.ReadDpapiSecretAsync(target, cancellationToken);
+    string? dpapiSecret = await _adapter.ReadDpapiSecretAsync(target, cancellationToken);
+    if (dpapiSecret != null) {
+      return dpapiSecret;
     }
 
     // 2. Query Windows Credential Manager
@@ -65,10 +63,6 @@ public sealed class WindowsCredentialManagerCredentialStore : ICredentialStore {
     ArgumentNullException.ThrowIfNull(account);
     ArgumentNullException.ThrowIfNull(secret);
     cancellationToken.ThrowIfCancellationRequested();
-
-    if (!_adapter.IsSupportedPlatform) {
-      throw new PlatformNotSupportedException("Windows Credential Manager is only supported on Windows.");
-    }
 
     byte[] secretBytes = Encoding.UTF8.GetBytes(secret);
     string target = FormatTarget(service, account);
@@ -98,10 +92,6 @@ public sealed class WindowsCredentialManagerCredentialStore : ICredentialStore {
     ArgumentNullException.ThrowIfNull(account);
     cancellationToken.ThrowIfCancellationRequested();
 
-    if (!_adapter.IsSupportedPlatform) {
-      return Task.CompletedTask;
-    }
-
     string target = FormatTarget(service, account);
     _adapter.DeleteCredential(target);
     _adapter.DeleteDpapiSecret(target);
@@ -111,7 +101,7 @@ public sealed class WindowsCredentialManagerCredentialStore : ICredentialStore {
   /// <inheritdoc />
   public Task<bool> IsAvailableAsync(CancellationToken cancellationToken = default) {
     cancellationToken.ThrowIfCancellationRequested();
-    return Task.FromResult(_adapter.IsSupportedPlatform);
+    return Task.FromResult(true);
   }
 
   private static string FormatTarget(string service, string account) => $"{service}:{account}";

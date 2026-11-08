@@ -92,7 +92,7 @@ public sealed partial class EnvironmentCredentialStore : ICredentialStore {
     } else if (string.Equals(service, CredentialTargets.SoundCloud, StringComparison.OrdinalIgnoreCase)) {
       if (string.Equals(account, CredentialTargets.AccountClientId, StringComparison.OrdinalIgnoreCase)) {
         yield return "SMOC_SOUNDCLOUD_CLIENT_ID";
-      } else {
+      } else if (string.Equals(account, CredentialTargets.AccountAuthToken, StringComparison.OrdinalIgnoreCase)) {
         yield return "SMOC_SOUNDCLOUD_AUTH_TOKEN";
       }
     } else if (string.Equals(service, CredentialTargets.YouTubeMusic, StringComparison.OrdinalIgnoreCase)) {

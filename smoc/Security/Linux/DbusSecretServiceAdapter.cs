@@ -8,16 +8,12 @@ namespace Smoc.Security.Linux;
 /// Default implementation of <see cref="ISecretServiceAdapter"/> using FreeDesktop Secret Service over D-Bus.
 /// </summary>
 internal sealed class DbusSecretServiceAdapter : ISecretServiceAdapter, IDisposable {
+  private static readonly ObjectPath NoPromptPath = new("/");
+
   private readonly SemaphoreSlim _gate = new(1, 1);
   private Connection? _connection;
   private ObjectPath? _sessionPath;
   private bool _disposed;
-
-  /// <summary>
-  /// Initializes a new instance of the <see cref="DbusSecretServiceAdapter"/> class.
-  /// </summary>
-  public DbusSecretServiceAdapter() {
-  }
 
   /// <inheritdoc />
   public async Task<bool> IsAvailableAsync(CancellationToken cancellationToken) {
@@ -34,7 +30,10 @@ internal sealed class DbusSecretServiceAdapter : ISecretServiceAdapter, IDisposa
       // If not yet active, attempt to open a session to trigger D-Bus activation (e.g. gnome-keyring / KWallet)
       await GetSessionPathAsync(connection, cancellationToken);
       return true;
+    } catch (OperationCanceledException) {
+      throw;
     } catch {
+      ResetConnectionAndSession();
       return false;
     }
   }
@@ -53,7 +52,12 @@ internal sealed class DbusSecretServiceAdapter : ISecretServiceAdapter, IDisposa
 
       ObjectPath[] items = unlocked;
       if (items.Length == 0 && locked.Length > 0) {
-        var (unlockedItems, _) = await serviceProxy.UnlockAsync(locked);
+        var (unlockedItems, prompt) = await serviceProxy.UnlockAsync(locked);
+        if (unlockedItems.Length == 0 && IsPromptRequired(prompt)) {
+          throw new InvalidOperationException(
+              $"Failed to retrieve secret for service '{service}' and account '{account}': the Secret Service keyring is locked.");
+        }
+
         items = unlockedItems;
       }
 
@@ -68,7 +72,7 @@ internal sealed class DbusSecretServiceAdapter : ISecretServiceAdapter, IDisposa
 
       return null;
     } catch {
-      ResetSession();
+      ResetConnectionAndSession();
       throw;
     }
   }
@@ -81,7 +85,11 @@ internal sealed class DbusSecretServiceAdapter : ISecretServiceAdapter, IDisposa
 
       var serviceProxy = connection.CreateProxy<SecretServiceDbusContracts.ISecretService>(
           SecretServiceDbusContracts.ServiceName, SecretServiceDbusContracts.ServicePath);
-      await serviceProxy.UnlockAsync([SecretServiceDbusContracts.DefaultCollectionPath]);
+      var (unlockedCollections, unlockPrompt) = await serviceProxy.UnlockAsync([SecretServiceDbusContracts.DefaultCollectionPath]);
+      if (unlockedCollections.Length == 0 && IsPromptRequired(unlockPrompt)) {
+        throw new InvalidOperationException(
+            $"Failed to save secret for service '{service}' and account '{account}': the Secret Service keyring collection is locked.");
+      }
 
       var collectionProxy = connection.CreateProxy<SecretServiceDbusContracts.ISecretCollection>(
           SecretServiceDbusContracts.ServiceName, SecretServiceDbusContracts.DefaultCollectionPath);
@@ -99,12 +107,13 @@ internal sealed class DbusSecretServiceAdapter : ISecretServiceAdapter, IDisposa
         ContentType = "text/plain; charset=utf-8"
       };
 
-      var (item, _) = await collectionProxy.CreateItemAsync(properties, secretStruct, replace: true);
-      if (item == new ObjectPath("/")) {
-        throw new InvalidOperationException($"Failed to create secret item for service '{service}' and account '{account}': keyring collection is locked or rejected item creation.");
+      var (item, createPrompt) = await collectionProxy.CreateItemAsync(properties, secretStruct, replace: true);
+      if (item == NoPromptPath || IsPromptRequired(createPrompt)) {
+        throw new InvalidOperationException(
+            $"Failed to create secret item for service '{service}' and account '{account}': keyring collection is locked or rejected item creation.");
       }
     } catch {
-      ResetSession();
+      ResetConnectionAndSession();
       throw;
     }
   }
@@ -120,13 +129,28 @@ internal sealed class DbusSecretServiceAdapter : ISecretServiceAdapter, IDisposa
       var attributes = CreateAttributes(service, account);
       var (unlocked, locked) = await serviceProxy.SearchItemsAsync(attributes);
 
-      foreach (ObjectPath itemPath in unlocked.Concat(locked)) {
+      ObjectPath[] unlockedLocked = Array.Empty<ObjectPath>();
+      if (locked.Length > 0) {
+        var (unlockedItems, unlockPrompt) = await serviceProxy.UnlockAsync(locked);
+        if (unlockedItems.Length < locked.Length && IsPromptRequired(unlockPrompt)) {
+          throw new InvalidOperationException(
+              $"Failed to delete secret for service '{service}' and account '{account}': the Secret Service keyring is locked.");
+        }
+
+        unlockedLocked = unlockedItems;
+      }
+
+      foreach (ObjectPath itemPath in unlocked.Concat(unlockedLocked)) {
         var itemProxy = connection.CreateProxy<SecretServiceDbusContracts.ISecretItem>(
             SecretServiceDbusContracts.ServiceName, itemPath);
-        await itemProxy.DeleteAsync();
+        ObjectPath deletePrompt = await itemProxy.DeleteAsync();
+        if (IsPromptRequired(deletePrompt)) {
+          throw new InvalidOperationException(
+              $"Failed to delete secret for service '{service}' and account '{account}': the Secret Service keyring is locked.");
+        }
       }
     } catch {
-      ResetSession();
+      ResetConnectionAndSession();
       throw;
     }
   }
@@ -138,9 +162,7 @@ internal sealed class DbusSecretServiceAdapter : ISecretServiceAdapter, IDisposa
     }
 
     _disposed = true;
-    _connection?.Dispose();
-    _connection = null;
-    _sessionPath = null;
+    ResetConnectionAndSession();
     _gate.Dispose();
   }
 
@@ -169,8 +191,9 @@ internal sealed class DbusSecretServiceAdapter : ISecretServiceAdapter, IDisposa
   private async Task<Connection> GetConnectionAsync(CancellationToken cancellationToken) {
     ObjectDisposedException.ThrowIf(_disposed, this);
 
-    if (_connection != null) {
-      return _connection;
+    Connection? existing = _connection;
+    if (existing != null) {
+      return existing;
     }
 
     await _gate.WaitAsync(cancellationToken);
@@ -199,8 +222,9 @@ internal sealed class DbusSecretServiceAdapter : ISecretServiceAdapter, IDisposa
   }
 
   private async Task<ObjectPath> GetSessionPathAsync(Connection connection, CancellationToken cancellationToken) {
-    if (_sessionPath != null) {
-      return _sessionPath.Value;
+    ObjectPath? existing = _sessionPath;
+    if (existing != null) {
+      return existing.Value;
     }
 
     await _gate.WaitAsync(cancellationToken);
@@ -211,6 +235,7 @@ internal sealed class DbusSecretServiceAdapter : ISecretServiceAdapter, IDisposa
 
       var serviceProxy = connection.CreateProxy<SecretServiceDbusContracts.ISecretService>(
           SecretServiceDbusContracts.ServiceName, SecretServiceDbusContracts.ServicePath);
+      // Use "plain" session transport over the local same-UID UNIX domain socket session bus.
       var (_, result) = await serviceProxy.OpenSessionAsync("plain", string.Empty);
       _sessionPath = result;
       return result;
@@ -222,8 +247,15 @@ internal sealed class DbusSecretServiceAdapter : ISecretServiceAdapter, IDisposa
     }
   }
 
-  private void ResetSession() {
+  private void ResetConnectionAndSession() {
     _sessionPath = null;
+    Connection? conn = Interlocked.Exchange(ref _connection, null);
+    conn?.Dispose();
+  }
+
+  private static bool IsPromptRequired(ObjectPath prompt) {
+    string path = prompt.ToString();
+    return !string.IsNullOrEmpty(path) && prompt != NoPromptPath;
   }
 
   private static Dictionary<string, string> CreateAttributes(string service, string account) {

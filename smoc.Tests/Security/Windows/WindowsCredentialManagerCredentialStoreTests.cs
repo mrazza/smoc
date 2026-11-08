@@ -8,7 +8,6 @@ public class WindowsCredentialManagerCredentialStoreTests {
   [Fact]
   public async Task WindowsStore_SmallCredential_WritesToCredentialManager() {
     var mockAdapter = new Mock<IWindowsCredentialAdapter>();
-    mockAdapter.SetupGet(a => a.IsSupportedPlatform).Returns(true);
     mockAdapter.Setup(a => a.WriteCredential(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
                .Returns(true);
 
@@ -25,7 +24,6 @@ public class WindowsCredentialManagerCredentialStoreTests {
   [Fact]
   public async Task WindowsStore_SmallCredential_FallsBackToDpapiWhenCredWriteFails() {
     var mockAdapter = new Mock<IWindowsCredentialAdapter>();
-    mockAdapter.SetupGet(a => a.IsSupportedPlatform).Returns(true);
     mockAdapter.Setup(a => a.WriteCredential(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()))
                .Returns(false);
 
@@ -41,7 +39,6 @@ public class WindowsCredentialManagerCredentialStoreTests {
   [Fact]
   public async Task WindowsStore_LargePayload_WritesToDpapiSecretAndDeletesCredentialManager() {
     var mockAdapter = new Mock<IWindowsCredentialAdapter>();
-    mockAdapter.SetupGet(a => a.IsSupportedPlatform).Returns(true);
 
     var store = new WindowsCredentialManagerCredentialStore(mockAdapter.Object);
     string largeCookies = new('A', 3500);
@@ -56,8 +53,6 @@ public class WindowsCredentialManagerCredentialStoreTests {
   [Fact]
   public async Task WindowsStore_GetCredential_PrefersDpapiWhenPresent() {
     var mockAdapter = new Mock<IWindowsCredentialAdapter>();
-    mockAdapter.SetupGet(a => a.IsSupportedPlatform).Returns(true);
-    mockAdapter.Setup(a => a.HasDpapiSecret("smoc:youtubemusic:cookies")).Returns(true);
     mockAdapter.Setup(a => a.ReadDpapiSecretAsync("smoc:youtubemusic:cookies", It.IsAny<CancellationToken>()))
                .ReturnsAsync("large_cookie_val");
 
@@ -73,8 +68,6 @@ public class WindowsCredentialManagerCredentialStoreTests {
   [Fact]
   public async Task WindowsStore_GetCredential_RethrowsWhenDpapiFails() {
     var mockAdapter = new Mock<IWindowsCredentialAdapter>();
-    mockAdapter.SetupGet(a => a.IsSupportedPlatform).Returns(true);
-    mockAdapter.Setup(a => a.HasDpapiSecret("smoc:youtubemusic:cookies")).Returns(true);
     mockAdapter.Setup(a => a.ReadDpapiSecretAsync("smoc:youtubemusic:cookies", It.IsAny<CancellationToken>()))
                .ThrowsAsync(new System.Security.Cryptography.CryptographicException("DPAPI decryption error"));
 
@@ -86,12 +79,18 @@ public class WindowsCredentialManagerCredentialStoreTests {
   [Fact]
   public async Task WindowsStore_DeleteCredential_CleansUpBothCredentialManagerAndDpapi() {
     var mockAdapter = new Mock<IWindowsCredentialAdapter>();
-    mockAdapter.SetupGet(a => a.IsSupportedPlatform).Returns(true);
 
     var store = new WindowsCredentialManagerCredentialStore(mockAdapter.Object);
     await store.DeleteCredentialAsync("smoc:youtubemusic", "cookies", TestContext.Current.CancellationToken);
 
     mockAdapter.Verify(a => a.DeleteCredential("smoc:youtubemusic:cookies"), Times.Once);
     mockAdapter.Verify(a => a.DeleteDpapiSecret("smoc:youtubemusic:cookies"), Times.Once);
+  }
+
+  [Fact]
+  public void WindowsStore_DefaultConstructor_ThrowsOnNonWindows() {
+    if (!OperatingSystem.IsWindows()) {
+      Assert.Throws<PlatformNotSupportedException>(() => new WindowsCredentialManagerCredentialStore());
+    }
   }
 }

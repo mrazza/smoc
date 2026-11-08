@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using System.Security.Cryptography;
@@ -11,8 +12,9 @@ namespace Smoc.Security.Windows;
 /// </summary>
 [SupportedOSPlatform("windows")]
 internal sealed class NativeWindowsCredentialAdapter : IWindowsCredentialAdapter {
-  private const int CRED_TYPE_GENERIC = 1;
-  private const int CRED_PERSIST_LOCAL_MACHINE = 2;
+  private const int CredTypeGeneric = 1;
+  private const int CredPersistLocalMachine = 2;
+  private const int ErrorNotFound = 1168;
 
   /// <summary>
   /// Directory where DPAPI encrypted blobs are persisted on Windows.
@@ -24,7 +26,7 @@ internal sealed class NativeWindowsCredentialAdapter : IWindowsCredentialAdapter
       "credentials");
 
   [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-  private struct CREDENTIAL {
+  private struct Credential {
     public int Flags;
     public int Type;
     public string TargetName;
@@ -43,7 +45,7 @@ internal sealed class NativeWindowsCredentialAdapter : IWindowsCredentialAdapter
   private static extern bool CredRead(string target, int type, int reservedFlag, out IntPtr credentialPtr);
 
   [DllImport("advapi32.dll", EntryPoint = "CredWriteW", CharSet = CharSet.Unicode, SetLastError = true)]
-  private static extern bool CredWrite([In] ref CREDENTIAL credential, int flags);
+  private static extern bool CredWrite([In] ref Credential credential, int flags);
 
   [DllImport("advapi32.dll", EntryPoint = "CredDeleteW", CharSet = CharSet.Unicode, SetLastError = true)]
   private static extern bool CredDelete(string target, int type, int flags);
@@ -52,18 +54,12 @@ internal sealed class NativeWindowsCredentialAdapter : IWindowsCredentialAdapter
   private static extern void CredFree(IntPtr buffer);
 
   /// <inheritdoc />
-  public bool IsSupportedPlatform => RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
-
-  /// <inheritdoc />
   public bool ReadCredential(string target, out string? secret) {
     secret = null;
-    if (!IsSupportedPlatform) {
-      return false;
-    }
 
-    if (CredRead(target, CRED_TYPE_GENERIC, 0, out IntPtr credPtr)) {
+    if (CredRead(target, CredTypeGeneric, 0, out IntPtr credPtr)) {
       try {
-        CREDENTIAL cred = Marshal.PtrToStructure<CREDENTIAL>(credPtr);
+        Credential cred = Marshal.PtrToStructure<Credential>(credPtr);
         if (cred.CredentialBlob != IntPtr.Zero && cred.CredentialBlobSize > 0) {
           byte[] bytes = new byte[cred.CredentialBlobSize];
           Marshal.Copy(cred.CredentialBlob, bytes, 0, cred.CredentialBlobSize);
@@ -73,6 +69,13 @@ internal sealed class NativeWindowsCredentialAdapter : IWindowsCredentialAdapter
       } finally {
         CredFree(credPtr);
       }
+
+      return false;
+    }
+
+    int error = Marshal.GetLastWin32Error();
+    if (error != 0 && error != ErrorNotFound) {
+      throw new Win32Exception(error, $"CredRead failed for target '{target}' (Win32 error {error}).");
     }
 
     return false;
@@ -80,21 +83,17 @@ internal sealed class NativeWindowsCredentialAdapter : IWindowsCredentialAdapter
 
   /// <inheritdoc />
   public bool WriteCredential(string target, string userName, string secret) {
-    if (!IsSupportedPlatform) {
-      return false;
-    }
-
     byte[] blob = Encoding.UTF8.GetBytes(secret);
     IntPtr blobPtr = Marshal.AllocHGlobal(blob.Length);
     try {
       Marshal.Copy(blob, 0, blobPtr, blob.Length);
-      CREDENTIAL cred = new() {
-        Type = CRED_TYPE_GENERIC,
+      Credential cred = new() {
+        Type = CredTypeGeneric,
         TargetName = target,
         UserName = userName,
         CredentialBlobSize = blob.Length,
         CredentialBlob = blobPtr,
-        Persist = CRED_PERSIST_LOCAL_MACHINE
+        Persist = CredPersistLocalMachine
       };
 
       return CredWrite(ref cred, 0);
@@ -105,17 +104,16 @@ internal sealed class NativeWindowsCredentialAdapter : IWindowsCredentialAdapter
 
   /// <inheritdoc />
   public bool DeleteCredential(string target) {
-    if (!IsSupportedPlatform) {
+    if (CredDelete(target, CredTypeGeneric, 0)) {
+      return true;
+    }
+
+    int error = Marshal.GetLastWin32Error();
+    if (error == ErrorNotFound || error == 0) {
       return false;
     }
 
-    return CredDelete(target, CRED_TYPE_GENERIC, 0);
-  }
-
-  /// <inheritdoc />
-  public bool HasDpapiSecret(string target) {
-    string filePath = GetDpapiFilePath(target);
-    return File.Exists(filePath);
+    throw new Win32Exception(error, $"CredDelete failed for target '{target}' (Win32 error {error}).");
   }
 
   /// <inheritdoc />
@@ -140,7 +138,20 @@ internal sealed class NativeWindowsCredentialAdapter : IWindowsCredentialAdapter
 
     byte[] secretBytes = Encoding.UTF8.GetBytes(secret);
     byte[] encryptedBytes = ProtectedData.Protect(secretBytes, optionalEntropy: null, DataProtectionScope.CurrentUser);
-    await File.WriteAllBytesAsync(filePath, encryptedBytes, cancellationToken);
+
+    string tempPath = $"{filePath}.{Guid.NewGuid():N}.tmp";
+    try {
+      await File.WriteAllBytesAsync(tempPath, encryptedBytes, cancellationToken);
+      File.Move(tempPath, filePath, overwrite: true);
+    } finally {
+      if (File.Exists(tempPath)) {
+        try {
+          File.Delete(tempPath);
+        } catch {
+          // Best effort cleanup
+        }
+      }
+    }
   }
 
   /// <inheritdoc />

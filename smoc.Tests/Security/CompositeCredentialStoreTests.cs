@@ -20,6 +20,20 @@ public class CompositeCredentialStoreTests {
   }
 
   [Fact]
+  public async Task Composite_GetCredentialWithSourceAsync_ReturnsMatchingStore() {
+    var primary = new InMemoryCredentialStore();
+    var fallback = new InMemoryCredentialStore();
+
+    await fallback.SetCredentialAsync("svc", "acct", "fallback_val", TestContext.Current.CancellationToken);
+
+    var composite = new CompositeCredentialStore(primary, fallback);
+    var (value, source) = await composite.GetCredentialWithSourceAsync("svc", "acct", TestContext.Current.CancellationToken);
+
+    Assert.Equal("fallback_val", value);
+    Assert.Same(fallback, source);
+  }
+
+  [Fact]
   public async Task Composite_GetAsync_FallsBackWhenPrimaryNull() {
     var primary = new InMemoryCredentialStore();
     var fallback = new InMemoryCredentialStore();
@@ -89,6 +103,20 @@ public class CompositeCredentialStoreTests {
 
     Assert.Null(await primary.GetCredentialAsync("svc", "acct", TestContext.Current.CancellationToken));
     Assert.Null(await fallback.GetCredentialAsync("svc", "acct", TestContext.Current.CancellationToken));
+  }
+
+  [Fact]
+  public async Task Composite_DeleteAsync_ThrowsWhenAnyWritableStoreFails() {
+    var failingPrimary = new Mock<ICredentialStore>();
+    failingPrimary.Setup(s => s.IsAvailableAsync(It.IsAny<CancellationToken>())).ReturnsAsync(true);
+    failingPrimary.Setup(s => s.DeleteCredentialAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                  .ThrowsAsync(new InvalidOperationException("Keyring locked"));
+
+    var succeedingSecondary = new InMemoryCredentialStore();
+    var composite = new CompositeCredentialStore(failingPrimary.Object, succeedingSecondary);
+
+    await Assert.ThrowsAsync<InvalidOperationException>(() =>
+        composite.DeleteCredentialAsync("svc", "acct", TestContext.Current.CancellationToken));
   }
 
   [Fact]
@@ -218,15 +246,31 @@ public class CompositeCredentialStoreTests {
   }
 
   [Fact]
-  public async Task Composite_IsAvailableAsync_CachesAvailability() {
+  public async Task Composite_IsAvailableAsync_CachesTrueButRetriesAfterFalse() {
     var store = new Mock<ICredentialStore>();
-    store.Setup(s => s.IsAvailableAsync(It.IsAny<CancellationToken>())).ReturnsAsync(true);
+    store.SetupSequence(s => s.IsAvailableAsync(It.IsAny<CancellationToken>()))
+         .ReturnsAsync(false)
+         .ReturnsAsync(true);
 
     var composite = new CompositeCredentialStore(store.Object);
-    await composite.IsAvailableAsync(TestContext.Current.CancellationToken);
-    await composite.IsAvailableAsync(TestContext.Current.CancellationToken);
 
-    store.Verify(s => s.IsAvailableAsync(It.IsAny<CancellationToken>()), Times.Once);
+    Assert.False(await composite.IsAvailableAsync(TestContext.Current.CancellationToken));
+    Assert.True(await composite.IsAvailableAsync(TestContext.Current.CancellationToken));
+    Assert.True(await composite.IsAvailableAsync(TestContext.Current.CancellationToken));
+
+    store.Verify(s => s.IsAvailableAsync(It.IsAny<CancellationToken>()), Times.Exactly(2));
+  }
+
+  [Fact]
+  public void Composite_Constructor_DefensivelyCopiesStoresArray() {
+    ICredentialStore s1 = new InMemoryCredentialStore();
+    ICredentialStore s2 = new InMemoryCredentialStore();
+    ICredentialStore[] array = [s1];
+
+    var composite = new CompositeCredentialStore(array);
+    array[0] = s2;
+
+    Assert.Same(s1, composite.Stores[0]);
   }
 
   [Fact]

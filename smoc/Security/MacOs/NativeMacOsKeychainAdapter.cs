@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
 using System.Text;
 
 namespace Smoc.Security.MacOs;
@@ -6,6 +7,7 @@ namespace Smoc.Security.MacOs;
 /// <summary>
 /// P/Invoke implementation of <see cref="IMacOsKeychainAdapter"/> targeting macOS Security.framework.
 /// </summary>
+[SupportedOSPlatform("macos")]
 internal sealed class NativeMacOsKeychainAdapter : IMacOsKeychainAdapter {
   private const string SecurityFramework = "/System/Library/Frameworks/Security.framework/Security";
   private const string CoreFoundationFramework = "/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation";
@@ -13,24 +15,12 @@ internal sealed class NativeMacOsKeychainAdapter : IMacOsKeychainAdapter {
   private const int ErrSecSuccess = 0;
   private const int ErrSecItemNotFound = -25300;
 
-  private static readonly Lazy<KeychainSymbols?> _symbols = new(() => {
-    if (!RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) {
-      return null;
-    }
-
-    return KeychainSymbols.Load();
-  });
-
-  /// <inheritdoc />
-  public bool IsSupportedPlatform => RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
+  private static readonly Lazy<KeychainSymbols> _symbols = new(KeychainSymbols.Load);
 
   /// <inheritdoc />
   public Task<string?> GetSecretAsync(string service, string account, CancellationToken cancellationToken) {
-    if (!IsSupportedPlatform || _symbols.Value is not { } sym) {
-      return Task.FromResult<string?>(null);
-    }
-
     cancellationToken.ThrowIfCancellationRequested();
+    KeychainSymbols sym = _symbols.Value;
 
     IntPtr cfService = CreateCFString(service);
     IntPtr cfAccount = CreateCFString(account);
@@ -69,11 +59,8 @@ internal sealed class NativeMacOsKeychainAdapter : IMacOsKeychainAdapter {
 
   /// <inheritdoc />
   public Task SetSecretAsync(string service, string account, string secret, CancellationToken cancellationToken) {
-    if (!IsSupportedPlatform || _symbols.Value is not { } sym) {
-      throw new PlatformNotSupportedException("macOS Keychain is only supported on macOS.");
-    }
-
     cancellationToken.ThrowIfCancellationRequested();
+    KeychainSymbols sym = _symbols.Value;
 
     byte[] secretBytes = Encoding.UTF8.GetBytes(secret);
     IntPtr cfService = CreateCFString(service);
@@ -124,11 +111,8 @@ internal sealed class NativeMacOsKeychainAdapter : IMacOsKeychainAdapter {
 
   /// <inheritdoc />
   public Task DeleteSecretAsync(string service, string account, CancellationToken cancellationToken) {
-    if (!IsSupportedPlatform || _symbols.Value is not { } sym) {
-      return Task.CompletedTask;
-    }
-
     cancellationToken.ThrowIfCancellationRequested();
+    KeychainSymbols sym = _symbols.Value;
 
     IntPtr cfService = CreateCFString(service);
     IntPtr cfAccount = CreateCFString(account);
