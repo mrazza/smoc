@@ -1,12 +1,9 @@
-using System.Collections.Concurrent;
-
 namespace Smoc.Security;
 
 /// <summary>
 /// A credential store that delegates operations across multiple underlying stores in priority order.
 /// </summary>
 public sealed class CompositeCredentialStore : ICredentialStore, IDisposable {
-  private readonly ConcurrentDictionary<ICredentialStore, bool> _availableStores = new();
   private bool _disposed;
 
   /// <summary>
@@ -62,7 +59,7 @@ public sealed class CompositeCredentialStore : ICredentialStore, IDisposable {
     foreach (ICredentialStore store in Stores) {
       cancellationToken.ThrowIfCancellationRequested();
       try {
-        if (await IsStoreAvailableAsync(store, cancellationToken)) {
+        if (await store.IsAvailableAsync(cancellationToken)) {
           string? credential = await store.GetCredentialAsync(service, account, cancellationToken);
           if (!string.IsNullOrEmpty(credential)) {
             return (credential, store);
@@ -71,7 +68,6 @@ public sealed class CompositeCredentialStore : ICredentialStore, IDisposable {
       } catch (OperationCanceledException) {
         throw;
       } catch (Exception ex) {
-        _availableStores.TryRemove(store, out _);
         (exceptions ??= new List<Exception>()).Add(ex);
       }
     }
@@ -95,7 +91,7 @@ public sealed class CompositeCredentialStore : ICredentialStore, IDisposable {
     foreach (ICredentialStore store in Stores) {
       cancellationToken.ThrowIfCancellationRequested();
       try {
-        if (await IsStoreAvailableAsync(store, cancellationToken)) {
+        if (await store.IsAvailableAsync(cancellationToken)) {
           await store.SetCredentialAsync(service, account, secret, cancellationToken);
           return;
         }
@@ -105,7 +101,6 @@ public sealed class CompositeCredentialStore : ICredentialStore, IDisposable {
         // Skip read-only stores without masking operational store failures
         continue;
       } catch (Exception ex) {
-        _availableStores.TryRemove(store, out _);
         (exceptions ??= new List<Exception>()).Add(ex);
       }
     }
@@ -129,7 +124,7 @@ public sealed class CompositeCredentialStore : ICredentialStore, IDisposable {
     foreach (ICredentialStore store in Stores) {
       cancellationToken.ThrowIfCancellationRequested();
       try {
-        if (await IsStoreAvailableAsync(store, cancellationToken)) {
+        if (await store.IsAvailableAsync(cancellationToken)) {
           await store.DeleteCredentialAsync(service, account, cancellationToken);
           deleted = true;
         }
@@ -139,7 +134,6 @@ public sealed class CompositeCredentialStore : ICredentialStore, IDisposable {
         // Skip read-only stores without masking operational store failures
         continue;
       } catch (Exception ex) {
-        _availableStores.TryRemove(store, out _);
         (exceptions ??= new List<Exception>()).Add(ex);
       }
     }
@@ -160,7 +154,7 @@ public sealed class CompositeCredentialStore : ICredentialStore, IDisposable {
     foreach (ICredentialStore store in Stores) {
       cancellationToken.ThrowIfCancellationRequested();
       try {
-        if (await IsStoreAvailableAsync(store, cancellationToken)) {
+        if (await store.IsAvailableAsync(cancellationToken)) {
           return true;
         }
       } catch (OperationCanceledException) {
@@ -185,20 +179,6 @@ public sealed class CompositeCredentialStore : ICredentialStore, IDisposable {
         disposable.Dispose();
       }
     }
-  }
-
-  private async Task<bool> IsStoreAvailableAsync(ICredentialStore store, CancellationToken cancellationToken) {
-    cancellationToken.ThrowIfCancellationRequested();
-    if (_availableStores.ContainsKey(store)) {
-      return true;
-    }
-
-    bool available = await store.IsAvailableAsync(cancellationToken);
-    if (available) {
-      _availableStores[store] = true;
-    }
-
-    return available;
   }
 
   private static Exception BuildFailure(string verb, string service, string account, IReadOnlyList<Exception> exceptions) {

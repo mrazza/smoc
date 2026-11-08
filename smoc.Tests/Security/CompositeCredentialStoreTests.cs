@@ -246,19 +246,20 @@ public class CompositeCredentialStoreTests {
   }
 
   [Fact]
-  public async Task Composite_IsAvailableAsync_CachesTrueButRetriesAfterFalse() {
+  public async Task Composite_IsAvailableAsync_DoesNotCacheAvailability() {
     var store = new Mock<ICredentialStore>();
     store.SetupSequence(s => s.IsAvailableAsync(It.IsAny<CancellationToken>()))
          .ReturnsAsync(false)
-         .ReturnsAsync(true);
+         .ReturnsAsync(true)
+         .ReturnsAsync(false);
 
     var composite = new CompositeCredentialStore(store.Object);
 
     Assert.False(await composite.IsAvailableAsync(TestContext.Current.CancellationToken));
     Assert.True(await composite.IsAvailableAsync(TestContext.Current.CancellationToken));
-    Assert.True(await composite.IsAvailableAsync(TestContext.Current.CancellationToken));
+    Assert.False(await composite.IsAvailableAsync(TestContext.Current.CancellationToken));
 
-    store.Verify(s => s.IsAvailableAsync(It.IsAny<CancellationToken>()), Times.Exactly(2));
+    store.Verify(s => s.IsAvailableAsync(It.IsAny<CancellationToken>()), Times.Exactly(3));
   }
 
   [Fact]
