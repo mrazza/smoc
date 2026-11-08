@@ -53,7 +53,7 @@ public class SystemConsoleTests {
       using var stringReader = new StringReader("myPassword123\n");
       Console.SetIn(stringReader);
 
-      SystemConsole console = new();
+      SystemConsole console = new(isInputRedirected: () => true);
       string pass = console.ReadPassword("Password: ");
       Assert.Equal("myPassword123", pass);
     } finally {

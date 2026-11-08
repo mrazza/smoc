@@ -6,7 +6,12 @@ namespace Smoc.Configuration;
 /// <summary>
 /// Provides safe and atomic reading and writing of JSON configuration files.
 /// </summary>
-public class ConfigFileWriter {
+/// <remarks>
+/// While <see cref="LoadAsync"/> tolerates JSON comments and trailing commas, saving via
+/// <see cref="SaveAsync"/> or <see cref="UpdateAsync"/> re-serializes the <see cref="JsonObject"/>
+/// and does not preserve comments.
+/// </remarks>
+public sealed class ConfigFileWriter {
   private readonly string _configPath;
 
   /// <summary>

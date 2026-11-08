@@ -6,8 +6,18 @@ namespace Smoc.Cli;
 /// Default implementation of <see cref="IConsoleIO"/> backed by standard <see cref="Console"/>.
 /// </summary>
 public class SystemConsole : IConsoleIO {
+  private readonly Func<bool> _isInputRedirected;
+
+  /// <summary>
+  /// Initializes a new instance of the <see cref="SystemConsole"/> class.
+  /// </summary>
+  /// <param name="isInputRedirected">Optional predicate to check whether standard input is redirected.</param>
+  public SystemConsole(Func<bool>? isInputRedirected = null) {
+    _isInputRedirected = isInputRedirected ?? (() => Console.IsInputRedirected);
+  }
+
   /// <inheritdoc />
-  public bool IsInputRedirected => Console.IsInputRedirected;
+  public bool IsInputRedirected => _isInputRedirected();
 
   /// <inheritdoc />
   public string? ReadLine() => Console.ReadLine();

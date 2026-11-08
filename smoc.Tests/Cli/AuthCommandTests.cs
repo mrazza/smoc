@@ -29,6 +29,7 @@ public class AuthCommandTests : IDisposable {
   }
 
   public void Dispose() {
+    _authService.Dispose();
     try {
       if (Directory.Exists(_tempDir)) {
         Directory.Delete(_tempDir, recursive: true);
@@ -36,6 +37,17 @@ public class AuthCommandTests : IDisposable {
     } catch {
       // Best-effort cleanup
     }
+  }
+
+  [Fact]
+  public void AuthCommandCreate_DoesNotInvokeServiceFactoryEagerly() {
+    bool factoryInvoked = false;
+    _ = AuthCommand.Create(() => {
+      factoryInvoked = true;
+      return _authService;
+    }, _console);
+
+    Assert.False(factoryInvoked);
   }
 
   [Fact]
@@ -78,6 +90,16 @@ public class AuthCommandTests : IDisposable {
     Assert.Equal(0, exitCode);
     Assert.Contains("Success! Saved server settings to config.json and password to secure credential store.", _console.Output);
     Assert.Equal("interpass", await _store.GetCredentialAsync(CredentialTargets.Subsonic, "interuser", TestContext.Current.CancellationToken));
+  }
+
+  [Fact]
+  public async Task AuthLoginSubsonic_InvalidPort_ReturnsExitCode1() {
+    RootCommand root = new() { _authCommand };
+
+    int exitCode = await root.Parse("auth login subsonic --host sub.example.com --port 70000 -u testuser --password secret123 --no-verify").InvokeAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+    Assert.Equal(1, exitCode);
+    Assert.Contains("Port must be between 1 and 65535", _console.Output);
   }
 
   [Fact]

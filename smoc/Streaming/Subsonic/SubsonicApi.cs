@@ -63,7 +63,7 @@ public static class SubsonicApi {
       }
     }
 
-    string path = method.StartsWith("rest/") ? method : $"rest/{method}";
+    string path = method.StartsWith("rest/", StringComparison.Ordinal) ? method : $"rest/{method}";
     return new UriBuilder(scheme, host, port, path) {
       Query = string.Join("&", queryParams)
     }.Uri;
@@ -77,7 +77,7 @@ public static class SubsonicApi {
   /// <exception cref="InvalidOperationException">Thrown if subsonic-response is missing or status is failed.</exception>
   public static JsonElement ValidateResponse(JsonElement rootElement) {
     if (!rootElement.TryGetProperty("subsonic-response", out JsonElement responseElement)) {
-      throw new Exception("Missing subsonic-response");
+      throw new InvalidOperationException("Missing subsonic-response");
     }
 
     if (responseElement.TryGetProperty("status", out JsonElement status) && status.GetString() == "failed") {
@@ -91,7 +91,7 @@ public static class SubsonicApi {
           errorMessage = msg.GetString() ?? errorMessage;
         }
       }
-      throw new Exception($"Subsonic API error {errorCode}: {errorMessage}");
+      throw new InvalidOperationException($"Subsonic API error {errorCode}: {errorMessage}");
     }
 
     return responseElement;

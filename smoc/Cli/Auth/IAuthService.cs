@@ -27,7 +27,7 @@ public interface IAuthService {
   );
 
   /// <summary>
-  /// Logs into SoundCloud by storing the client ID and authentication token in the credential store and config.
+  /// Logs into SoundCloud by storing the authentication token in the credential store and optional client ID in config.
   /// </summary>
   /// <param name="clientId">The SoundCloud client ID.</param>
   /// <param name="authToken">The SoundCloud OAuth authentication token.</param>
@@ -72,5 +72,5 @@ public interface IAuthService {
   /// <param name="backupPlaintextFiles">Whether to back up plaintext files (.bak) before removal.</param>
   /// <param name="cancellationToken">Cancellation token for the asynchronous operation.</param>
   /// <returns>A <see cref="MigrationResult"/> detailing the migrated items and cleaned files.</returns>
-  Task<MigrationResult> MigrateAsync(bool backupPlaintextFiles = true, CancellationToken cancellationToken = default);
+  Task<MigrationResult> MigrateAsync(bool backupPlaintextFiles = false, CancellationToken cancellationToken = default);
 }
