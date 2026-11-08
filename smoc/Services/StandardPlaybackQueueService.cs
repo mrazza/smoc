@@ -346,7 +346,7 @@ public sealed class StandardPlaybackQueueService : IPlaybackQueueService {
       Logging.Error($"Playback setup for {currentSong.Title} failed: {e}");
       if (IsForbiddenHttpError(e)) {
         _mainWindow.DisplayError(
-          $"Playback failed for '{currentSong.Title}' (403 Forbidden). Tokens or cookies may be expired; try running with --gentokens.");
+          $"Playback failed for '{currentSong.Title}' (403 Forbidden). Tokens or cookies may be expired; try running 'smoc auth gentokens'.");
       } else {
         _mainWindow.DisplayError($"Playback failed for '{currentSong.Title}': {e.Message}");
       }

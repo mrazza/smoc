@@ -29,20 +29,15 @@ public static class ServiceCredentialResolver {
     ArgumentNullException.ThrowIfNull(credentialStore);
     config ??= SubsonicConfig.Defaults;
 
-    string scheme = config.ServerScheme;
     string host = config.ServerHost ?? throw new InvalidOperationException("Subsonic Server Host not configured");
-    int port = config.ServerPort;
     string username = config.Username ?? throw new InvalidOperationException("Subsonic Username not configured");
-    bool useToken = config.UseToken;
 
-    string? password = null;
-    Exception? storeException = null;
-    try {
-      password = await credentialStore.GetCredentialAsync(CredentialTargets.Subsonic, username, cancellationToken);
-    } catch (Exception ex) when (ex is not OperationCanceledException) {
-      storeException = ex;
-      Logging.Warning($"Failed to resolve Subsonic password from credential store for user '{username}': {ex.Message}");
-    }
+    (string? password, Exception? storeException) = await TryGetCredentialAsync(
+        credentialStore,
+        CredentialTargets.Subsonic,
+        username,
+        $"Subsonic password for user '{username}'",
+        cancellationToken);
 
     password ??= config.Password;
 
@@ -56,7 +51,7 @@ public static class ServiceCredentialResolver {
       throw new InvalidOperationException("Subsonic Password not configured");
     }
 
-    return new SubsonicCredentials(scheme, host, port, username, password, useToken);
+    return new SubsonicCredentials(config.ServerScheme, host, config.ServerPort, username, password, config.UseToken);
   }
 
   /// <summary>
@@ -74,17 +69,14 @@ public static class ServiceCredentialResolver {
     ArgumentNullException.ThrowIfNull(credentialStore);
     config ??= SoundCloudConfig.Defaults;
 
-    string? authToken = null;
-    try {
-      authToken = await credentialStore.GetCredentialAsync(CredentialTargets.SoundCloud, CredentialTargets.AccountAuthToken, cancellationToken);
-    } catch (Exception ex) when (ex is not OperationCanceledException) {
-      Logging.Warning($"Failed to resolve SoundCloud auth token from credential store: {ex.Message}");
-    }
+    (string? authToken, _) = await TryGetCredentialAsync(
+        credentialStore,
+        CredentialTargets.SoundCloud,
+        CredentialTargets.AccountAuthToken,
+        "SoundCloud auth token",
+        cancellationToken);
 
-    authToken ??= config.AuthToken;
-    string? clientId = config.ClientId;
-
-    return new SoundCloudCredentials(clientId, authToken);
+    return new SoundCloudCredentials(config.ClientId, authToken ?? config.AuthToken);
   }
 
   /// <summary>
@@ -106,131 +98,151 @@ public static class ServiceCredentialResolver {
     ArgumentNullException.ThrowIfNull(credentialStore);
     tokenGenerator ??= YtmStreamingClient.GenerateTokensAsync;
 
-    YtmSession? storeSession = await TryResolveFromStoreAsync(credentialStore, tokenGenerator, cancellationToken);
-    if (storeSession != null) {
-      return storeSession;
+    List<Cookie>? storeCookies = await TryReadStoreCookiesAsync(credentialStore, cancellationToken);
+    if (storeCookies != null) {
+      return await ResolveStoreSessionAsync(credentialStore, storeCookies, tokenGenerator, cancellationToken);
     }
 
     string resolvedCookiesPath = cookiesPath ?? SmocPaths.DefaultCookiesPath;
     string resolvedTokensPath = tokensPath ?? SmocPaths.DefaultTokensPath;
-    return await TryResolveFromLegacyFilesAsync(resolvedCookiesPath, resolvedTokensPath, tokenGenerator, cancellationToken);
+    List<Cookie>? fileCookies = TryReadLegacyCookiesFile(resolvedCookiesPath);
+    if (fileCookies != null) {
+      return await ResolveLegacyFileSessionAsync(fileCookies, resolvedTokensPath, tokenGenerator, cancellationToken);
+    }
+
+    return null;
   }
 
-  private static async Task<YtmSession?> TryResolveFromStoreAsync(
+  private static async Task<(string? Value, Exception? Error)> TryGetCredentialAsync(
     ICredentialStore credentialStore,
-    Func<List<Cookie>, Task<YtmTokens>> tokenGenerator,
+    string service,
+    string account,
+    string description,
     CancellationToken cancellationToken
   ) {
-    string? cookiesRaw = null;
-    string? tokensRaw = null;
-
     try {
-      cookiesRaw = await credentialStore.GetCredentialAsync(CredentialTargets.YouTubeMusic, CredentialTargets.AccountCookies, cancellationToken);
+      string? value = await credentialStore.GetCredentialAsync(service, account, cancellationToken);
+      return (value, null);
     } catch (Exception ex) when (ex is not OperationCanceledException) {
-      Logging.Warning($"Failed to read YouTube Music cookies from credential store: {ex.Message}");
+      Logging.Warning($"Failed to resolve {description} from credential store: {ex.Message}");
+      return (null, ex);
     }
+  }
+
+  private static async Task<List<Cookie>?> TryReadStoreCookiesAsync(
+    ICredentialStore credentialStore,
+    CancellationToken cancellationToken
+  ) {
+    (string? cookiesRaw, _) = await TryGetCredentialAsync(
+        credentialStore,
+        CredentialTargets.YouTubeMusic,
+        CredentialTargets.AccountCookies,
+        "YouTube Music cookies",
+        cancellationToken);
 
     if (string.IsNullOrWhiteSpace(cookiesRaw)) {
       return null;
     }
 
     List<Cookie> cookies = YtmStreamingClient.ParseCookies(cookiesRaw);
-    if (cookies.Count == 0) {
-      return null;
-    }
-
-    try {
-      tokensRaw = await credentialStore.GetCredentialAsync(CredentialTargets.YouTubeMusic, CredentialTargets.AccountTokens, cancellationToken);
-    } catch (Exception ex) when (ex is not OperationCanceledException) {
-      Logging.Warning($"Failed to read YouTube Music tokens from credential store: {ex.Message}");
-    }
-
-    YtmTokens? tokens = await GetOrGenerateTokensAsync(
-      cookies,
-      tokensRaw,
-      "credential store",
-      tokenGenerator,
-      serialized => credentialStore.SetCredentialAsync(
-          CredentialTargets.YouTubeMusic,
-          CredentialTargets.AccountTokens,
-          serialized,
-          cancellationToken));
-
-    return tokens != null ? new YtmSession(cookies, tokens) : null;
+    return cookies.Count > 0 ? cookies : null;
   }
 
-  private static async Task<YtmSession?> TryResolveFromLegacyFilesAsync(
-    string cookiesPath,
-    string tokensPath,
-    Func<List<Cookie>, Task<YtmTokens>> tokenGenerator,
-    CancellationToken cancellationToken
-  ) {
+  private static List<Cookie>? TryReadLegacyCookiesFile(string cookiesPath) {
     if (!File.Exists(cookiesPath)) {
       return null;
     }
 
-    List<Cookie> cookies;
     try {
-      cookies = YtmStreamingClient.GetCookiesFromFile(cookiesPath);
+      List<Cookie> cookies = YtmStreamingClient.GetCookiesFromFile(cookiesPath);
+      return cookies.Count > 0 ? cookies : null;
     } catch (Exception ex) when (ex is not OperationCanceledException) {
       Logging.Warning($"Failed to read legacy cookies file '{cookiesPath}': {ex.Message}");
       return null;
     }
+  }
 
-    if (cookies.Count == 0) {
-      return null;
+  private static async Task<YtmSession?> ResolveStoreSessionAsync(
+    ICredentialStore credentialStore,
+    List<Cookie> cookies,
+    Func<List<Cookie>, Task<YtmTokens>> tokenGenerator,
+    CancellationToken cancellationToken
+  ) {
+    (string? rawTokens, _) = await TryGetCredentialAsync(
+        credentialStore,
+        CredentialTargets.YouTubeMusic,
+        CredentialTargets.AccountTokens,
+        "YouTube Music tokens",
+        cancellationToken);
+
+    YtmTokens? tokens = TryDeserializeTokens(rawTokens, "credential store");
+    if (tokens == null) {
+      try {
+        tokens = await tokenGenerator(cookies);
+      } catch (Exception ex) when (ex is not OperationCanceledException) {
+        Logging.Warning($"Failed to generate YouTube Music tokens from credential store: {ex.Message}");
+        return null;
+      }
+
+      try {
+        await credentialStore.SetCredentialAsync(
+            CredentialTargets.YouTubeMusic,
+            CredentialTargets.AccountTokens,
+            JsonSerializer.Serialize(tokens),
+            cancellationToken);
+      } catch (Exception ex) when (ex is not OperationCanceledException) {
+        Logging.Warning($"Failed to persist generated YouTube Music tokens to credential store: {ex.Message}");
+      }
     }
 
-    string? fileTokenContent = null;
+    return new YtmSession(cookies, tokens);
+  }
+
+  private static async Task<YtmSession?> ResolveLegacyFileSessionAsync(
+    List<Cookie> cookies,
+    string tokensPath,
+    Func<List<Cookie>, Task<YtmTokens>> tokenGenerator,
+    CancellationToken cancellationToken
+  ) {
+    string? rawTokens = null;
     if (File.Exists(tokensPath)) {
       try {
-        fileTokenContent = await File.ReadAllTextAsync(tokensPath, cancellationToken);
+        rawTokens = await File.ReadAllTextAsync(tokensPath, cancellationToken);
       } catch (IOException ex) {
         Logging.Warning($"Failed to read tokens from legacy file '{tokensPath}': {ex.Message}");
       }
     }
 
-    YtmTokens? tokens = await GetOrGenerateTokensAsync(
-      cookies,
-      fileTokenContent,
-      $"legacy file '{tokensPath}'",
-      tokenGenerator,
-      async serialized => {
-        await File.WriteAllTextAsync(tokensPath, serialized, cancellationToken);
-        Logging.Information($"Generated YouTube Music tokens and saved to '{tokensPath}'. Run 'smoc auth migrate' to securely store credentials.");
-      });
-
-    return tokens != null ? new YtmSession(cookies, tokens) : null;
-  }
-
-  private static async Task<YtmTokens?> GetOrGenerateTokensAsync(
-    List<Cookie> cookies,
-    string? rawTokens,
-    string sourceDescription,
-    Func<List<Cookie>, Task<YtmTokens>> tokenGenerator,
-    Func<string, Task> persistTokensAsync
-  ) {
-    if (!string.IsNullOrWhiteSpace(rawTokens)) {
+    string sourceDescription = $"legacy file '{tokensPath}'";
+    YtmTokens? tokens = TryDeserializeTokens(rawTokens, sourceDescription);
+    if (tokens == null) {
       try {
-        YtmTokens? deserialized = JsonSerializer.Deserialize<YtmTokens>(rawTokens);
-        if (deserialized != null) {
-          return deserialized;
-        }
-      } catch (JsonException ex) {
-        Logging.Warning($"Failed to deserialize YouTube Music tokens from {sourceDescription}: {ex.Message}. Regenerating tokens.");
+        tokens = await tokenGenerator(cookies);
+      } catch (Exception ex) when (ex is not OperationCanceledException) {
+        Logging.Warning($"Failed to generate YouTube Music tokens from {sourceDescription}: {ex.Message}");
+        return null;
       }
-    }
 
-    try {
-      YtmTokens generated = await tokenGenerator(cookies);
       try {
-        await persistTokensAsync(JsonSerializer.Serialize(generated));
+        await File.WriteAllTextAsync(tokensPath, JsonSerializer.Serialize(tokens), cancellationToken);
+        Logging.Information($"Generated YouTube Music tokens and saved to '{tokensPath}'. Run 'smoc auth migrate' to securely store credentials.");
       } catch (Exception ex) when (ex is not OperationCanceledException) {
         Logging.Warning($"Failed to persist generated YouTube Music tokens to {sourceDescription}: {ex.Message}");
       }
-      return generated;
-    } catch (Exception ex) when (ex is not OperationCanceledException) {
-      Logging.Warning($"Failed to generate YouTube Music tokens from {sourceDescription}: {ex.Message}");
+    }
+
+    return new YtmSession(cookies, tokens);
+  }
+
+  private static YtmTokens? TryDeserializeTokens(string? rawTokens, string sourceDescription) {
+    if (string.IsNullOrWhiteSpace(rawTokens)) {
+      return null;
+    }
+
+    try {
+      return JsonSerializer.Deserialize<YtmTokens>(rawTokens);
+    } catch (JsonException ex) {
+      Logging.Warning($"Failed to deserialize YouTube Music tokens from {sourceDescription}: {ex.Message}. Regenerating tokens.");
       return null;
     }
   }

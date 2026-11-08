@@ -257,7 +257,12 @@ When connecting to streaming services, SMoC resolves authentication credentials 
   ```bash
   smoc auth import-cookies [path/to/cookies.txt]
   ```
-  Imports cookies into the secure credential store and automatically generates session tokens (supersedes legacy `smoc --gentokens`).
+  Imports cookies into the secure credential store and automatically generates session tokens.
+- **Regenerate YouTube Music Tokens**:
+  ```bash
+  smoc auth gentokens
+  ```
+  Regenerates visitor and Proof-of-Origin (PO) session tokens using your stored YouTube Music cookies.
 - **Migrate Existing Plaintext Credentials**:
   ```bash
   smoc auth migrate
@@ -293,7 +298,7 @@ To access your YouTube Music account ([these steps are copied from YouTube.js](h
 > [!TIP]
 > It is recommended to open an incognito window or separate browser profile when getting your cookie information to avoid other browser sessions from invalidating the tokens. Once cookies are retrieved, close the session _without_ logging out.
 
-More recently, additional tokens beyond just cookies are often needed (Proof-of-Origin and Visitor Data). `smoc auth import-cookies` automatically generates these tokens and stores them securely. If using legacy files, `smoc --gentokens` can generate `tokens.json`.
+More recently, additional tokens beyond just cookies are often needed (Proof-of-Origin and Visitor Data). `smoc auth import-cookies` automatically generates these tokens and stores them securely. If those tokens later expire while your cookies are still valid, you can regenerate them with `smoc auth gentokens`.
 
 ### Subsonic
 
