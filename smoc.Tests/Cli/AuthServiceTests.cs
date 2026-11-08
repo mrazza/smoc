@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Moq;
 using Smoc.Cli.Auth;
 using Smoc.Security;
 using Smoc.Streaming.YouTubeMusic;
@@ -34,14 +35,21 @@ public class AuthServiceTests : IDisposable {
     }
   }
 
-  private AuthService CreateService(Func<List<Cookie>, Task<YtmTokens>>? tokenGenerator = null) {
+  private AuthService CreateService(ICredentialStore? store = null, Func<List<Cookie>, Task<YtmTokens>>? tokenGenerator = null) {
     tokenGenerator ??= _ => Task.FromResult(new YtmTokens("mockPoToken", "mockRollout", "mockVisitor"));
-    return new AuthService(_store, _configPath, _cookiesPath, _tokensPath, tokenGenerator);
+    return new AuthService(store ?? _store, _configPath, _cookiesPath, _tokensPath, tokenGenerator);
   }
 
   [Fact]
-  public async Task LoginSubsonicAsync_SavesCredentialsAndSanitizesConfig() {
-    var service = CreateService();
+  public async Task LoginSubsonicAsync_SavesCredentialsAndSanitizesConfigWithoutLeavingPlaintextBackup() {
+    var initialConfig = new JsonObject {
+      ["SubsonicConfig"] = new JsonObject {
+        ["Password"] = "oldPlaintextSecret"
+      }
+    };
+    await File.WriteAllTextAsync(_configPath, initialConfig.ToJsonString(), TestContext.Current.CancellationToken);
+
+    using var service = CreateService();
 
     await service.LoginSubsonicAsync("subsonic.example.com", 443, "https", "razza", "secretpass", useToken: true, verifyConnection: false, TestContext.Current.CancellationToken);
 
@@ -54,11 +62,12 @@ public class AuthServiceTests : IDisposable {
     Assert.Equal(443, node?["SubsonicConfig"]?["ServerPort"]?.GetValue<int>());
     Assert.Equal("razza", node?["SubsonicConfig"]?["Username"]?.GetValue<string>());
     Assert.Null(node?["SubsonicConfig"]?["Password"]);
+    Assert.False(File.Exists(_configPath + ".bak"));
   }
 
   [Fact]
   public async Task LoginSubsonicAsync_ThrowsOnMissingArguments() {
-    var service = CreateService();
+    using var service = CreateService();
 
     await Assert.ThrowsAsync<ArgumentException>(() => service.LoginSubsonicAsync("", 443, "https", "user", "pass", true, false, TestContext.Current.CancellationToken));
     await Assert.ThrowsAsync<ArgumentException>(() => service.LoginSubsonicAsync("host", 443, "https", "", "pass", true, false, TestContext.Current.CancellationToken));
@@ -66,25 +75,26 @@ public class AuthServiceTests : IDisposable {
   }
 
   [Fact]
-  public async Task LoginSoundCloudAsync_SavesCredentialsAndConfig() {
-    var service = CreateService();
+  public async Task LoginSoundCloudAsync_SavesTokenToStoreAndClientIdToConfigOnly() {
+    using var service = CreateService();
 
     await service.LoginSoundCloudAsync("my-client-id", "my-auth-token", TestContext.Current.CancellationToken);
 
     string? storedToken = await _store.GetCredentialAsync(CredentialTargets.SoundCloud, CredentialTargets.AccountAuthToken, TestContext.Current.CancellationToken);
     string? storedClientId = await _store.GetCredentialAsync(CredentialTargets.SoundCloud, CredentialTargets.AccountClientId, TestContext.Current.CancellationToken);
     Assert.Equal("my-auth-token", storedToken);
-    Assert.Equal("my-client-id", storedClientId);
+    Assert.Null(storedClientId);
 
     string configJson = await File.ReadAllTextAsync(_configPath, TestContext.Current.CancellationToken);
     var node = JsonNode.Parse(configJson);
     Assert.Equal("my-client-id", node?["SoundCloudConfig"]?["ClientId"]?.GetValue<string>());
     Assert.Null(node?["SoundCloudConfig"]?["AuthToken"]);
+    Assert.False(File.Exists(_configPath + ".bak"));
   }
 
   [Fact]
   public async Task ImportCookiesAsync_FileNotFound_ReturnsFailure() {
-    var service = CreateService();
+    using var service = CreateService();
 
     var result = await service.ImportCookiesAsync(Path.Combine(_tempDir, "nonexistent.txt"), deleteSource: false, TestContext.Current.CancellationToken);
 
@@ -94,7 +104,7 @@ public class AuthServiceTests : IDisposable {
 
   [Fact]
   public async Task ImportCookiesAsync_Success_StoresCookiesAndTokens_DeletesSourceIfRequested() {
-    var service = CreateService();
+    using var service = CreateService();
     string testCookies = "SID=abcd1234; HSID=xyz9876;";
     await File.WriteAllTextAsync(_cookiesPath, testCookies, TestContext.Current.CancellationToken);
 
@@ -117,7 +127,7 @@ public class AuthServiceTests : IDisposable {
 
   [Fact]
   public async Task ImportCookiesAsync_DefaultsToConfiguredCookiesPath_WhenPathOmittedOrWhitespace() {
-    var service = CreateService();
+    using var service = CreateService();
     string testCookies = "SID=defaultpath123; HSID=defaultpath456;";
     await File.WriteAllTextAsync(_cookiesPath, testCookies, TestContext.Current.CancellationToken);
 
@@ -131,7 +141,7 @@ public class AuthServiceTests : IDisposable {
 
   [Fact]
   public async Task GetStatusAsync_ReturnsStatusAcrossServices() {
-    var service = CreateService();
+    using var service = CreateService();
     await _store.SetCredentialAsync(CredentialTargets.Subsonic, "razza", "secretpass", TestContext.Current.CancellationToken);
     await _store.SetCredentialAsync(CredentialTargets.YouTubeMusic, CredentialTargets.AccountCookies, "cookie=val;", TestContext.Current.CancellationToken);
     await _store.SetCredentialAsync(CredentialTargets.YouTubeMusic, CredentialTargets.AccountTokens, "{}", TestContext.Current.CancellationToken);
@@ -147,21 +157,37 @@ public class AuthServiceTests : IDisposable {
     var statuses = await service.GetStatusAsync(TestContext.Current.CancellationToken);
 
     var subsonic = Assert.Single(statuses, s => s.Service == "Subsonic");
-    Assert.Equal("Authenticated", subsonic.Status);
-    Assert.Equal("Keyring", subsonic.Storage);
+    Assert.Equal(AuthStatusState.Authenticated, subsonic.Status);
+    Assert.Equal(CredentialStorageKind.Keyring, subsonic.Storage);
     Assert.Contains("razza @ subsonic.local", subsonic.Details);
 
     var ytm = Assert.Single(statuses, s => s.Service == "YouTube Music");
-    Assert.Equal("Authenticated", ytm.Status);
-    Assert.Equal("Keyring", ytm.Storage);
+    Assert.Equal(AuthStatusState.Authenticated, ytm.Status);
+    Assert.Equal(CredentialStorageKind.Keyring, ytm.Storage);
 
     var soundcloud = Assert.Single(statuses, s => s.Service == "SoundCloud");
-    Assert.Equal("Not Configured", soundcloud.Status);
+    Assert.Equal(AuthStatusState.NotConfigured, soundcloud.Status);
+  }
+
+  [Fact]
+  public async Task GetStatusAsync_SkipsUnavailableStoreInComposite_ReportsNotConfiguredInsteadOfError() {
+    var unavailableKeyring = new Mock<ICredentialStore>();
+    unavailableKeyring.Setup(s => s.IsAvailableAsync(It.IsAny<CancellationToken>())).ReturnsAsync(false);
+    unavailableKeyring.Setup(s => s.GetCredentialAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                      .ThrowsAsync(new InvalidOperationException("No D-Bus session bus"));
+
+    var envStore = new EnvironmentCredentialStore(_ => null);
+    var composite = new CompositeCredentialStore(unavailableKeyring.Object, envStore);
+
+    using var service = CreateService(composite);
+    var statuses = await service.GetStatusAsync(TestContext.Current.CancellationToken);
+
+    Assert.All(statuses, s => Assert.Equal(AuthStatusState.NotConfigured, s.Status));
   }
 
   [Fact]
   public async Task LogoutAsync_RemovesCredentials() {
-    var service = CreateService();
+    using var service = CreateService();
     await _store.SetCredentialAsync(CredentialTargets.Subsonic, "razza", "pass", TestContext.Current.CancellationToken);
     await _store.SetCredentialAsync(CredentialTargets.YouTubeMusic, CredentialTargets.AccountCookies, "cookie", TestContext.Current.CancellationToken);
     await _store.SetCredentialAsync(CredentialTargets.SoundCloud, CredentialTargets.AccountAuthToken, "token", TestContext.Current.CancellationToken);
@@ -184,14 +210,25 @@ public class AuthServiceTests : IDisposable {
   }
 
   [Fact]
+  public async Task LogoutAsync_ReturnsFalseWhenCredentialIsOnlyInReadOnlyEnvironmentStore() {
+    var envStore = new EnvironmentCredentialStore(key => key == "SMOC_SOUNDCLOUD_AUTH_TOKEN" ? "env_token" : null);
+    var composite = new CompositeCredentialStore(_store, envStore);
+
+    using var service = CreateService(composite);
+    bool removed = await service.LogoutAsync("soundcloud", TestContext.Current.CancellationToken);
+
+    Assert.False(removed);
+  }
+
+  [Fact]
   public async Task LogoutAsync_ThrowsOnUnknownService() {
-    var service = CreateService();
+    using var service = CreateService();
     await Assert.ThrowsAsync<ArgumentException>(() => service.LogoutAsync("unknown_svc", TestContext.Current.CancellationToken));
   }
 
   [Fact]
   public async Task MigrateAsync_MigratesPlaintextSecretsAndBacksUpFiles() {
-    var service = CreateService();
+    using var service = CreateService();
 
     var config = new JsonObject {
       ["SubsonicConfig"] = new JsonObject {

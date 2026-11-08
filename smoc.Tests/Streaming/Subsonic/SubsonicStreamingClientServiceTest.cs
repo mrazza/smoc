@@ -114,7 +114,7 @@ public class SubsonicStreamingClientServiceTest {
       }
     }";
     var client = CreateClientWithMockResponse(jsonResponse);
-    var ex = await Assert.ThrowsAsync<Exception>(() => client.SearchArtistsAsync("Artist", TestContext.Current.CancellationToken));
+    var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => client.SearchArtistsAsync("Artist", TestContext.Current.CancellationToken));
     Assert.Contains("error 40: Wrong user or password", ex.Message);
   }
   
@@ -128,7 +128,7 @@ public class SubsonicStreamingClientServiceTest {
       }
     }";
     var client = CreateClientWithMockResponse(jsonResponse);
-    var ex = await Assert.ThrowsAsync<Exception>(() => client.SearchArtistsAsync("Artist", TestContext.Current.CancellationToken));
+    var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => client.SearchArtistsAsync("Artist", TestContext.Current.CancellationToken));
     Assert.Contains("error 0: Unknown Subsonic error", ex.Message);
   }
 
@@ -136,7 +136,7 @@ public class SubsonicStreamingClientServiceTest {
   public async Task GetResponseElementAsync_ThrowsOnMissingSubsonicResponse() {
     var jsonResponse = @"{ ""wrong-response"": {} }";
     var client = CreateClientWithMockResponse(jsonResponse);
-    var ex = await Assert.ThrowsAsync<Exception>(() => client.SearchArtistsAsync("Artist", TestContext.Current.CancellationToken));
+    var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => client.SearchArtistsAsync("Artist", TestContext.Current.CancellationToken));
     Assert.Contains("Missing subsonic-response", ex.Message);
   }
 

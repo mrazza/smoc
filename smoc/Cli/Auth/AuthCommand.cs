@@ -8,32 +8,72 @@ namespace Smoc.Cli.Auth;
 /// </summary>
 public static class AuthCommand {
   /// <summary>
-  /// Creates the root <c>auth</c> command with all nested subcommands.
+  /// Creates the root <c>auth</c> command with all nested subcommands using an explicit service instance.
   /// </summary>
-  /// <param name="authService">Optional auth service override (defaults to standard <see cref="AuthService"/>).</param>
+  /// <param name="authService">The auth service instance to use.</param>
   /// <param name="console">Optional console IO override (defaults to <see cref="SystemConsole"/>).</param>
   /// <returns>A configured <see cref="Command"/> instance.</returns>
-  public static Command Create(IAuthService? authService = null, IConsoleIO? console = null) {
+  public static Command Create(IAuthService authService, IConsoleIO? console = null) {
+    ArgumentNullException.ThrowIfNull(authService);
+    return Create(() => authService, console);
+  }
+
+  /// <summary>
+  /// Creates the root <c>auth</c> command with all nested subcommands using a lazy service factory.
+  /// </summary>
+  /// <param name="authServiceFactory">Optional factory for creating <see cref="IAuthService"/> on demand.</param>
+  /// <param name="console">Optional console IO override (defaults to <see cref="SystemConsole"/>).</param>
+  /// <returns>A configured <see cref="Command"/> instance.</returns>
+  public static Command Create(Func<IAuthService>? authServiceFactory = null, IConsoleIO? console = null) {
     IConsoleIO io = console ?? new SystemConsole();
-    IAuthService service = authService ?? new AuthService();
+    Lazy<IAuthService> lazyService = new(authServiceFactory ?? (() => new AuthService()));
 
     Command authRoot = new("auth", "Manage streaming service authentication and credentials.");
 
-    authRoot.Subcommands.Add(CreateLoginCommand(service, io));
-    authRoot.Subcommands.Add(CreateImportCookiesCommand(service, io));
-    authRoot.Subcommands.Add(CreateStatusCommand(service, io));
-    authRoot.Subcommands.Add(CreateLogoutCommand(service, io));
-    authRoot.Subcommands.Add(CreateMigrateCommand(service, io));
+    authRoot.Subcommands.Add(CreateLoginCommand(() => lazyService.Value, io));
+    authRoot.Subcommands.Add(CreateImportCookiesCommand(() => lazyService.Value, io));
+    authRoot.Subcommands.Add(CreateStatusCommand(() => lazyService.Value, io));
+    authRoot.Subcommands.Add(CreateLogoutCommand(() => lazyService.Value, io));
+    authRoot.Subcommands.Add(CreateMigrateCommand(() => lazyService.Value, io));
 
     authRoot.SetAction(async (parseResult, cancellationToken) => {
-      await ExecuteStatusAsync(service, io, cancellationToken);
+      await ExecuteStatusAsync(lazyService.Value, io, cancellationToken);
       return 0;
     });
 
     return authRoot;
   }
 
-  private static Command CreateLoginCommand(IAuthService authService, IConsoleIO io) {
+  /// <summary>
+  /// Formats an <see cref="AuthStatusState"/> for display in the CLI status table.
+  /// </summary>
+  /// <param name="state">The status state enum value.</param>
+  /// <returns>A human-readable status label.</returns>
+  public static string FormatStatus(AuthStatusState state) => state switch {
+    AuthStatusState.Authenticated => "Authenticated",
+    AuthStatusState.CookiesStored => "Cookies Stored",
+    AuthStatusState.ConfiguredInsecure => "Configured (Insecure)",
+    AuthStatusState.MissingCredentials => "Missing Credentials",
+    AuthStatusState.NotConfigured => "Not Configured",
+    AuthStatusState.Error => "Error",
+    _ => state.ToString()
+  };
+
+  /// <summary>
+  /// Formats a <see cref="CredentialStorageKind"/> for display in the CLI status table.
+  /// </summary>
+  /// <param name="storage">The storage kind enum value.</param>
+  /// <returns>A human-readable storage label.</returns>
+  public static string FormatStorage(CredentialStorageKind storage) => storage switch {
+    CredentialStorageKind.None => "None",
+    CredentialStorageKind.Keyring => "Keyring",
+    CredentialStorageKind.Environment => "Environment",
+    CredentialStorageKind.PlaintextConfig => "Plaintext Config",
+    CredentialStorageKind.PlaintextFile => "Plaintext File",
+    _ => storage.ToString()
+  };
+
+  private static Command CreateLoginCommand(Func<IAuthService> getService, IConsoleIO io) {
     Argument<string> serviceArg = new("service") {
       Description = "Streaming service to authenticate with ('subsonic', 'soundcloud')."
     };
@@ -48,6 +88,8 @@ public static class AuthCommand {
     Option<string?> schemeOption = new("--scheme") {
       Description = "Subsonic server scheme ('http' or 'https')."
     };
+    schemeOption.AcceptOnlyFromAmong("http", "https");
+
     Option<string?> usernameOption = new("--username", "-u") {
       Description = "Subsonic username."
     };
@@ -94,11 +136,11 @@ public static class AuthCommand {
               parseResult.GetValue(passwordOption),
               parseResult.GetValue(useTokenOption),
               parseResult.GetValue(noVerifyOption));
-          return await ExecuteSubsonicLoginAsync(authService, io, args, cancellationToken);
+          return await ExecuteSubsonicLoginAsync(getService(), io, args, cancellationToken);
         }
 
         case "soundcloud":
-          return await ExecuteSoundCloudLoginAsync(authService, io, parseResult.GetValue(clientIdOption), parseResult.GetValue(tokenOption), cancellationToken);
+          return await ExecuteSoundCloudLoginAsync(getService(), io, parseResult.GetValue(clientIdOption), parseResult.GetValue(tokenOption), cancellationToken);
 
         default:
           io.WriteLine($"Unknown service '{service}'. Supported services: subsonic, soundcloud.");
@@ -131,7 +173,9 @@ public static class AuthCommand {
 
     string? scheme = args.Scheme?.Trim().ToLowerInvariant();
     int defaultPort = scheme == "https" ? 443 : SubsonicConfig.Defaults.ServerPort;
-    int port = GetOrPromptPort(io, args.Port, defaultPort);
+    if (!TryGetOrPromptPort(io, args.Port, defaultPort, out int port)) {
+      return 1;
+    }
 
     if (string.IsNullOrWhiteSpace(scheme)) {
       scheme = port == 443 ? "https" : "http";
@@ -153,6 +197,8 @@ public static class AuthCommand {
       await authService.LoginSubsonicAsync(host, port, scheme, username, password, args.UseToken, verifyConnection: !args.NoVerify, cancellationToken);
       io.WriteLine("Success! Saved server settings to config.json and password to secure credential store.");
       return 0;
+    } catch (OperationCanceledException) {
+      throw;
     } catch (Exception ex) {
       io.WriteLine($"Error: {ex.Message}");
       return 1;
@@ -176,6 +222,8 @@ public static class AuthCommand {
       await authService.LoginSoundCloudAsync(clientId ?? string.Empty, token, cancellationToken);
       io.WriteLine("Success! Saved SoundCloud credentials to secure credential store.");
       return 0;
+    } catch (OperationCanceledException) {
+      throw;
     } catch (Exception ex) {
       io.WriteLine($"Error: {ex.Message}");
       return 1;
@@ -223,17 +271,35 @@ public static class AuthCommand {
     return string.IsNullOrWhiteSpace(input) ? null : input;
   }
 
-  private static int GetOrPromptPort(IConsoleIO io, int? currentPort, int defaultPort = 80) {
+  private static bool TryGetOrPromptPort(IConsoleIO io, int? currentPort, int defaultPort, out int port) {
     if (currentPort.HasValue) {
-      return currentPort.Value;
+      if (currentPort.Value is < 1 or > 65535) {
+        io.WriteLine($"Error: Port must be between 1 and 65535 (got {currentPort.Value}).");
+        port = 0;
+        return false;
+      }
+
+      port = currentPort.Value;
+      return true;
     }
 
     io.Write($"Server Port [{defaultPort}]: ");
     string? portStr = io.ReadLine()?.Trim();
-    return int.TryParse(portStr, out int p) ? p : defaultPort;
+    if (string.IsNullOrEmpty(portStr)) {
+      port = defaultPort;
+      return true;
+    }
+
+    if (!int.TryParse(portStr, out port) || port is < 1 or > 65535) {
+      io.WriteLine($"Error: Invalid port '{portStr}'. Port must be an integer between 1 and 65535.");
+      port = 0;
+      return false;
+    }
+
+    return true;
   }
 
-  private static Command CreateImportCookiesCommand(IAuthService authService, IConsoleIO io) {
+  private static Command CreateImportCookiesCommand(Func<IAuthService> getService, IConsoleIO io) {
     Argument<string?> pathArg = new("path") {
       Description = "Path to cookies.txt (defaults to ~/.config/smoc/cookies.txt).",
       Arity = ArgumentArity.ZeroOrOne
@@ -257,7 +323,7 @@ public static class AuthCommand {
       }
 
       io.WriteLine($"Importing cookies from {displayPath}...");
-      ImportCookiesResult result = await authService.ImportCookiesAsync(path, deleteSource, cancellationToken);
+      ImportCookiesResult result = await getService().ImportCookiesAsync(path, deleteSource, cancellationToken);
 
       if (result.Success) {
         io.WriteLine($"Success: {result.Message}");
@@ -275,11 +341,11 @@ public static class AuthCommand {
     return importCmd;
   }
 
-  private static Command CreateStatusCommand(IAuthService authService, IConsoleIO io) {
+  private static Command CreateStatusCommand(Func<IAuthService> getService, IConsoleIO io) {
     Command statusCmd = new("status", "View authentication and storage status across all services.");
 
     statusCmd.SetAction(async (parseResult, cancellationToken) => {
-      await ExecuteStatusAsync(authService, io, cancellationToken);
+      await ExecuteStatusAsync(getService(), io, cancellationToken);
       return 0;
     });
 
@@ -289,18 +355,23 @@ public static class AuthCommand {
   private static async Task ExecuteStatusAsync(IAuthService authService, IConsoleIO io, CancellationToken cancellationToken) {
     IReadOnlyList<ServiceAuthStatus> statuses = await authService.GetStatusAsync(cancellationToken);
 
-    io.WriteLine(string.Format("{0,-16} {1,-16} {2,-18} {3}", "SERVICE", "STATUS", "STORAGE", "ACCOUNT / DETAILS"));
-    io.WriteLine(new string('-', 78));
+    io.WriteLine(string.Format("{0,-16} {1,-22} {2,-18} {3}", "SERVICE", "STATUS", "STORAGE", "ACCOUNT / DETAILS"));
+    io.WriteLine(new string('-', 84));
 
     foreach (ServiceAuthStatus status in statuses) {
-      io.WriteLine(string.Format("{0,-16} {1,-16} {2,-18} {3}", status.Service, status.Status, status.Storage, status.Details));
+      io.WriteLine(string.Format(
+          "{0,-16} {1,-22} {2,-18} {3}",
+          status.Service,
+          FormatStatus(status.Status),
+          FormatStorage(status.Storage),
+          status.Details));
     }
   }
 
-  private static Command CreateLogoutCommand(IAuthService authService, IConsoleIO io) {
+  private static Command CreateLogoutCommand(Func<IAuthService> getService, IConsoleIO io) {
     Argument<string> serviceArg = new("service") {
       Description = "Service to log out of ('subsonic', 'soundcloud', 'youtube'/'ytm', or 'all').",
-      Arity = ArgumentArity.ZeroOrOne
+      Arity = ArgumentArity.ExactlyOne
     };
     serviceArg.AcceptOnlyFromAmong("subsonic", "soundcloud", "youtube", "youtubemusic", "ytm", "all");
 
@@ -309,10 +380,7 @@ public static class AuthCommand {
 
     logoutCmd.SetAction(async (parseResult, cancellationToken) => {
       string service = parseResult.GetValue(serviceArg)?.Trim() ?? string.Empty;
-      if (string.IsNullOrWhiteSpace(service)) {
-        io.WriteLine("Error: Service argument is required. Supported services: subsonic, soundcloud, youtube, all.");
-        return 1;
-      }
+      IAuthService authService = getService();
 
       try {
         bool removed = await authService.LogoutAsync(service, cancellationToken);
@@ -321,8 +389,20 @@ public static class AuthCommand {
         } else {
           io.WriteLine($"No credentials found to remove for {service}.");
         }
+
+        IReadOnlyList<ServiceAuthStatus> statuses = await authService.GetStatusAsync(cancellationToken);
+        if (AuthServiceTargetParser.TryParse(service, out AuthServiceTarget target)) {
+          foreach (ServiceAuthStatus status in statuses) {
+            if (MatchesTarget(status.Service, target) && status.Storage == CredentialStorageKind.Environment) {
+              io.WriteLine($"Note: {status.Service} credentials are still active via environment variables.");
+            }
+          }
+        }
+
         return 0;
-      } catch (ArgumentException ex) {
+      } catch (OperationCanceledException) {
+        throw;
+      } catch (Exception ex) {
         io.WriteLine($"Error: {ex.Message}");
         return 1;
       }
@@ -331,7 +411,15 @@ public static class AuthCommand {
     return logoutCmd;
   }
 
-  private static Command CreateMigrateCommand(IAuthService authService, IConsoleIO io) {
+  private static bool MatchesTarget(string serviceDisplayName, AuthServiceTarget target) => target switch {
+    AuthServiceTarget.All => true,
+    AuthServiceTarget.Subsonic => string.Equals(serviceDisplayName, "Subsonic", StringComparison.OrdinalIgnoreCase),
+    AuthServiceTarget.SoundCloud => string.Equals(serviceDisplayName, "SoundCloud", StringComparison.OrdinalIgnoreCase),
+    AuthServiceTarget.YouTubeMusic => string.Equals(serviceDisplayName, "YouTube Music", StringComparison.OrdinalIgnoreCase),
+    _ => false
+  };
+
+  private static Command CreateMigrateCommand(Func<IAuthService> getService, IConsoleIO io) {
     Option<bool> keepBackupOption = new("--keep-backup") {
       Description = "Keep plaintext backup files (.bak) on disk instead of deleting them."
     };
@@ -343,7 +431,7 @@ public static class AuthCommand {
       bool keepBackup = parseResult.GetValue(keepBackupOption);
 
       io.WriteLine("Scanning for plaintext credentials to migrate...");
-      MigrationResult result = await authService.MigrateAsync(backupPlaintextFiles: keepBackup, cancellationToken);
+      MigrationResult result = await getService().MigrateAsync(backupPlaintextFiles: keepBackup, cancellationToken);
 
       if (result.MigratedItems.Count == 0 && result.CleanedFiles.Count == 0) {
         if (result.Errors.Count > 0) {
