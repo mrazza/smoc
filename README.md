@@ -280,7 +280,7 @@ Unlike other services where credentials are saved directly in `config.json`, You
 > [!NOTE]
 > You need a YouTube Music Premium subscription to play most content.
 
-To access your YouTube Music account:
+To access your YouTube Music account ([these steps are copied from YouTube.js](https://youtubejs.dev/guide/authentication.html#cookie-authentication)):
 1. Open [YouTube Music](https://music.youtube.com) in your browser (Incognito recommended).
 2. Open Developer Tools (`F12`) -> **Network** tab.
 3. Find a `POST` request to `music.youtube.com`.

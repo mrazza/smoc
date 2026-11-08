@@ -315,7 +315,7 @@ public sealed class YtmStreamingClient : IStreamingClient {
   /// <param name="songCacheService">Optional cache service to use for caching streams; if not provided, no caching will be used.</param>
   /// <param name="albumArtCacheService">Optional cache service to use for caching album covers; if not provided, no caching will be used.</param>
   /// <returns>An initialized client.</returns>
-  public static YtmStreamingClient Create(List<Cookie> cookies, YtmTokens tokens, ICacheService? songCacheService = null, ICacheService? albumArtCacheService = null) {
+  public static YtmStreamingClient Create(IReadOnlyList<Cookie> cookies, YtmTokens tokens, ICacheService? songCacheService = null, ICacheService? albumArtCacheService = null) {
     return new YtmStreamingClient(new(logger: Logging.Logger, cookies: cookies, poToken: tokens.PoToken, visitorData: tokens.VisitorData, playerId: YouTubeMusicConfig.Defaults.PlayerId), songCacheService, albumArtCacheService);
   }
 
