@@ -9,8 +9,13 @@ public sealed class MacOsKeychainCredentialStore : ICredentialStore {
   /// <summary>
   /// Initializes a new instance of <see cref="MacOsKeychainCredentialStore"/> using the native macOS adapter.
   /// </summary>
-  public MacOsKeychainCredentialStore()
-      : this(new NativeMacOsKeychainAdapter()) {
+  /// <exception cref="PlatformNotSupportedException">Thrown when not running on macOS.</exception>
+  public MacOsKeychainCredentialStore() {
+    if (!OperatingSystem.IsMacOS()) {
+      throw new PlatformNotSupportedException("macOS Keychain is only supported on macOS.");
+    }
+
+    _adapter = new NativeMacOsKeychainAdapter();
   }
 
   /// <summary>
@@ -52,6 +57,6 @@ public sealed class MacOsKeychainCredentialStore : ICredentialStore {
   /// <inheritdoc />
   public Task<bool> IsAvailableAsync(CancellationToken cancellationToken = default) {
     cancellationToken.ThrowIfCancellationRequested();
-    return Task.FromResult(_adapter.IsSupportedPlatform);
+    return Task.FromResult(true);
   }
 }

@@ -3,7 +3,7 @@ namespace Smoc.Security.Linux;
 /// <summary>
 /// An <see cref="ICredentialStore"/> that uses the Linux FreeDesktop Secret Service over D-Bus (GNOME Keyring / KWallet).
 /// </summary>
-public sealed class LinuxSecretServiceCredentialStore : ICredentialStore {
+public sealed class LinuxSecretServiceCredentialStore : ICredentialStore, IDisposable {
   private readonly ISecretServiceAdapter _adapter;
 
   /// <summary>
@@ -53,5 +53,12 @@ public sealed class LinuxSecretServiceCredentialStore : ICredentialStore {
   public async Task<bool> IsAvailableAsync(CancellationToken cancellationToken = default) {
     cancellationToken.ThrowIfCancellationRequested();
     return await _adapter.IsAvailableAsync(cancellationToken);
+  }
+
+  /// <inheritdoc />
+  public void Dispose() {
+    if (_adapter is IDisposable disposable) {
+      disposable.Dispose();
+    }
   }
 }

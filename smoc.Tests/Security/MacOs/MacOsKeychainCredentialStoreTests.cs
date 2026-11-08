@@ -9,7 +9,6 @@ public class MacOsKeychainCredentialStoreTests {
   [Fact]
   public async Task MacOsKeychain_GetCredentialAsync_DelegatesToAdapter() {
     var mockAdapter = new Mock<IMacOsKeychainAdapter>();
-    mockAdapter.SetupGet(a => a.IsSupportedPlatform).Returns(true);
     mockAdapter.Setup(a => a.GetSecretAsync("smoc:soundcloud", "token", It.IsAny<CancellationToken>()))
                .ReturnsAsync("mac_sc_token");
 
@@ -23,7 +22,6 @@ public class MacOsKeychainCredentialStoreTests {
   [Fact]
   public async Task MacOsKeychain_SetAndDelete_DelegatesToAdapter() {
     var mockAdapter = new Mock<IMacOsKeychainAdapter>();
-    mockAdapter.SetupGet(a => a.IsSupportedPlatform).Returns(true);
 
     var store = new MacOsKeychainCredentialStore(mockAdapter.Object);
     await store.SetCredentialAsync("smoc:subsonic", "user", "pass", TestContext.Current.CancellationToken);
@@ -31,5 +29,12 @@ public class MacOsKeychainCredentialStoreTests {
 
     mockAdapter.Verify(a => a.SetSecretAsync("smoc:subsonic", "user", "pass", It.IsAny<CancellationToken>()), Times.Once);
     mockAdapter.Verify(a => a.DeleteSecretAsync("smoc:subsonic", "user", It.IsAny<CancellationToken>()), Times.Once);
+  }
+
+  [Fact]
+  public void MacOsKeychain_DefaultConstructor_ThrowsOnNonMacOs() {
+    if (!OperatingSystem.IsMacOS()) {
+      Assert.Throws<PlatformNotSupportedException>(() => new MacOsKeychainCredentialStore());
+    }
   }
 }

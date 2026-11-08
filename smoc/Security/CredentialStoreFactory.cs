@@ -10,20 +10,23 @@ namespace Smoc.Security;
 public static class CredentialStoreFactory {
   /// <summary>
   /// Creates the default credential store pipeline for the current operating system,
-  /// composed of the native OS keyring/credential store as primary and environment variables as fallback.
+  /// composed of the native OS keyring/credential store as primary (when supported) and environment variables as fallback.
   /// </summary>
   /// <returns>A configured <see cref="ICredentialStore"/> instance.</returns>
   public static ICredentialStore CreateDefault() {
-    ICredentialStore nativeStore = CreateNativeStore();
     EnvironmentCredentialStore envStore = new();
+    if (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS() || OperatingSystem.IsWindows()) {
+      return new CompositeCredentialStore(CreateNativeStore(), envStore);
+    }
 
-    return new CompositeCredentialStore(nativeStore, envStore);
+    return new CompositeCredentialStore(envStore);
   }
 
   /// <summary>
   /// Creates the native credential store for the current platform.
   /// </summary>
   /// <returns>An OS-specific <see cref="ICredentialStore"/> implementation.</returns>
+  /// <exception cref="PlatformNotSupportedException">Thrown when no native store is supported on the current operating system.</exception>
   public static ICredentialStore CreateNativeStore() {
     if (OperatingSystem.IsLinux()) {
       return new LinuxSecretServiceCredentialStore();
