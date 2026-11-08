@@ -637,55 +637,6 @@ public class SubsonicStreamingClientServiceTest {
   }
 
   [Fact]
-  public void Create_InitializesCorrectly_WithValidConfig() {
-    SubsonicConfig.Defaults.ServerHost = "example.com";
-    SubsonicConfig.Defaults.Username = "user";
-    SubsonicConfig.Defaults.Password = "pass";
-    
-    var client = SubsonicStreamingClient.Create(new NoCachingCacheService(), new NoCachingCacheService());
-    Assert.NotNull(client);
-  }
-
-  [Fact]
-  public void Create_ThrowsIfHostNotConfigured() {
-    SubsonicConfig.Defaults.ServerHost = null;
-    SubsonicConfig.Defaults.Username = "user";
-    SubsonicConfig.Defaults.Password = "pass";
-    
-    var ex = Assert.Throws<InvalidOperationException>(() => SubsonicStreamingClient.Create(new NoCachingCacheService(), new NoCachingCacheService()));
-    Assert.Contains("Subsonic Server Host not configured", ex.Message);
-  }
-
-  [Fact]
-  public void Create_ThrowsIfUsernameNotConfigured() {
-    SubsonicConfig.Defaults.ServerHost = "example.com";
-    SubsonicConfig.Defaults.Username = null;
-    SubsonicConfig.Defaults.Password = "pass";
-    
-    var ex = Assert.Throws<InvalidOperationException>(() => SubsonicStreamingClient.Create(new NoCachingCacheService(), new NoCachingCacheService()));
-    Assert.Contains("Subsonic Username not configured", ex.Message);
-  }
-
-  [Fact]
-  public void Create_ThrowsIfPasswordNotConfigured() {
-    var originalHost = SubsonicConfig.Defaults.ServerHost;
-    var originalUser = SubsonicConfig.Defaults.Username;
-    var originalPass = SubsonicConfig.Defaults.Password;
-    try {
-      SubsonicConfig.Defaults.ServerHost = "example.com";
-      SubsonicConfig.Defaults.Username = "user";
-      SubsonicConfig.Defaults.Password = null;
-      
-      var ex = Assert.Throws<InvalidOperationException>(() => SubsonicStreamingClient.Create(new NoCachingCacheService(), new NoCachingCacheService()));
-      Assert.Contains("Subsonic Password not configured", ex.Message);
-    } finally {
-      SubsonicConfig.Defaults.ServerHost = originalHost;
-      SubsonicConfig.Defaults.Username = originalUser;
-      SubsonicConfig.Defaults.Password = originalPass;
-    }
-  }
-
-  [Fact]
   public void Create_WithCredentials_CreatesClient() {
     var creds = new SubsonicCredentials("https", "subsonic.example.com", 443, "user", "pass", true);
     var client = SubsonicStreamingClient.Create(new NoCachingCacheService(), new NoCachingCacheService(), creds);

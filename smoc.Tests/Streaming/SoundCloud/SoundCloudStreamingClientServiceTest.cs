@@ -168,6 +168,51 @@ public class SoundCloudStreamingClientServiceTest {
   }
 
   /// <summary>
+  /// Verifies that the OAuth token is NOT sent to a look-alike domain that starts with api-v2.soundcloud.com.
+  /// </summary>
+  [Fact]
+  public async Task GetSongStreamAsync_WhenAuthTokenProvided_DoesNotAttachOAuthHeaderToLookAlikeHost() {
+    var track = new SoundCloudTrack(1, "Track 1", 1000, null, new SoundCloudUser(10, "Artist 1", "http://avatar"), new SoundCloudMedia(
+        [
+            new SoundCloudTranscoding("https://api-v2.soundcloud.com.attacker.tld/media/stream-meta", "mp3", new SoundCloudFormat("progressive", "audio/mpeg"))
+        ]
+    ));
+    var streamInfo = new SoundCloudStreamResponse("https://cf-media.sndcdn.com/actual-stream-url");
+
+    AuthenticationHeaderValue? lookAlikeHostAuth = null;
+
+    var handler = new MockHandler {
+      Handler = req => {
+        var url = req.RequestUri!.ToString();
+        if (url.Contains("/tracks/1")) {
+          return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) {
+            Content = new StringContent(JsonSerializer.Serialize(track))
+          });
+        }
+        if (url.Contains("attacker.tld")) {
+          lookAlikeHostAuth = req.Headers.Authorization;
+          return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) {
+            Content = new StringContent(JsonSerializer.Serialize(streamInfo))
+          });
+        }
+        if (url.Contains("actual-stream-url")) {
+          return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) {
+            Content = new ByteArrayContent([1, 2, 3, 4])
+          });
+        }
+        return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+      }
+    };
+
+    var httpClient = new HttpClient(handler);
+    var client = SoundCloudStreamingClient.CreateForTesting(httpClient, authToken: "secret-oauth-token");
+
+    var songStream = await client.GetSongStreamAsync("1", TestContext.Current.CancellationToken);
+    Assert.NotNull(songStream);
+    Assert.Null(lookAlikeHostAuth);
+  }
+
+  /// <summary>
   /// Verifies that when no auth token is provided, requests do not contain an Authorization header.
   /// </summary>
   [Fact]

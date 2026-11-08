@@ -3,7 +3,6 @@ using System.Net.Http.Json;
 using Terminal.Gui.App;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
-using Smoc.Configuration;
 using Smoc.Services;
 using Smoc.Services.Caching;
 using Smoc.Streaming.SoundCloud.Models;
@@ -17,19 +16,38 @@ namespace Smoc.Streaming.SoundCloud;
 public sealed class SoundCloudStreamingClient : IStreamingClient {
   private static readonly string _soundCloudUrl = "https://soundcloud.com";
   private static readonly string _apiUrl = "https://api-v2.soundcloud.com";
+  private static readonly Uri _apiBaseUri = new(_apiUrl);
   private readonly HttpClient _httpClient;
   private readonly ICacheService _songCacheService;
   private readonly ICacheService _albumArtCacheService;
   private string? _clientId;
   private readonly string? _authToken;
 
-  private SoundCloudStreamingClient(ICacheService? songCacheService = null, ICacheService? albumArtCacheService = null, string? clientId = null, string? authToken = null) {
-    _httpClient = new HttpClient();
-    _httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+  private SoundCloudStreamingClient(
+      ICacheService? songCacheService = null,
+      ICacheService? albumArtCacheService = null,
+      string? clientId = null,
+      string? authToken = null)
+      : this(CreateDefaultHttpClient(), songCacheService, albumArtCacheService, clientId, authToken) {
+  }
+
+  internal SoundCloudStreamingClient(
+      HttpClient httpClient,
+      ICacheService? songCacheService = null,
+      ICacheService? albumArtCacheService = null,
+      string? clientId = null,
+      string? authToken = null) {
+    _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
     _songCacheService = songCacheService ?? new NoCachingCacheService();
     _albumArtCacheService = albumArtCacheService ?? new NoCachingCacheService();
     _clientId = clientId;
     _authToken = authToken;
+  }
+
+  private static HttpClient CreateDefaultHttpClient() {
+    HttpClient client = new();
+    client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+    return client;
   }
 
   /// <summary>
@@ -42,10 +60,7 @@ public sealed class SoundCloudStreamingClient : IStreamingClient {
   /// <param name="authToken">Optional SoundCloud auth token.</param>
   /// <returns>A new instance of <see cref="SoundCloudStreamingClient"/>.</returns>
   public static SoundCloudStreamingClient CreateForTesting(HttpClient httpClient, ICacheService? songCacheService = null, ICacheService? albumArtCacheService = null, string? clientId = "test-client-id", string? authToken = null) {
-    var client = new SoundCloudStreamingClient(songCacheService, albumArtCacheService, clientId, authToken);
-    var httpClientField = typeof(SoundCloudStreamingClient).GetField("_httpClient", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-    httpClientField?.SetValue(client, httpClient);
-    return client;
+    return new SoundCloudStreamingClient(httpClient, songCacheService, albumArtCacheService, clientId, authToken);
   }
 
   /// <summary>
@@ -53,18 +68,14 @@ public sealed class SoundCloudStreamingClient : IStreamingClient {
   /// </summary>
   /// <param name="songCacheService">The song cache service.</param>
   /// <param name="albumArtCacheService">The album art cache service.</param>
-  /// <param name="clientId">Optional SoundCloud client ID; if omitted, falls back to configuration.</param>
-  /// <param name="authToken">Optional SoundCloud auth token; if omitted, falls back to configuration.</param>
+  /// <param name="credentials">Optional resolved SoundCloud credentials.</param>
   /// <returns>A new instance of <see cref="SoundCloudStreamingClient"/>.</returns>
   public static SoundCloudStreamingClient Create(
     ICacheService? songCacheService = null,
     ICacheService? albumArtCacheService = null,
-    string? clientId = null,
-    string? authToken = null
+    SoundCloudCredentials? credentials = null
   ) {
-    clientId ??= SoundCloudConfig.Defaults.ClientId;
-    authToken ??= SoundCloudConfig.Defaults.AuthToken;
-    return new SoundCloudStreamingClient(songCacheService, albumArtCacheService, clientId, authToken);
+    return new SoundCloudStreamingClient(songCacheService, albumArtCacheService, credentials?.ClientId, credentials?.AuthToken);
   }
 
   /// <inheritdoc />
@@ -221,12 +232,18 @@ public sealed class SoundCloudStreamingClient : IStreamingClient {
     var fullUrl = url.Contains('?') ? $"{url}&{queryString}" : $"{url}?{queryString}";
 
     using var request = new HttpRequestMessage(HttpMethod.Get, fullUrl);
-    if (!string.IsNullOrWhiteSpace(_authToken) && url.StartsWith(_apiUrl, StringComparison.OrdinalIgnoreCase)) {
+    if (!string.IsNullOrWhiteSpace(_authToken) && IsSoundCloudApiUri(request.RequestUri)) {
       request.Headers.Authorization = new AuthenticationHeaderValue("OAuth", _authToken);
     }
 
     using var response = await _httpClient.SendAsync(request, cancellationToken);
     response.EnsureSuccessStatusCode();
     return await response.Content.ReadFromJsonAsync<T>(cancellationToken) ?? throw new InvalidOperationException("API returned null.");
+  }
+
+  private static bool IsSoundCloudApiUri(Uri? uri) {
+    return uri != null
+        && string.Equals(uri.Scheme, _apiBaseUri.Scheme, StringComparison.OrdinalIgnoreCase)
+        && string.Equals(uri.Host, _apiBaseUri.Host, StringComparison.OrdinalIgnoreCase);
   }
 }

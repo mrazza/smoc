@@ -1,11 +1,13 @@
 using System.Net;
 using System.Text.Json;
+using Moq;
 using Smoc.Configuration;
 using Smoc.Security;
+using Smoc.Streaming;
 using Smoc.Streaming.YouTubeMusic;
 using Xunit;
 
-namespace smoc.Tests.Security;
+namespace smoc.Tests.Streaming;
 
 /// <summary>
 /// Unit tests for <see cref="ServiceCredentialResolver"/>.
@@ -15,117 +17,101 @@ public class ServiceCredentialResolverTests {
 
   [Fact]
   public async Task ResolveSubsonic_ResolvesPasswordFromCredentialStore() {
-    var originalHost = SubsonicConfig.Defaults.ServerHost;
-    var originalUser = SubsonicConfig.Defaults.Username;
-    var originalPass = SubsonicConfig.Defaults.Password;
-    try {
-      SubsonicConfig.Defaults.ServerHost = "subsonic.example.com";
-      SubsonicConfig.Defaults.Username = "subsonicUser";
-      SubsonicConfig.Defaults.Password = null;
+    var config = new SubsonicConfig {
+      ServerHost = "subsonic.example.com",
+      Username = "subsonicUser",
+      Password = null
+    };
 
-      var store = new InMemoryCredentialStore();
-      await store.SetCredentialAsync(CredentialTargets.Subsonic, "subsonicUser", "keyringPassword", TestContext.Current.CancellationToken);
+    var store = new InMemoryCredentialStore();
+    await store.SetCredentialAsync(CredentialTargets.Subsonic, "subsonicUser", "keyringPassword", TestContext.Current.CancellationToken);
 
-      var credentials = await ServiceCredentialResolver.ResolveSubsonicAsync(store, TestContext.Current.CancellationToken);
+    var credentials = await ServiceCredentialResolver.ResolveSubsonicAsync(store, config, TestContext.Current.CancellationToken);
 
-      Assert.NotNull(credentials);
-      Assert.Equal("subsonic.example.com", credentials.Host);
-      Assert.Equal("subsonicUser", credentials.Username);
-      Assert.Equal("keyringPassword", credentials.Password);
-    } finally {
-      SubsonicConfig.Defaults.ServerHost = originalHost;
-      SubsonicConfig.Defaults.Username = originalUser;
-      SubsonicConfig.Defaults.Password = originalPass;
-    }
+    Assert.NotNull(credentials);
+    Assert.Equal("subsonic.example.com", credentials.Host);
+    Assert.Equal("subsonicUser", credentials.Username);
+    Assert.Equal("keyringPassword", credentials.Password);
   }
 
   [Fact]
   public async Task ResolveSubsonic_FallsBackToConfig_WhenCredentialStoreHasNoPassword() {
-    var originalHost = SubsonicConfig.Defaults.ServerHost;
-    var originalUser = SubsonicConfig.Defaults.Username;
-    var originalPass = SubsonicConfig.Defaults.Password;
-    try {
-      SubsonicConfig.Defaults.ServerHost = "subsonic.example.com";
-      SubsonicConfig.Defaults.Username = "subsonicUser";
-      SubsonicConfig.Defaults.Password = "configPassword";
+    var config = new SubsonicConfig {
+      ServerHost = "subsonic.example.com",
+      Username = "subsonicUser",
+      Password = "configPassword"
+    };
 
-      var store = new InMemoryCredentialStore();
+    var store = new InMemoryCredentialStore();
 
-      var credentials = await ServiceCredentialResolver.ResolveSubsonicAsync(store, TestContext.Current.CancellationToken);
+    var credentials = await ServiceCredentialResolver.ResolveSubsonicAsync(store, config, TestContext.Current.CancellationToken);
 
-      Assert.NotNull(credentials);
-      Assert.Equal("configPassword", credentials.Password);
-    } finally {
-      SubsonicConfig.Defaults.ServerHost = originalHost;
-      SubsonicConfig.Defaults.Username = originalUser;
-      SubsonicConfig.Defaults.Password = originalPass;
-    }
+    Assert.NotNull(credentials);
+    Assert.Equal("configPassword", credentials.Password);
   }
 
   [Fact]
   public async Task ResolveSubsonic_ThrowsIfPasswordNotConfiguredAnywhere() {
-    var originalHost = SubsonicConfig.Defaults.ServerHost;
-    var originalUser = SubsonicConfig.Defaults.Username;
-    var originalPass = SubsonicConfig.Defaults.Password;
-    try {
-      SubsonicConfig.Defaults.ServerHost = "subsonic.example.com";
-      SubsonicConfig.Defaults.Username = "subsonicUser";
-      SubsonicConfig.Defaults.Password = null;
+    var config = new SubsonicConfig {
+      ServerHost = "subsonic.example.com",
+      Username = "subsonicUser",
+      Password = null
+    };
 
-      var store = new InMemoryCredentialStore();
+    var store = new InMemoryCredentialStore();
 
-      var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
-        ServiceCredentialResolver.ResolveSubsonicAsync(store, TestContext.Current.CancellationToken));
-      Assert.Contains("Subsonic Password not configured", ex.Message);
-    } finally {
-      SubsonicConfig.Defaults.ServerHost = originalHost;
-      SubsonicConfig.Defaults.Username = originalUser;
-      SubsonicConfig.Defaults.Password = originalPass;
-    }
+    var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+      ServiceCredentialResolver.ResolveSubsonicAsync(store, config, TestContext.Current.CancellationToken));
+    Assert.Contains("Subsonic Password not configured", ex.Message);
+  }
+
+  [Fact]
+  public async Task ResolveSubsonic_SurfacesStoreException_WhenKeyringFailsAndNoFallbackConfigured() {
+    var config = new SubsonicConfig {
+      ServerHost = "subsonic.example.com",
+      Username = "subsonicUser",
+      Password = null
+    };
+
+    var failingStore = new Mock<ICredentialStore>();
+    var inner = new InvalidOperationException("Keyring collection is locked");
+    failingStore.Setup(s => s.GetCredentialAsync(CredentialTargets.Subsonic, "subsonicUser", It.IsAny<CancellationToken>()))
+                .ThrowsAsync(inner);
+
+    var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+      ServiceCredentialResolver.ResolveSubsonicAsync(failingStore.Object, config, TestContext.Current.CancellationToken));
+    Assert.Contains("Keyring collection is locked", ex.Message);
+    Assert.Same(inner, ex.InnerException);
   }
 
   [Fact]
   public async Task ResolveSubsonic_ThrowsIfHostNotConfigured() {
-    var originalHost = SubsonicConfig.Defaults.ServerHost;
-    var originalUser = SubsonicConfig.Defaults.Username;
-    var originalPass = SubsonicConfig.Defaults.Password;
-    try {
-      SubsonicConfig.Defaults.ServerHost = null;
-      SubsonicConfig.Defaults.Username = "subsonicUser";
-      SubsonicConfig.Defaults.Password = "pass";
+    var config = new SubsonicConfig {
+      ServerHost = null,
+      Username = "subsonicUser",
+      Password = "pass"
+    };
 
-      var store = new InMemoryCredentialStore();
+    var store = new InMemoryCredentialStore();
 
-      var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
-        ServiceCredentialResolver.ResolveSubsonicAsync(store, TestContext.Current.CancellationToken));
-      Assert.Contains("Subsonic Server Host not configured", ex.Message);
-    } finally {
-      SubsonicConfig.Defaults.ServerHost = originalHost;
-      SubsonicConfig.Defaults.Username = originalUser;
-      SubsonicConfig.Defaults.Password = originalPass;
-    }
+    var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+      ServiceCredentialResolver.ResolveSubsonicAsync(store, config, TestContext.Current.CancellationToken));
+    Assert.Contains("Subsonic Server Host not configured", ex.Message);
   }
 
   [Fact]
   public async Task ResolveSubsonic_ThrowsIfUsernameNotConfigured() {
-    var originalHost = SubsonicConfig.Defaults.ServerHost;
-    var originalUser = SubsonicConfig.Defaults.Username;
-    var originalPass = SubsonicConfig.Defaults.Password;
-    try {
-      SubsonicConfig.Defaults.ServerHost = "subsonic.example.com";
-      SubsonicConfig.Defaults.Username = null;
-      SubsonicConfig.Defaults.Password = "pass";
+    var config = new SubsonicConfig {
+      ServerHost = "subsonic.example.com",
+      Username = null,
+      Password = "pass"
+    };
 
-      var store = new InMemoryCredentialStore();
+    var store = new InMemoryCredentialStore();
 
-      var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
-        ServiceCredentialResolver.ResolveSubsonicAsync(store, TestContext.Current.CancellationToken));
-      Assert.Contains("Subsonic Username not configured", ex.Message);
-    } finally {
-      SubsonicConfig.Defaults.ServerHost = originalHost;
-      SubsonicConfig.Defaults.Username = originalUser;
-      SubsonicConfig.Defaults.Password = originalPass;
-    }
+    var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+      ServiceCredentialResolver.ResolveSubsonicAsync(store, config, TestContext.Current.CancellationToken));
+    Assert.Contains("Subsonic Username not configured", ex.Message);
   }
 
   #endregion
@@ -133,68 +119,52 @@ public class ServiceCredentialResolverTests {
   #region SoundCloud
 
   [Fact]
-  public async Task ResolveSoundCloud_ResolvesFromCredentialStore() {
-    var originalToken = SoundCloudConfig.Defaults.AuthToken;
-    var originalClient = SoundCloudConfig.Defaults.ClientId;
-    try {
-      SoundCloudConfig.Defaults.AuthToken = null;
-      SoundCloudConfig.Defaults.ClientId = null;
+  public async Task ResolveSoundCloud_ResolvesAuthTokenFromStoreAndClientIdFromConfig() {
+    var config = new SoundCloudConfig {
+      AuthToken = null,
+      ClientId = "config-client-456"
+    };
 
-      var store = new InMemoryCredentialStore();
-      await store.SetCredentialAsync(CredentialTargets.SoundCloud, CredentialTargets.AccountAuthToken, "store-token-123", TestContext.Current.CancellationToken);
-      await store.SetCredentialAsync(CredentialTargets.SoundCloud, CredentialTargets.AccountClientId, "store-client-456", TestContext.Current.CancellationToken);
+    var store = new InMemoryCredentialStore();
+    await store.SetCredentialAsync(CredentialTargets.SoundCloud, CredentialTargets.AccountAuthToken, "store-token-123", TestContext.Current.CancellationToken);
 
-      var credentials = await ServiceCredentialResolver.ResolveSoundCloudAsync(store, TestContext.Current.CancellationToken);
+    var credentials = await ServiceCredentialResolver.ResolveSoundCloudAsync(store, config, TestContext.Current.CancellationToken);
 
-      Assert.NotNull(credentials);
-      Assert.Equal("store-token-123", credentials.AuthToken);
-      Assert.Equal("store-client-456", credentials.ClientId);
-    } finally {
-      SoundCloudConfig.Defaults.AuthToken = originalToken;
-      SoundCloudConfig.Defaults.ClientId = originalClient;
-    }
+    Assert.NotNull(credentials);
+    Assert.Equal("store-token-123", credentials.AuthToken);
+    Assert.Equal("config-client-456", credentials.ClientId);
   }
 
   [Fact]
   public async Task ResolveSoundCloud_FallsBackToConfig_WhenNotInStore() {
-    var originalToken = SoundCloudConfig.Defaults.AuthToken;
-    var originalClient = SoundCloudConfig.Defaults.ClientId;
-    try {
-      SoundCloudConfig.Defaults.AuthToken = "config-token";
-      SoundCloudConfig.Defaults.ClientId = "config-client";
+    var config = new SoundCloudConfig {
+      AuthToken = "config-token",
+      ClientId = "config-client"
+    };
 
-      var store = new InMemoryCredentialStore();
+    var store = new InMemoryCredentialStore();
 
-      var credentials = await ServiceCredentialResolver.ResolveSoundCloudAsync(store, TestContext.Current.CancellationToken);
+    var credentials = await ServiceCredentialResolver.ResolveSoundCloudAsync(store, config, TestContext.Current.CancellationToken);
 
-      Assert.NotNull(credentials);
-      Assert.Equal("config-token", credentials.AuthToken);
-      Assert.Equal("config-client", credentials.ClientId);
-    } finally {
-      SoundCloudConfig.Defaults.AuthToken = originalToken;
-      SoundCloudConfig.Defaults.ClientId = originalClient;
-    }
+    Assert.NotNull(credentials);
+    Assert.Equal("config-token", credentials.AuthToken);
+    Assert.Equal("config-client", credentials.ClientId);
   }
 
   [Fact]
   public async Task ResolveSoundCloud_ReturnsNulls_WhenNoCredentialsConfigured() {
-    var originalToken = SoundCloudConfig.Defaults.AuthToken;
-    var originalClient = SoundCloudConfig.Defaults.ClientId;
-    try {
-      SoundCloudConfig.Defaults.AuthToken = null;
-      SoundCloudConfig.Defaults.ClientId = null;
+    var config = new SoundCloudConfig {
+      AuthToken = null,
+      ClientId = null
+    };
 
-      var store = new InMemoryCredentialStore();
+    var store = new InMemoryCredentialStore();
 
-      var credentials = await ServiceCredentialResolver.ResolveSoundCloudAsync(store, TestContext.Current.CancellationToken);
+    var credentials = await ServiceCredentialResolver.ResolveSoundCloudAsync(store, config, TestContext.Current.CancellationToken);
 
-      Assert.NotNull(credentials);
-      Assert.Null(credentials.AuthToken);
-      Assert.Null(credentials.ClientId);
-    } finally {
-      SoundCloudConfig.Defaults.AuthToken = originalToken;
-      SoundCloudConfig.Defaults.ClientId = originalClient;
-    }
+    Assert.NotNull(credentials);
+    Assert.Null(credentials.AuthToken);
+    Assert.Null(credentials.ClientId);
   }
 
   #endregion
