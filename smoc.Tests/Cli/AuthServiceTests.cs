@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Moq;
 using Smoc.Cli.Auth;
+using Smoc.Cli.Auth.YouTubeMusic;
 using Smoc.Security;
 using Smoc.Streaming.YouTubeMusic;
 using Xunit;
@@ -137,6 +138,40 @@ public class AuthServiceTests : IDisposable {
     Assert.Equal(2, result.CookieCount);
     string? storedCookies = await _store.GetCredentialAsync(CredentialTargets.YouTubeMusic, CredentialTargets.AccountCookies, TestContext.Current.CancellationToken);
     Assert.Equal(testCookies, storedCookies);
+  }
+
+  [Fact]
+  public async Task GenerateTokensAsync_RegeneratesTokensFromStoredCookies() {
+    using var service = CreateService(tokenGenerator: _ => Task.FromResult(new YtmTokens("newPoToken", "newRollout", "newVisitor")));
+    await _store.SetCredentialAsync(CredentialTargets.YouTubeMusic, CredentialTargets.AccountCookies, "SID=stored123; HSID=stored456;", TestContext.Current.CancellationToken);
+    await _store.SetCredentialAsync(CredentialTargets.YouTubeMusic, CredentialTargets.AccountTokens, JsonSerializer.Serialize(new YtmTokens("oldPo", "oldRollout", "oldVisitor")), TestContext.Current.CancellationToken);
+
+    await service.GenerateTokensAsync(TestContext.Current.CancellationToken);
+
+    string? storedTokens = await _store.GetCredentialAsync(CredentialTargets.YouTubeMusic, CredentialTargets.AccountTokens, TestContext.Current.CancellationToken);
+    Assert.NotNull(storedTokens);
+    var parsedTokens = JsonSerializer.Deserialize<YtmTokens>(storedTokens);
+    Assert.Equal("newPoToken", parsedTokens?.PoToken);
+  }
+
+  [Fact]
+  public async Task GenerateTokensAsync_FallsBackToLegacyCookiesFile_WhenNotInStore() {
+    using var service = CreateService(tokenGenerator: _ => Task.FromResult(new YtmTokens("legacyPoToken", "legacyRollout", "legacyVisitor")));
+    await File.WriteAllTextAsync(_cookiesPath, "SID=legacy123; HSID=legacy456;", TestContext.Current.CancellationToken);
+
+    await service.GenerateTokensAsync(TestContext.Current.CancellationToken);
+
+    Assert.True(File.Exists(_tokensPath));
+    string savedTokens = await File.ReadAllTextAsync(_tokensPath, TestContext.Current.CancellationToken);
+    var parsedTokens = JsonSerializer.Deserialize<YtmTokens>(savedTokens);
+    Assert.Equal("legacyPoToken", parsedTokens?.PoToken);
+  }
+
+  [Fact]
+  public async Task GenerateTokensAsync_ThrowsWhenNoCookiesExist() {
+    using var service = CreateService();
+
+    await Assert.ThrowsAsync<InvalidOperationException>(() => service.GenerateTokensAsync(TestContext.Current.CancellationToken));
   }
 
   [Fact]

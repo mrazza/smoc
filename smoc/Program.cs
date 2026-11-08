@@ -1,5 +1,4 @@
 using System.CommandLine;
-using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Smoc.Cli.Auth;
 using Smoc.Configuration;
@@ -41,13 +40,6 @@ public static class Program {
 
     rootCommand.Subcommands.Add(AuthCommand.Create(
         () => new AuthService(credentialStore.Value, _configPath, _cookiesPath, _tokensPath)));
-
-    Command generateTokensCommand = new Command("--gentokens", "[Deprecated: use 'smoc auth import-cookies'] Generate PO Token and Visitor Token for YouTube Music.");
-    rootCommand.Subcommands.Add(generateTokensCommand);
-    generateTokensCommand.SetAction(async (parseResult, cancellationToken) => {
-      Console.Error.WriteLine("Warning: '--gentokens' is deprecated. Use 'smoc auth import-cookies' instead.");
-      await ExecuteLegacyGenerateTokensAsync(credentialStore.Value, cancellationToken);
-    });
 
     rootCommand.SetAction(async (parseResult, cancellationToken) => {
       var builder = new TuiConfigurationBuilder(ProductName);
@@ -109,37 +101,6 @@ public static class Program {
         disposableStore.Dispose();
       }
       Logging.Information("SMoC exiting...");
-    }
-  }
-
-  private static async Task ExecuteLegacyGenerateTokensAsync(ICredentialStore credentialStore, CancellationToken cancellationToken) {
-    string? cookiesRaw = null;
-    try {
-      cookiesRaw = await credentialStore.GetCredentialAsync(CredentialTargets.YouTubeMusic, CredentialTargets.AccountCookies, cancellationToken);
-    } catch (Exception ex) when (ex is not OperationCanceledException) {
-      Console.Error.WriteLine($"Warning: Failed to read YouTube Music cookies from credential store: {ex.Message}");
-    }
-
-    List<System.Net.Cookie>? cookies = null;
-    if (!string.IsNullOrWhiteSpace(cookiesRaw)) {
-      cookies = YtmStreamingClient.ParseCookies(cookiesRaw);
-    } else if (File.Exists(_cookiesPath)) {
-      cookies = YtmStreamingClient.GetCookiesFromFile(_cookiesPath);
-    }
-
-    if (cookies == null || cookies.Count == 0) {
-      throw new InvalidOperationException("No YouTube Music cookies found in Keyring or cookies.txt. Use 'smoc auth import-cookies <path>' to import cookies.");
-    }
-
-    YtmTokens tokens = await YtmStreamingClient.GenerateTokensAsync(cookies);
-    string serializedTokens = JsonSerializer.Serialize(tokens);
-
-    if (!string.IsNullOrWhiteSpace(cookiesRaw)) {
-      await credentialStore.SetCredentialAsync(CredentialTargets.YouTubeMusic, CredentialTargets.AccountTokens, serializedTokens, cancellationToken);
-      Console.WriteLine("Successfully generated and saved YouTube Music tokens to credential store.");
-    } else {
-      await File.WriteAllTextAsync(_tokensPath, serializedTokens, cancellationToken);
-      Console.WriteLine($"Successfully generated and saved YouTube Music tokens to {_tokensPath}. Consider running 'smoc auth migrate' to securely store credentials in your OS keyring.");
     }
   }
 

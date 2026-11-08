@@ -1,4 +1,5 @@
 using System.CommandLine;
+using Smoc.Cli.Auth.YouTubeMusic;
 using Smoc.Configuration;
 
 namespace Smoc.Cli.Auth;
@@ -32,6 +33,7 @@ public static class AuthCommand {
 
     authRoot.Subcommands.Add(CreateLoginCommand(() => lazyService.Value, io));
     authRoot.Subcommands.Add(CreateImportCookiesCommand(() => lazyService.Value, io));
+    authRoot.Subcommands.Add(CreateGenTokensCommand(() => lazyService.Value, io));
     authRoot.Subcommands.Add(CreateStatusCommand(() => lazyService.Value, io));
     authRoot.Subcommands.Add(CreateLogoutCommand(() => lazyService.Value, io));
     authRoot.Subcommands.Add(CreateMigrateCommand(() => lazyService.Value, io));
@@ -339,6 +341,26 @@ public static class AuthCommand {
     });
 
     return importCmd;
+  }
+
+  private static Command CreateGenTokensCommand(Func<IAuthService> getService, IConsoleIO io) {
+    Command genTokensCmd = new("gentokens", "Regenerate YouTube Music visitor and PO session tokens from stored cookies.");
+
+    genTokensCmd.SetAction(async (parseResult, cancellationToken) => {
+      io.WriteLine("Generating YouTube Music session tokens...");
+      try {
+        await getService().GenerateTokensAsync(cancellationToken);
+        io.WriteLine("Success! Generated and saved YouTube Music session tokens.");
+        return 0;
+      } catch (OperationCanceledException) {
+        throw;
+      } catch (Exception ex) {
+        io.WriteLine($"Error: {ex.Message}");
+        return 1;
+      }
+    });
+
+    return genTokensCmd;
   }
 
   private static Command CreateStatusCommand(Func<IAuthService> getService, IConsoleIO io) {

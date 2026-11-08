@@ -1,4 +1,4 @@
-namespace Smoc.Cli.Auth;
+namespace Smoc.Cli.Auth.YouTubeMusic;
 
 /// <summary>
 /// Result of importing YouTube Music session cookies.
@@ -27,3 +27,4 @@ public record ImportCookiesResult(
   public static ImportCookiesResult Failed(string message) =>
       new(false, message, 0, false, false);
 }
+

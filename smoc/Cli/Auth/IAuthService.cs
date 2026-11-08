@@ -1,3 +1,5 @@
+using Smoc.Cli.Auth.YouTubeMusic;
+
 namespace Smoc.Cli.Auth;
 
 /// <summary>
@@ -50,6 +52,12 @@ public interface IAuthService {
     bool deleteSource = false,
     CancellationToken cancellationToken = default
   );
+
+  /// <summary>
+  /// Regenerates YouTube Music visitor and PO tokens from stored cookies.
+  /// </summary>
+  /// <param name="cancellationToken">Cancellation token for the asynchronous operation.</param>
+  Task GenerateTokensAsync(CancellationToken cancellationToken = default);
 
   /// <summary>
   /// Retrieves the current authentication and configuration status across all supported streaming services.

@@ -140,6 +140,28 @@ public class AuthCommandTests : IDisposable {
   }
 
   [Fact]
+  public async Task AuthGenTokens_SucceedsWhenCookiesStored() {
+    await _store.SetCredentialAsync(CredentialTargets.YouTubeMusic, CredentialTargets.AccountCookies, "SID=abc;", TestContext.Current.CancellationToken);
+    RootCommand root = new() { _authCommand };
+
+    int exitCode = await root.Parse("auth gentokens").InvokeAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+    Assert.Equal(0, exitCode);
+    Assert.Contains("Success! Generated and saved YouTube Music session tokens.", _console.Output);
+    Assert.NotNull(await _store.GetCredentialAsync(CredentialTargets.YouTubeMusic, CredentialTargets.AccountTokens, TestContext.Current.CancellationToken));
+  }
+
+  [Fact]
+  public async Task AuthGenTokens_ReturnsExitCode1_WhenNoCookiesExist() {
+    RootCommand root = new() { _authCommand };
+
+    int exitCode = await root.Parse("auth gentokens").InvokeAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+    Assert.Equal(1, exitCode);
+    Assert.Contains("Error:", _console.Output);
+  }
+
+  [Fact]
   public async Task AuthLogout_Succeeds() {
     await _store.SetCredentialAsync(CredentialTargets.YouTubeMusic, CredentialTargets.AccountCookies, "c=1;", TestContext.Current.CancellationToken);
     RootCommand root = new() { _authCommand };

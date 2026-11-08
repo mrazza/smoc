@@ -18,8 +18,8 @@ public sealed class ConfigFileWriter {
   /// Initializes a new instance of <see cref="ConfigFileWriter"/> targeting the specified path.
   /// </summary>
   /// <param name="configPath">Path to the target configuration file.</param>
-  public ConfigFileWriter(string? configPath = null) {
-    _configPath = configPath ?? SmocPaths.DefaultConfigPath;
+  public ConfigFileWriter(string configPath) {
+    _configPath = configPath;
   }
 
   /// <summary>

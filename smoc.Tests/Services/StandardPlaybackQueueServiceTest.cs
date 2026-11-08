@@ -1361,7 +1361,7 @@ public class StandardPlaybackQueueServiceTest {
 
   /// <summary>
   /// Verifies that when GetSongStreamAsync throws an HttpRequestException with Forbidden status,
-  /// a helpful error message suggesting --gentokens is displayed to the user.
+  /// a helpful error message suggesting 'smoc auth gentokens' is displayed to the user.
   /// </summary>
   [Fact]
   public async Task Play_StreamingClientThrowsForbiddenHttpException_DisplaysHelpfulError() {
@@ -1376,13 +1376,13 @@ public class StandardPlaybackQueueServiceTest {
     Assert.Single(_fakeMainWindow.DisplayedErrors);
     Assert.Contains("Forbidden Track", _fakeMainWindow.LastDisplayedError);
     Assert.Contains("403 Forbidden", _fakeMainWindow.LastDisplayedError);
-    Assert.Contains("--gentokens", _fakeMainWindow.LastDisplayedError);
-    Assert.Equal("Playback failed for 'Forbidden Track' (403 Forbidden). Tokens or cookies may be expired; try running with --gentokens.", _fakeMainWindow.LastDisplayedError);
+    Assert.Contains("smoc auth gentokens", _fakeMainWindow.LastDisplayedError);
+    Assert.Equal("Playback failed for 'Forbidden Track' (403 Forbidden). Tokens or cookies may be expired; try running 'smoc auth gentokens'.", _fakeMainWindow.LastDisplayedError);
   }
 
   /// <summary>
   /// Verifies that when GetSongStreamAsync throws an exception whose inner exception is an HttpRequestException with Forbidden status,
-  /// a helpful error message suggesting --gentokens is displayed to the user.
+  /// a helpful error message suggesting 'smoc auth gentokens' is displayed to the user.
   /// </summary>
   [Fact]
   public async Task Play_StreamingClientThrowsInnerForbiddenHttpException_DisplaysHelpfulError() {
@@ -1396,12 +1396,12 @@ public class StandardPlaybackQueueServiceTest {
     await sut.Play();
 
     Assert.Single(_fakeMainWindow.DisplayedErrors);
-    Assert.Equal("Playback failed for 'Inner Forbidden Track' (403 Forbidden). Tokens or cookies may be expired; try running with --gentokens.", _fakeMainWindow.LastDisplayedError);
+    Assert.Equal("Playback failed for 'Inner Forbidden Track' (403 Forbidden). Tokens or cookies may be expired; try running 'smoc auth gentokens'.", _fakeMainWindow.LastDisplayedError);
   }
 
   /// <summary>
   /// Verifies that when GetSongStreamAsync throws an exception with a message containing "403" but without StatusCode set,
-  /// a helpful error message suggesting --gentokens is displayed to the user as fallback.
+  /// a helpful error message suggesting 'smoc auth gentokens' is displayed to the user as fallback.
   /// </summary>
   [Fact]
   public async Task Play_StreamingClientThrows403MessageFallback_DisplaysHelpfulError() {
@@ -1414,7 +1414,7 @@ public class StandardPlaybackQueueServiceTest {
     await sut.Play();
 
     Assert.Single(_fakeMainWindow.DisplayedErrors);
-    Assert.Equal("Playback failed for 'Fallback 403 Track' (403 Forbidden). Tokens or cookies may be expired; try running with --gentokens.", _fakeMainWindow.LastDisplayedError);
+    Assert.Equal("Playback failed for 'Fallback 403 Track' (403 Forbidden). Tokens or cookies may be expired; try running 'smoc auth gentokens'.", _fakeMainWindow.LastDisplayedError);
   }
 
   /// <summary>
@@ -1507,7 +1507,7 @@ public class StandardPlaybackQueueServiceTest {
 
     Assert.Single(_fakeMainWindow.DisplayedErrors);
     Assert.Equal(
-      "Playback failed for 'Nested Aggregate Track' (403 Forbidden). Tokens or cookies may be expired; try running with --gentokens.",
+      "Playback failed for 'Nested Aggregate Track' (403 Forbidden). Tokens or cookies may be expired; try running 'smoc auth gentokens'.",
       _fakeMainWindow.LastDisplayedError);
   }
 
