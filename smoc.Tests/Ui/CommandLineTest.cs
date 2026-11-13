@@ -130,6 +130,26 @@ public class CommandLineTest {
   }
 
   [Fact]
+  public void TabCompletion_WithCompleter_CyclesArguments() {
+    var commandService = new CommandService();
+    commandService.RegisterCommand("output", (_, __) => { });
+    commandService.RegisterCompleter("output", (_, _) => ["local", "speaker"]);
+
+    using var context = NewContext();
+    var commandLine = new CommandLine(commandService);
+    context.Add(commandLine);
+
+    context.KeyDown(Key.O).KeyDown(Key.U).KeyDown(Key.T).KeyDown(Key.P).KeyDown(Key.U).KeyDown(Key.T).KeyDown(new Key('/'));
+    Assert.Equal(":output/", commandLine.Text);
+
+    context.KeyDown(Key.Tab);
+    Assert.Equal(":output/local", commandLine.Text);
+
+    context.KeyDown(Key.Tab);
+    Assert.Equal(":output/speaker", commandLine.Text);
+  }
+
+  [Fact]
   public void History_AcceptedCommands_AddedToHistoryWithoutConsecutiveDuplicates() {
     using var context = NewContext();
     var commandLine = NewCommandLine();

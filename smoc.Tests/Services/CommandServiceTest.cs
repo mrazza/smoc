@@ -100,6 +100,62 @@ public class CommandServiceTest {
   }
 
   [Fact]
+  public void GetCompletions_NoCompleter_ReturnsMatchingCommands() {
+    var commandService = new CommandService();
+    commandService.RegisterCommand("apple", (cmd, __) => { });
+    commandService.RegisterCommand("apply", (cmd, __) => { });
+    commandService.RegisterCommand("banana", (cmd, __) => { });
+
+    var completions = commandService.GetCompletions("app");
+    Assert.Equal(["apple", "apply"], completions.OrderBy(c => c));
+  }
+
+  [Fact]
+  public void GetCompletions_WithCompleter_ReturnsMatchingArgs() {
+    var commandService = new CommandService();
+    commandService.RegisterCommand("fruit", (cmd, __) => { });
+    commandService.RegisterCompleter("fruit", (cmd, args) => {
+        string[] fruits = ["apple", "banana", "cherry"];
+        return fruits.Where(f => f.StartsWith(args));
+    });
+
+    var completions = commandService.GetCompletions("fruit/a");
+    Assert.Equal(["apple"], completions);
+  }
+
+  [Fact]
+  public void GetCompletions_UnknownCommandWithArgs_ReturnsEmpty() {
+    var commandService = new CommandService();
+    var completions = commandService.GetCompletions("unknown/args");
+    Assert.Empty(completions);
+  }
+
+  [Fact]
+  public void GetCompletions_CommandWithoutSlash_ReturnsCommandNameNotArgs() {
+    var commandService = new CommandService();
+    commandService.RegisterCommand("output", (cmd, __) => { });
+    commandService.RegisterCompleter("output", (cmd, args) => ["local", "refresh"]);
+
+    var completions = commandService.GetCompletions("output");
+    Assert.Equal(["output"], completions);
+  }
+
+  [Fact]
+  public void UnregisterCompleter_RemovesCompleter() {
+    var commandService = new CommandService();
+    commandService.RegisterCommand("fruit", (cmd, __) => { });
+    commandService.RegisterCompleter("fruit", (cmd, args) => ["apple", "banana"]);
+
+    var completionsBefore = commandService.GetCompletions("fruit/a");
+    Assert.Equal(["apple", "banana"], completionsBefore);
+
+    commandService.UnregisterCompleter("fruit");
+
+    var completionsAfter = commandService.GetCompletions("fruit/a");
+    Assert.Empty(completionsAfter);
+  }
+
+  [Fact]
   public void GetRegisteredCommands_Empty_ReturnsEmpty() {
     var commandService = new CommandService();
     Assert.Empty(commandService.GetRegisteredCommands());
